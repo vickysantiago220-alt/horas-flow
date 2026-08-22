@@ -1,0 +1,26 @@
+@"
+node_modules/
+**/node_modules/
+
+.env
+.env.*
+!.env.example
+
+dist/
+build/
+.vite/
+**/dist/
+**/build/
+**/.vite/
+
+*.log
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+sistema-horas-backup/
+"@ | Set-Content "C:\sistema-horas-demandas-v2 (1)\.gitignore"

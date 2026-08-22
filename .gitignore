@@ -1,0 +1,36 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Variaveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Build
+dist/
+build/
+.vite/
+**/dist/
+**/build/
+**/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+npm-debug.*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Backup local
+sistema-horas-backup/
+
+# Arquivos temporarios
+*.tmp
+*.temp
