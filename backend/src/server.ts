@@ -66,6 +66,8 @@ const DEMAND_SELECT = `
     approved_by_user_id AS approvedByUserId,
     approved_at AS approvedAt,
     rejection_reason AS rejectionReason,
+    execution_month AS executionMonth,
+    responsible,
     client_id AS clientId,
     paid,
     created_at AS createdAt,
@@ -1236,6 +1238,7 @@ app.post(
         priority = 'Média',
         status = 'Aguardando análise',
         clientId = null,
+        responsible = null,
       } = req.body;
 
       if (
@@ -1315,6 +1318,8 @@ app.post(
             approved_by_user_id,
             approved_at,
             rejection_reason,
+            execution_month,
+            responsible,
             client_id,
             paid
           )
@@ -1331,6 +1336,8 @@ app.post(
             NULL,
             NULL,
             NULL,
+            NULL,
+            ?,
             ?,
             0
           )
@@ -1343,6 +1350,9 @@ app.post(
             Number(requiredHours) || 0,
             priority,
             status,
+            responsible?.trim()
+              ? responsible.trim()
+              : null,
             clientId
               ? Number(clientId)
               : null,
@@ -1422,6 +1432,7 @@ app.put(
         priority = 'Média',
         status = 'Aguardando análise',
         clientId = null,
+        responsible = null,
       } = req.body;
 
       if (
@@ -1464,6 +1475,7 @@ app.put(
           priority = ?,
           status = ?,
           client_id = ?,
+          responsible = ?,
           updated_at = NOW()
         WHERE id = ?
         `,
@@ -1476,6 +1488,9 @@ app.put(
           status,
           clientId
             ? Number(clientId)
+            : null,
+          responsible?.trim()
+            ? responsible.trim()
             : null,
           id,
         ]
@@ -1663,12 +1678,24 @@ app.post(
   ) => {
     try {
       const id = getId(req.params.id);
+      const { executionMonth } = req.body;
 
       if (!id) {
         return res.status(400).json({
           success: false,
           message:
             'ID da demanda inválido.',
+        });
+      }
+
+      if (
+        !executionMonth ||
+        !/^\d{4}-\d{2}$/.test(String(executionMonth))
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Informe o mês de execução no formato YYYY-MM.',
         });
       }
 
@@ -1717,12 +1744,14 @@ app.post(
           approved_by_user_id = ?,
           approved_at = NOW(),
           rejection_reason = NULL,
+          execution_month = ?,
           updated_at = NOW()
         WHERE id = ?
         `,
         [
           req.user?.name || null,
           req.user?.id || null,
+          `${String(executionMonth)}-01`,
           id,
         ]
       );
@@ -1838,6 +1867,7 @@ app.post(
           approved_by_user_id = ?,
           approved_at = NOW(),
           rejection_reason = ?,
+          execution_month = NULL,
           updated_at = NOW()
         WHERE id = ?
         `,
@@ -1961,40 +1991,18 @@ app.get(
     res
   ) => {
     try {
-      const user = req.user;
-
       let where = '';
       const params: any[] = [];
 
-      // CLIENTE:
-      // sempre enxerga somente a própria empresa.
-      if (user?.role === 'CLIENTE') {
-        if (!user.clientId) {
-          return res.status(403).json({
-            success: false,
-            message:
-              'Usuário cliente não está vinculado a uma empresa.',
-          });
-        }
+      if (
+        req.user?.role === 'CLIENTE'
+      ) {
+        where =
+          ' WHERE client_id = ? ';
 
-        where = ' WHERE client_id = ? ';
-        params.push(user.clientId);
-      }
-
-      // ADMIN:
-      // pode filtrar por uma empresa específica através de ?clientId=1.
-      // Sem clientId, visualiza o consolidado de todas as empresas.
-      if (user?.role === 'ADMIN') {
-        const requestedClientId = getId(
-          typeof req.query.clientId === 'string'
-            ? req.query.clientId
-            : undefined
+        params.push(
+          req.user.clientId
         );
-
-        if (requestedClientId) {
-          where = ' WHERE client_id = ? ';
-          params.push(requestedClientId);
-        }
       }
 
       const [rows] =
@@ -2019,42 +2027,7 @@ app.get(
                 required_hours
               ),
               0
-            ) AS totalHours,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN approval = 'Aprovada'
-                  THEN 1
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS approvedDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN approval = 'Reprovada'
-                  THEN 1
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS rejectedDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN approval IS NULL
-                    OR approval = ''
-                    OR approval = 'Pendente'
-                  THEN 1
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS pendingApproval
+            ) AS totalHours
 
           FROM demands
           ${where}
@@ -2075,98 +2048,6 @@ app.get(
           params
         );
 
-      // Para o ADMIN, retorna também o consolidado por cliente.
-      // Isso permite montar gráficos/rankings sem fazer várias chamadas.
-      let byClient: any[] = [];
-
-      if (user?.role === 'ADMIN') {
-        const [clientRows] =
-          await pool.query(
-            `
-            SELECT
-              c.id AS clientId,
-              c.name AS clientName,
-              COUNT(d.id) AS totalDemands,
-              COALESCE(
-                SUM(d.analysis_hours),
-                0
-              ) AS analysisHours,
-              COALESCE(
-                SUM(d.required_hours),
-                0
-              ) AS requiredHours,
-              COALESCE(
-                SUM(
-                  d.analysis_hours +
-                  d.required_hours
-                ),
-                0
-              ) AS totalHours,
-              COALESCE(
-                SUM(
-                  CASE
-                    WHEN d.approval = 'Aprovada'
-                    THEN 1
-                    ELSE 0
-                  END
-                ),
-                0
-              ) AS approvedDemands,
-              COALESCE(
-                SUM(
-                  CASE
-                    WHEN d.approval = 'Reprovada'
-                    THEN 1
-                    ELSE 0
-                  END
-                ),
-                0
-              ) AS rejectedDemands,
-              COALESCE(
-                SUM(
-                  CASE
-                    WHEN d.approval IS NULL
-                      OR d.approval = ''
-                      OR d.approval = 'Pendente'
-                    THEN 1
-                    ELSE 0
-                  END
-                ),
-                0
-              ) AS pendingApproval
-            FROM clients c
-            LEFT JOIN demands d
-              ON d.client_id = c.id
-            GROUP BY
-              c.id,
-              c.name
-            ORDER BY
-              c.name ASC
-            `
-          );
-
-        byClient = (clientRows as any[]).map(
-          (row) => ({
-            clientId: Number(row.clientId),
-            clientName: row.clientName,
-            totalDemands:
-              Number(row.totalDemands || 0),
-            analysisHours:
-              Number(row.analysisHours || 0),
-            requiredHours:
-              Number(row.requiredHours || 0),
-            totalHours:
-              Number(row.totalHours || 0),
-            approvedDemands:
-              Number(row.approvedDemands || 0),
-            rejectedDemands:
-              Number(row.rejectedDemands || 0),
-            pendingApproval:
-              Number(row.pendingApproval || 0),
-          })
-        );
-      }
-
       const summary =
         (rows as any[])[0];
 
@@ -2186,43 +2067,25 @@ app.get(
         data: {
           totalDemands:
             Number(
-              summary.totalDemands || 0
+              summary.totalDemands
             ),
 
           totalHours:
             Number(
-              summary.totalHours || 0
+              summary.totalHours
             ),
 
           analysisHours:
             Number(
-              summary.analysisHours || 0
+              summary.analysisHours
             ),
 
           requiredHours:
             Number(
-              summary.requiredHours || 0
-            ),
-
-          approvedDemands:
-            Number(
-              summary.approvedDemands || 0
-            ),
-
-          rejectedDemands:
-            Number(
-              summary.rejectedDemands || 0
-            ),
-
-          pendingApproval:
-            Number(
-              summary.pendingApproval || 0
+              summary.requiredHours
             ),
 
           byStatus,
-
-          // Somente ADMIN recebe o consolidado por empresa.
-          byClient,
         },
       });
 
@@ -2245,10 +2108,6 @@ app.get(
   }
 );
 
-
-// =====================================================
-// 404
-// =====================================================
 
 // =====================================================
 // 404
