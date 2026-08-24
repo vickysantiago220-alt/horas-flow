@@ -51,6 +51,47 @@ async function clientExists(clientId: number | null): Promise<boolean> {
   return (rows as any[]).length > 0;
 }
 
+async function recordDemandHistory(
+  demandId: number,
+  req: AuthenticatedRequest,
+  field: string,
+  oldValue: any,
+  newValue: any
+) {
+  const normalize = (value: any) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
+  const oldNormalized = normalize(oldValue);
+  const newNormalized = normalize(newValue);
+
+  if (oldNormalized === newNormalized) return;
+
+  await pool.execute(
+    `
+      INSERT INTO demand_history (
+        demand_id,
+        user_id,
+        user_name,
+        field,
+        old_value,
+        new_value
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+    `,
+    [
+      demandId,
+      req.user?.id || null,
+      req.user?.name || null,
+      field,
+      oldNormalized,
+      newNormalized,
+    ]
+  );
+}
+
 const DEMAND_SELECT = `
   SELECT
     id,
@@ -1194,9 +1235,30 @@ app.get(
         });
       }
 
+      const [historyRows] = await pool.query(
+        `
+          SELECT
+            id,
+            demand_id AS demandId,
+            user_id AS userId,
+            user_name AS userName,
+            field,
+            old_value AS oldValue,
+            new_value AS newValue,
+            created_at AS createdAt
+          FROM demand_history
+          WHERE demand_id = ?
+          ORDER BY created_at DESC, id DESC
+        `,
+        [id]
+      );
+
       return res.json({
         success: true,
-        data: demand,
+        data: {
+          ...demand,
+          history: historyRows,
+        },
       });
 
     } catch (error: any) {
@@ -1464,6 +1526,24 @@ app.put(
         }
       }
 
+      const [beforeRows] = await pool.query(
+        `
+          ${DEMAND_SELECT}
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [id]
+      );
+
+      const beforeDemand = (beforeRows as any[])[0];
+
+      if (!beforeDemand) {
+        return res.status(404).json({
+          success: false,
+          message: 'Demanda não encontrada.',
+        });
+      }
+
       await pool.execute(
         `
         UPDATE demands
@@ -1496,6 +1576,63 @@ app.put(
         ]
       );
 
+      await recordDemandHistory(
+        id,
+        req,
+        'Problema',
+        beforeDemand.problem,
+        problem.trim()
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Tratamento',
+        beforeDemand.treatment,
+        treatment.trim()
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Horas de análise',
+        beforeDemand.analysisHours,
+        Number(analysisHours) || 0
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Horas necessárias',
+        beforeDemand.requiredHours,
+        Number(requiredHours) || 0
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Prioridade',
+        beforeDemand.priority,
+        priority
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Status',
+        beforeDemand.status,
+        status
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Cliente',
+        beforeDemand.clientId,
+        clientId ? Number(clientId) : null
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Responsável',
+        beforeDemand.responsible,
+        responsible?.trim() ? responsible.trim() : null
+      );
+
       const [rows] =
         await pool.query(
           `
@@ -1515,12 +1652,34 @@ app.put(
         });
       }
 
+      // Retorna também o histórico atualizado para o frontend
+      // não depender de uma segunda chamada após salvar.
+      const [historyRows] = await pool.query(
+        `
+          SELECT
+            id,
+            demand_id AS demandId,
+            user_id AS userId,
+            user_name AS userName,
+            field,
+            old_value AS oldValue,
+            new_value AS newValue,
+            created_at AS createdAt
+          FROM demand_history
+          WHERE demand_id = ?
+          ORDER BY created_at DESC, id DESC
+        `,
+        [id]
+      );
+
       return res.json({
         success: true,
         message:
           'Demanda atualizada com sucesso.',
-        data:
-          (rows as any[])[0],
+        data: {
+          ...(rows as any[])[0],
+          history: historyRows,
+        },
       });
 
     } catch (error: any) {
@@ -1593,7 +1752,8 @@ app.patch(
           `
           SELECT
             id,
-            client_id AS clientId
+            client_id AS clientId,
+            priority
           FROM demands
           WHERE id = ?
           `,
@@ -1637,6 +1797,14 @@ app.patch(
         ]
       );
 
+      await recordDemandHistory(
+        id,
+        req,
+        'Prioridade',
+        demand.priority,
+        priority
+      );
+
       return res.json({
         success: true,
         message:
@@ -1659,7 +1827,175 @@ app.patch(
     }
   }
 );
+// =====================================================
+// HISTÓRICO DA DEMANDA
+// ADMIN / INTERNO / CLIENTE
+// CLIENTE SÓ DA PRÓPRIA DEMANDA
+// =====================================================
 
+app.get(
+  '/api/demands/:id/history',
+  authorize(
+    'ADMIN',
+    'INTERNO',
+    'CLIENTE'
+  ),
+  async (
+    req: AuthenticatedRequest,
+    res
+  ) => {
+    try {
+      const id = getId(req.params.id);
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID da demanda inválido.',
+        });
+      }
+
+      const [demandRows] = await pool.query(
+        `
+          SELECT
+            id,
+            client_id AS clientId,
+            approval,
+            status,
+            rejection_reason AS rejectionReason,
+            execution_month AS executionMonth
+          FROM demands
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [id]
+      );
+
+      const demand = (demandRows as any[])[0];
+
+      if (!demand) {
+        return res.status(404).json({
+          success: false,
+          message: 'Demanda não encontrada.',
+        });
+      }
+
+      if (
+        req.user?.role === 'CLIENTE' &&
+        Number(demand.clientId) !== Number(req.user.clientId)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Você não possui acesso a esta demanda.',
+        });
+      }
+
+      const [historyRows] = await pool.query(
+        `
+          SELECT
+            id,
+            demand_id AS demandId,
+            user_id AS userId,
+            user_name AS userName,
+            field,
+            old_value AS oldValue,
+            new_value AS newValue,
+            created_at AS createdAt
+          FROM demand_history
+          WHERE demand_id = ?
+          ORDER BY created_at DESC, id DESC
+        `,
+        [id]
+      );
+
+      return res.json({
+        success: true,
+        data: historyRows,
+      });
+    } catch (error: any) {
+      console.error('ERRO HISTÓRICO DEMANDA:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar histórico da demanda.',
+        error: error?.message,
+        code: error?.code,
+        sqlMessage: error?.sqlMessage,
+      });
+    }
+  }
+);
+
+
+// =====================================================
+// EXCLUIR DEMANDA
+// ADMIN / INTERNO
+// =====================================================
+
+app.delete(
+  '/api/demands/:id',
+  authorize('ADMIN', 'INTERNO'),
+  async (
+    req: AuthenticatedRequest,
+    res
+  ) => {
+    try {
+      const id = getId(req.params.id);
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID da demanda inválido.',
+        });
+      }
+
+      const [rows] = await pool.query(
+        `
+          SELECT id
+          FROM demands
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [id]
+      );
+
+      const demand = (rows as any[])[0];
+
+      if (!demand) {
+        return res.status(404).json({
+          success: false,
+          message: 'Demanda não encontrada.',
+        });
+      }
+
+      await pool.execute(
+        `
+          DELETE FROM demands
+          WHERE id = ?
+        `,
+        [id]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Demanda excluída com sucesso.',
+      });
+
+    } catch (error: any) {
+      console.error(
+        'ERRO EXCLUIR DEMANDA:',
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao excluir demanda.',
+        error: error?.message,
+        code: error?.code,
+        sqlMessage: error?.sqlMessage,
+      });
+    }
+  }
+);
 
 // =====================================================
 // APROVAR DEMANDA
@@ -1705,7 +2041,8 @@ app.post(
           SELECT
             id,
             client_id AS clientId,
-            approval
+            approval,
+            execution_month AS executionMonth
           FROM demands
           WHERE id = ?
           `,
@@ -1754,6 +2091,21 @@ app.post(
           `${String(executionMonth)}-01`,
           id,
         ]
+      );
+
+      await recordDemandHistory(
+        id,
+        req,
+        'Aprovação',
+        demand.approval,
+        'Aprovada'
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Mês de execução',
+        demand.executionMonth,
+        `${String(executionMonth)}-01`
       );
 
       return res.json({
@@ -1879,6 +2231,35 @@ app.post(
         ]
       );
 
+      await recordDemandHistory(
+        id,
+        req,
+        'Aprovação',
+        demand.approval,
+        'Reprovada'
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Status',
+        demand.status,
+        'Pendente'
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Motivo da reprovação',
+        demand.rejectionReason,
+        reason.trim()
+      );
+      await recordDemandHistory(
+        id,
+        req,
+        'Mês de execução',
+        demand.executionMonth,
+        null
+      );
+
       return res.json({
         success: true,
         message:
@@ -1930,6 +2311,25 @@ app.post(
         });
       }
 
+      const [beforePayRows] = await pool.query(
+        `
+          SELECT paid
+          FROM demands
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [id]
+      );
+
+      const beforePay = (beforePayRows as any[])[0];
+
+      if (!beforePay) {
+        return res.status(404).json({
+          success: false,
+          message: 'Demanda não encontrada.',
+        });
+      }
+
       const [result] =
         await pool.execute(
           `
@@ -1954,6 +2354,14 @@ app.post(
             'Demanda não encontrada.',
         });
       }
+
+      await recordDemandHistory(
+        id,
+        req,
+        'Pagamento',
+        beforePay.paid ? 'Pago' : 'Não pago',
+        'Pago'
+      );
 
       return res.json({
         success: true,
