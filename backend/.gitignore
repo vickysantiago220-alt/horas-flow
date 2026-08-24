@@ -1,11 +1,13 @@
-@"
+# Dependencias
 node_modules/
 **/node_modules/
 
+# Variaveis de ambiente
 .env
 .env.*
 !.env.example
 
+# Build
 dist/
 build/
 .vite/
@@ -13,14 +15,22 @@ build/
 **/build/
 **/.vite/
 
+# Logs
 *.log
 npm-debug.log*
+npm-debug.*
 
+# Sistema operacional
 .DS_Store
 Thumbs.db
 
+# IDE
 .vscode/
 .idea/
 
+# Backup local
 sistema-horas-backup/
-"@ | Set-Content "C:\sistema-horas-demandas-v2 (1)\.gitignore"
+
+# Arquivos temporarios
+*.tmp
+*.temp

@@ -34,3 +34,7 @@ sistema-horas-backup/
 # Arquivos temporarios
 *.tmp
 *.temp
+
+ca.pem
+backend/ca.pem
+horaflow.sql
