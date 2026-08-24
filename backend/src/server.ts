@@ -2413,6 +2413,11 @@ app.get(
         );
       }
 
+      const period =
+        typeof req.query.period === 'string'
+          ? req.query.period
+          : null;
+
       const [rows] =
         await pool.query(
           `
@@ -2435,12 +2440,36 @@ app.get(
                 required_hours
               ),
               0
-            ) AS totalHours
+            ) AS totalHours,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN status = 'Concluída'
+                    AND (
+                      ? IS NULL
+                      OR DATE_FORMAT(
+                        execution_month,
+                        '%Y-%m'
+                      ) = ?
+                    )
+                  THEN
+                    COALESCE(analysis_hours, 0) +
+                    COALESCE(required_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS finishedHours
 
           FROM demands
           ${where}
           `,
-          params
+          [
+            period,
+            period,
+            ...params
+          ]
         );
 
       const [statusRows] =
@@ -2491,6 +2520,11 @@ app.get(
           requiredHours:
             Number(
               summary.requiredHours
+            ),
+
+          finishedHours:
+            Number(
+              summary.finishedHours
             ),
 
           byStatus,
@@ -2571,3 +2605,5 @@ app.listen(
     );
   }
 );
+
+
