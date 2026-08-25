@@ -113,6 +113,7 @@ function App(){
   const [loading,setLoading]=useState(false);
   const [apiError,setApiError]=useState('');
   const [demandSearch,setDemandSearch]=useState('');
+  const [demandFiltersOpen,setDemandFiltersOpen]=useState(false);
   const [demandStatusFilter,setDemandStatusFilter]=useState('Todos');
   const [demandApprovalFilter,setDemandApprovalFilter]=useState('Todas');
   const [demandPriorityFilter,setDemandPriorityFilter]=useState('Todas');
@@ -759,7 +760,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
       {tab==='clientes'&&<ClientsPage clients={clients} demands={demands} isAdmin={isAdmin} onNew={()=>openClientModal()} onEdit={openClientModal} onDemand={openEditDemand}/>}
       {(tab==='dashboard'||tab==='demandas')&&<>
         {tab==='dashboard' ? (
-          <section className="hf-filters">
+          <section className="hf-filters hf-filters-clean">
             {isAdmin&&<select value={dashboardClientFilter} onChange={e=>setDashboardClientFilter(e.target.value)}><option value="Todos">Todos os clientes</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
             <select value={dashboardPeriod} onChange={e=>setDashboardPeriod(e.target.value)}><option value="Todos">Todos os períodos</option><option value="2026-08">Agosto/2026</option><option value="2026-07">Julho/2026</option></select>
             <span className="hf-filter-count"><Filter size={15}/> {dashboard.totalDemands} demandas</span>
@@ -774,23 +775,180 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 </button>
           </section>
         ) : (
-          <section className="hf-filters">
-            <div className="hf-search"><Search size={17}/><input value={demandSearch} onChange={e=>setDemandSearch(e.target.value)} placeholder="Buscar por nº, problema, tratamento ou responsável..."/></div>
-            <select aria-label="Filtrar por status" value={demandStatusFilter} onChange={e=>setDemandStatusFilter(e.target.value)}><option value="Todos">Todos os status</option>{statuses.map(s=><option key={s} value={s}>{s}</option>)}{demands.some(d=>normalizeStatus(d.status)==='Pendente')&&<option value="Pendente">Pendente</option>}</select>
-            <select value={demandApprovalFilter} onChange={e=>setDemandApprovalFilter(e.target.value)}><option value="Todas">Todas as aprovações</option><option value="Pendente">Pendente</option><option value="Aprovada">Aprovada</option><option value="Reprovada">Reprovada</option></select>
-            <select value={demandPriorityFilter} onChange={e=>setDemandPriorityFilter(e.target.value)}><option>Todas</option>{priorities.map(p=><option key={p}>{p}</option>)}</select>
-            {isAdmin&&<select value={demandClientFilter} onChange={e=>setDemandClientFilter(e.target.value)}><option value="Todos">Todos os clientes</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
-            <select value={demandPeriod} onChange={e=>setDemandPeriod(e.target.value)}><option value="Todos">Todos os períodos</option><option value="2026-08">Agosto/2026</option><option value="2026-07">Julho/2026</option></select>
-            <label className="hf-filter-month" title="Filtrar pelo mês programado para execução">
-              <CalendarDays size={15}/>
-              <span>Execução</span>
-              <input type="month" value={demandExecutionMonthFilter} onChange={e=>setDemandExecutionMonthFilter(e.target.value)} aria-label="Filtrar por mês de execução"/>
-              {demandExecutionMonthFilter&&<button type="button" onClick={()=>setDemandExecutionMonthFilter('')} title="Limpar filtro">×</button>}
-            </label>
-            <span className="hf-filter-count"><Filter size={15}/> {filtered.length} resultados</span>
+          <section className="hf-filters hf-filters-clean">
+            <div className="hf-search">
+  <Search size={17}/>
+  <input
+    value={demandSearch}
+    onChange={e=>setDemandSearch(e.target.value)}
+    placeholder="Buscar..."
+  />
+</div>
+
+<button
+  type="button"
+  className="hf-filter-trigger"
+  onClick={()=>setDemandFiltersOpen(true)}
+>
+  <Filter size={16}/>
+  Filtros
+</button>
           </section>
         )}
 
+        {demandFiltersOpen && (
+          <div
+            className="hf-filter-modal-backdrop"
+            onMouseDown={e=>{
+              if(e.target===e.currentTarget)setDemandFiltersOpen(false)
+            }}
+          >
+            <div
+              className="hf-filter-modal"
+              onMouseDown={e=>e.stopPropagation()}
+            >
+
+              <div className="hf-filter-modal-header">
+                <div>
+                  <h3>Filtros</h3>
+                  <p>Refine a listagem de demandas</p>
+                </div>
+
+                <button
+                  type="button"
+                  className="hf-filter-modal-close"
+                  onClick={()=>setDemandFiltersOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="hf-filter-modal-body">
+
+                <label>
+                  <span>Status</span>
+                  <select
+                    value={demandStatusFilter}
+                    onChange={e=>setDemandStatusFilter(e.target.value)}
+                  >
+                    <option value="Todos">Status</option>
+                    {statuses.map(s=>
+                      <option key={s} value={s}>{s}</option>
+                    )}
+                    {demands.some(d=>normalizeStatus(d.status)==='Pendente') &&
+                      <option value="Pendente">Pendente</option>
+                    }
+                  </select>
+                </label>
+
+                <label>
+                  <span>Aprovações</span>
+                  <select
+                    value={demandApprovalFilter}
+                    onChange={e=>setDemandApprovalFilter(e.target.value)}
+                  >
+                    <option value="Todas">Aprovações</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Aprovada">Aprovada</option>
+                    <option value="Reprovada">Reprovada</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Prioridade</span>
+                  <select
+                    value={demandPriorityFilter}
+                    onChange={e=>setDemandPriorityFilter(e.target.value)}
+                  >
+                    <option value="Todas">Prioridade</option>
+                    {priorities.map(p=>
+                      <option key={p}>{p}</option>
+                    )}
+                  </select>
+                </label>
+
+                {isAdmin && (
+                  <label>
+                    <span>Clientes</span>
+                    <select
+                      value={demandClientFilter}
+                      onChange={e=>setDemandClientFilter(e.target.value)}
+                    >
+                      <option value="Todos">Clientes</option>
+                      {clients.map(c=>
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      )}
+                    </select>
+                  </label>
+                )}
+
+                <label>
+                  <span>Períodos</span>
+                  <select
+                    value={demandPeriod}
+                    onChange={e=>setDemandPeriod(e.target.value)}
+                  >
+                    <option value="Todos">Períodos</option>
+                    <option value="2026-08">Agosto/2026</option>
+                    <option value="2026-07">Julho/2026</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Execução</span>
+
+                  <div className="hf-execution-filter-modal">
+                    <CalendarDays size={16}/>
+
+                    <input
+                      type="month"
+                      value={demandExecutionMonthFilter}
+                      onChange={e=>setDemandExecutionMonthFilter(e.target.value)}
+                    />
+
+                    {demandExecutionMonthFilter && (
+                      <button
+                        type="button"
+                        onClick={()=>setDemandExecutionMonthFilter('')}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </label>
+
+              </div>
+
+              <div className="hf-filter-modal-footer">
+
+                <button
+                  type="button"
+                  className="hf-filter-clear"
+                  onClick={()=>{
+                    setDemandStatusFilter('Todos');
+                    setDemandApprovalFilter('Todas');
+                    setDemandPriorityFilter('Todas');
+                    setDemandClientFilter('Todos');
+                    setDemandPeriod('Todos');
+                    setDemandExecutionMonthFilter('');
+                  }}
+                >
+                  Limpar filtros
+                </button>
+
+                <button
+                  type="button"
+                  className="hf-filter-apply"
+                  onClick={()=>setDemandFiltersOpen(false)}
+                >
+                  Aplicar filtros
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+        )}
         {tab==='dashboard'?<>
           <section className="hf-cards">
             <Card title="Demandas" value={dashboardLoading?'…':dashboard.totalDemands} icon={<BarChart3/>}/>
@@ -1136,9 +1294,566 @@ const styles = `
 .hf-reject-confirm:hover{background:#c93f3f!important;border-color:#c93f3f!important}
 @media(max-width:650px){.hf-form-grid{grid-template-columns:1fr}.hf-demand-modal,.hf-decision-modal{width:calc(100vw - 20px)}.hf-modal-head{padding:18px}.hf-demand-form,.hf-decision-modal .hf-form{padding:0 18px 18px}.hf-decision-demand{margin-left:18px;margin-right:18px}}
 
+
+/* =========================================================
+   SAPPHIRE — FILTROS CLEAN
+   ========================================================= */
+
+.hf-filters-clean {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px !important;
+
+  background: #ffffff !important;
+  border: 1px solid #e4eaf3 !important;
+  border-radius: 16px !important;
+
+  box-shadow: 0 2px 8px rgba(16,24,40,.03) !important;
+}
+
+.hf-filters-clean .hf-search {
+  flex: 1 !important;
+  min-width: 0 !important;
+
+  height: 42px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+
+  padding: 0 13px !important;
+
+  background: #fff !important;
+  border: 1px solid #dfe6f1 !important;
+  border-radius: 10px !important;
+
+  color: #8794a7 !important;
+
+  transition: .18s ease !important;
+}
+
+.hf-filters-clean .hf-search:focus-within {
+  border-color: #2f5bea !important;
+  box-shadow: 0 0 0 3px rgba(47,91,234,.08) !important;
+}
+
+.hf-filters-clean .hf-search svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: #8996a9 !important;
+}
+
+.hf-filters-clean .hf-search input {
+  flex: 1 !important;
+  min-width: 0 !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+
+  background: transparent !important;
+
+  color: #344054 !important;
+  font-size: 14px !important;
+}
+
+.hf-filters-clean .hf-search input::placeholder {
+  color: #98a2b3 !important;
+}
+
+
+/* =========================================================
+   BOTÃO FILTROS
+   ========================================================= */
+
+.hf-filter-trigger {
+  height: 42px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+
+  padding: 0 15px !important;
+
+  border: 1px solid #dce4ef !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+  color: #475467 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  cursor: pointer !important;
+
+  transition: all .18s ease !important;
+}
+
+.hf-filter-trigger svg {
+  width: 16px !important;
+  height: 16px !important;
+
+  color: #667085 !important;
+
+  stroke-width: 2 !important;
+}
+
+.hf-filter-trigger:hover {
+  background: #f6f8ff !important;
+  border-color: #c5d2f3 !important;
+  color: #2f5bea !important;
+}
+
+.hf-filter-trigger:hover svg {
+  color: #2f5bea !important;
+}
+
+
+/* =========================================================
+   RESULTADOS
+   ========================================================= */
+
+.hf-filter-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+
+  color: #98a2b3 !important;
+
+  font-size: 13px !important;
+  font-weight: 500 !important;
+
+  white-space: nowrap !important;
+}
+
+.hf-filter-count svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+
+/* =========================================================
+   BACKDROP
+   ========================================================= */
+
+.hf-filter-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+
+  z-index: 99999 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 24px !important;
+
+  background: rgba(13,26,45,.42) !important;
+
+  backdrop-filter: blur(5px) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.hf-filter-modal {
+  width: min(680px, calc(100vw - 48px)) !important;
+  max-width: 680px !important;
+
+  max-height: calc(100vh - 48px) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #e5eaf2 !important;
+  border-radius: 18px !important;
+
+  box-shadow:
+    0 24px 70px rgba(15,23,42,.18),
+    0 8px 24px rgba(15,23,42,.08) !important;
+
+  animation: sapphireFilterModal .18s ease-out !important;
+}
+
+@keyframes sapphireFilterModal {
+
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+}
+
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.hf-filter-modal-header {
+  min-height: 76px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  padding: 18px 22px !important;
+
+  background: #ffffff !important;
+
+  border-bottom: 1px solid #edf1f6 !important;
+}
+
+.hf-filter-modal-header > div:first-child {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.hf-filter-modal-header h3 {
+  margin: 0 !important;
+
+  color: #172033 !important;
+
+  font-family: inherit !important;
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.2px !important;
+}
+
+.hf-filter-modal-header p {
+  margin: 0 !important;
+
+  color: #98a2b3 !important;
+
+  font-size: 13px !important;
+}
+
+
+/* =========================================================
+   FECHAR
+   ========================================================= */
+
+.hf-filter-modal-close {
+  width: 34px !important;
+  height: 34px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 9px !important;
+
+  background: transparent !important;
+  color: #98a2b3 !important;
+
+  font-size: 21px !important;
+  line-height: 1 !important;
+
+  cursor: pointer !important;
+
+  transition: .15s ease !important;
+}
+
+.hf-filter-modal-close:hover {
+  background: #f2f4f7 !important;
+  color: #344054 !important;
+}
+
+
+/* =========================================================
+   CORPO
+   ========================================================= */
+
+.hf-filter-modal-body {
+  display: grid !important;
+
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+
+  gap: 18px !important;
+
+  padding: 22px !important;
+
+  overflow-y: auto !important;
+
+  background: #ffffff !important;
+}
+
+
+/* =========================================================
+   CAMPOS
+   ========================================================= */
+
+.hf-filter-modal-body > label {
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 7px !important;
+
+  min-width: 0 !important;
+
+  margin: 0 !important;
+}
+
+.hf-filter-modal-body > label > span {
+  color: #667085 !important;
+
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+
+/* =========================================================
+   SELECTS
+   ========================================================= */
+
+.hf-filter-modal-body select {
+  width: 100% !important;
+  height: 44px !important;
+
+  box-sizing: border-box !important;
+
+  padding: 0 13px !important;
+
+  border: 1px solid #dce3ed !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+  color: #344054 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+
+  outline: none !important;
+
+  cursor: pointer !important;
+
+  transition: all .15s ease !important;
+}
+
+.hf-filter-modal-body select:hover {
+  border-color: #bcc9df !important;
+  background: #fcfdff !important;
+}
+
+.hf-filter-modal-body select:focus {
+  border-color: #4770f5 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(47,91,234,.08) !important;
+}
+
+
+/* =========================================================
+   EXECUÇÃO
+   ========================================================= */
+
+.hf-execution-filter-modal {
+  width: 100% !important;
+  height: 44px !important;
+
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  padding: 0 11px !important;
+
+  border: 1px solid #dce3ed !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+
+  color: #8491a5 !important;
+}
+
+.hf-execution-filter-modal:focus-within {
+  border-color: #4770f5 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(47,91,234,.08) !important;
+}
+
+.hf-execution-filter-modal svg {
+  width: 17px !important;
+  height: 17px !important;
+
+  color: #8190a5 !important;
+}
+
+.hf-execution-filter-modal input {
+  flex: 1 !important;
+  min-width: 0 !important;
+
+  margin-left: 8px !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+
+  background: transparent !important;
+
+  color: #344054 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+}
+
+.hf-execution-filter-modal button {
+  width: 26px !important;
+  height: 26px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  border: 0 !important;
+  border-radius: 7px !important;
+
+  background: #f2f4f7 !important;
+  color: #667085 !important;
+
+  cursor: pointer !important;
+}
+
+
+/* =========================================================
+   RODAPÉ
+   ========================================================= */
+
+.hf-filter-modal-footer {
+  min-height: 74px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  padding: 15px 22px !important;
+
+  border-top: 1px solid #edf1f6 !important;
+
+  background: #fbfcfe !important;
+}
+
+.hf-filter-clear,
+.hf-filter-apply {
+  height: 42px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 18px !important;
+
+  border-radius: 9px !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  cursor: pointer !important;
+
+  transition: all .15s ease !important;
+}
+
+.hf-filter-clear {
+  border: 1px solid #dce3ed !important;
+
+  background: #ffffff !important;
+  color: #667085 !important;
+}
+
+.hf-filter-clear:hover {
+  background: #f7f9fc !important;
+  color: #344054 !important;
+}
+
+.hf-filter-apply {
+  min-width: 145px !important;
+
+  border: 0 !important;
+
+  background: #2f5bea !important;
+  color: #ffffff !important;
+
+  box-shadow: 0 5px 14px rgba(47,91,234,.20) !important;
+}
+
+.hf-filter-apply:hover {
+  background: #244bd0 !important;
+
+  box-shadow: 0 7px 18px rgba(47,91,234,.25) !important;
+
+  transform: translateY(-1px) !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .hf-filter-modal-backdrop {
+    align-items: flex-start !important;
+    padding: 10px !important;
+  }
+
+  .hf-filter-modal {
+    width: calc(100vw - 20px) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 20px) !important;
+  }
+
+  .hf-filter-modal-body {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding: 18px !important;
+  }
+
+}
+
+@media (max-width: 520px) {
+
+  .hf-filter-count {
+    display: none !important;
+  }
+
+  .hf-filter-modal-footer {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+  }
+
+  .hf-filter-clear,
+  .hf-filter-apply {
+    width: 100% !important;
+  }
+
+}
+
 `;
 
 export default App;
+
+
+
+
 
 
 
