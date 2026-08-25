@@ -957,13 +957,28 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             <Card title="Horas totais" value={dashboardLoading?'…':`${dashboard.totalHours}h`} icon={<CheckCircle2/>}/>
           </section>
           <section className="hf-cards small">
-            <Card title="Aprovadas" value={dashboardLoading?'…':dashboard.approvedDemands} icon={<CheckCircle2/>}/>
-            <Card title="Reprovadas" value={dashboardLoading?'…':dashboard.rejectedDemands} icon={<X/>}/>
-            <Card title="Aguardando aprovação" value={dashboardLoading?'…':dashboard.pendingApproval} icon={<Clock3/>}/>
-            <Card title="Em desenvolvimento" value={dashboardLoading?'…':(dashboard.byStatus['Em desenvolvimento']||0)} icon={<BarChart3/>}/>
-             <Card title="Horas finalizadas" value={dashboardLoading?'…':`${dashboard.finishedHours}h`} icon={<CheckCircle2/>}/>
-             <Card title="Demandas finalizadas" value={dashboardLoading?'…':dashboard.finishedDemands} icon={<CheckCircle2/>}/>
-          </section>
+  {dashboard.approvedDemands > 0 && (
+    <Card title="Aprovadas" value={dashboardLoading?'…':dashboard.approvedDemands} icon={<CheckCircle2/>}/>
+  )}
+
+  {dashboard.rejectedDemands > 0 && (
+    <Card title="Reprovadas" value={dashboardLoading?'…':dashboard.rejectedDemands} icon={<X/>}/>
+  )}
+
+  {dashboard.pendingApproval > 0 && (
+    <Card title="Aguardando aprovação" value={dashboardLoading?'…':dashboard.pendingApproval} icon={<Clock3/>}/>
+  )}
+
+  {(dashboard.byStatus['Em desenvolvimento'] || 0) > 0 && (
+    <Card title="Em desenvolvimento" value={dashboardLoading?'…':(dashboard.byStatus['Em desenvolvimento']||0)} icon={<BarChart3/>}/>
+  )}
+
+  <Card title="Horas finalizadas" value={dashboardLoading?'…':`${dashboard.finishedHours}h`} icon={<CheckCircle2/>}/>
+
+  {dashboard.finishedDemands > 0 && (
+    <Card title="Demandas finalizadas" value={dashboardLoading?'…':dashboard.finishedDemands} icon={<CheckCircle2/>}/>
+  )}
+</section>
           <section className="hf-grid2">
             <div className="hf-panel">
               <PanelTitle title="Demandas por status"/>
@@ -1850,6 +1865,7 @@ const styles = `
 `;
 
 export default App;
+
 
 
 
