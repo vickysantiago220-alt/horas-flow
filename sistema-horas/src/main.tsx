@@ -110,6 +110,38 @@ function App(){
   const [dashboardLoading,setDashboardLoading]=useState(false);
   const [dashboardClientFilter,setDashboardClientFilter]=useState('Todos');
   const [dashboardPeriod,setDashboardPeriod]=useState('Todos');
+
+const availablePeriods = useMemo(() => {
+  const periods = new Set<string>();
+
+  demands.forEach(d => {
+    const created = String(d.criadoEm || '').slice(0,7);
+    const execution = String(d.executionMonth || '').slice(0,7);
+
+    if (created) periods.add(created);
+    if (execution) periods.add(execution);
+  });
+
+  const current = new Date();
+  periods.add(
+    `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}`
+  );
+
+  return Array.from(periods).sort().reverse();
+}, [demands]);
+
+const formatPeriod = (period:string) => {
+  if (!period || period === 'Todos') return 'Todos os períodos';
+
+  const [year, month] = period.split('-');
+
+  const date = new Date(Number(year), Number(month)-1, 1);
+
+  return date.toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric'
+  }).replace(/^./, c => c.toUpperCase());
+};
   const [loading,setLoading]=useState(false);
   const [apiError,setApiError]=useState('');
   const [demandSearch,setDemandSearch]=useState('');
@@ -762,7 +794,18 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         {tab==='dashboard' ? (
           <section className="hf-filters hf-filters-clean">
             {isAdmin&&<select value={dashboardClientFilter} onChange={e=>setDashboardClientFilter(e.target.value)}><option value="Todos">Todos os clientes</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
-            <select value={dashboardPeriod} onChange={e=>setDashboardPeriod(e.target.value)}><option value="Todos">Todos os períodos</option><option value="2026-08">Agosto/2026</option><option value="2026-07">Julho/2026</option></select>
+            <select
+  value={dashboardPeriod}
+  onChange={e=>setDashboardPeriod(e.target.value)}
+>
+  <option value="Todos">Todos os períodos</option>
+
+  {availablePeriods.map(period => (
+    <option key={period} value={period}>
+      {formatPeriod(period)}
+    </option>
+  ))}
+</select>
             <span className="hf-filter-count"><Filter size={15}/> {dashboard.totalDemands} demandas</span>
 <button
   type="button"
@@ -889,8 +932,12 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                     onChange={e=>setDemandPeriod(e.target.value)}
                   >
                     <option value="Todos">Períodos</option>
-                    <option value="2026-08">Agosto/2026</option>
-                    <option value="2026-07">Julho/2026</option>
+                    {availablePeriods.map(period => (
+      <option key={period} value={period}>
+        {formatPeriod(period)}
+      </option>
+    ))}
+                    
                   </select>
                 </label>
 
@@ -1865,6 +1912,9 @@ const styles = `
 `;
 
 export default App;
+
+
+
 
 
 
