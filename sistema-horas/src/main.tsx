@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   BarChart3, CheckCircle2, Clock3, Filter, History, LayoutDashboard,
   Plus, Search, Trash2, Users, X, Clipboard, CalendarDays, LogOut,
@@ -152,6 +154,275 @@ function App(){
   const isAdmin=user?.role==='ADMIN';
   const isInternal=user?.role==='INTERNO'||isAdmin;
   const isClient=user?.role==='CLIENTE';
+
+  const exportStatusReport = () => {
+    const doc = new jsPDF();
+
+    const formatReportPeriod = (period: string) => {
+    if (period === 'Todos') {
+      return 'Todos os períodos';
+    }
+
+    const [year, month] = period.split('-');
+
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro'
+    ];
+
+    const monthName =
+      months[Number(month) - 1];
+
+    return monthName
+      ? monthName + '/' + year
+      : period;
+  };
+
+  const periodLabel =
+    formatReportPeriod(dashboardPeriod);
+
+    const selectedClient =
+      dashboardClientFilter !== 'Todos'
+        ? clients.find(
+            c => String(c.id) === String(dashboardClientFilter)
+          )
+        : null;
+
+    const clientName =
+      selectedClient?.name ||
+      (isClient ? user?.name : 'Todos os clientes');
+
+    const reportDemands = demands.filter((d) => {
+      const normalizedStatus = normalizeStatus(d.status);
+
+      if (normalizedStatus !== 'Concluída') {
+        return false;
+      }
+
+      if (
+        dashboardPeriod !== 'Todos' &&
+        !String(d.executionMonth || '').startsWith(dashboardPeriod)
+      ) {
+        return false;
+      }
+
+      if (dashboardClientFilter !== 'Todos') {
+        const demandClientId =
+          (d as any).clientId ??
+          (d as any).client_id ??
+          '';
+
+        if (
+          String(demandClientId) !==
+          String(dashboardClientFilter)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    const analysisHours = reportDemands.reduce(
+      (sum, d) => sum + Number(d.horasAnalise || 0),
+      0
+    );
+
+    const requiredHours = reportDemands.reduce(
+      (sum, d) => sum + Number(d.horasNecessarias || 0),
+      0
+    );
+
+    const totalHours =
+      analysisHours + requiredHours;
+
+    const today = new Date();
+
+    const generatedAt =
+      today.toLocaleDateString('pt-BR') +
+      ' às ' +
+      today.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+    // =================================================
+    // CABEÇALHO
+    // =================================================
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('STATUS REPORT', 14, 20);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(
+      `Período: ${periodLabel}`,
+      14,
+      29
+    );
+
+    doc.text(
+      `Cliente: ${clientName}`,
+      14,
+      35
+    );
+
+    doc.text(
+      `Gerado em: ${generatedAt}`,
+      14,
+      41
+    );
+
+    // =================================================
+    // RESUMO
+    // =================================================
+
+    const summaryY = 52;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+
+    doc.text(
+      'RESUMO DO PERÍODO',
+      14,
+      summaryY
+    );
+
+    doc.setFont('helvetica', 'normal');
+
+    doc.text(
+      `Demandas finalizadas: ${reportDemands.length}`,
+      14,
+      summaryY + 9
+    );
+
+    doc.text(
+      `Horas de análise: ${analysisHours}h`,
+      14,
+      summaryY + 16
+    );
+
+    doc.text(
+      `Horas necessárias: ${requiredHours}h`,
+      14,
+      summaryY + 23
+    );
+
+    doc.text(
+      `Horas totais: ${totalHours}h`,
+      14,
+      summaryY + 30
+    );
+
+    // =================================================
+    // TABELA
+    // =================================================
+
+    const tableData = reportDemands.map((d) => [
+      String(d.numero),
+      d.problema || '-',
+      d.tratamento || '-',
+      `${Number(d.horasAnalise || 0)}h`,
+      `${Number(d.horasNecessarias || 0)}h`,
+      `${Number(d.horasAnalise || 0) + Number(d.horasNecessarias || 0)}h`,
+      d.responsavel || '-'
+    ]);
+
+    autoTable(doc, {
+      startY: 91,
+      head: [[
+        'Nº',
+        'Problema',
+        'Tratamento',
+        'Análise',
+        'Necessárias',
+        'Total',
+        'Responsável'
+      ]],
+      body: tableData,
+      theme: 'grid',
+      styles: {
+        font: 'helvetica',
+        fontSize: 8,
+        cellPadding: 3,
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 25 }
+      },
+      margin: {
+        left: 10,
+        right: 10
+      }
+    });
+
+    // =================================================
+    // RODAPÉ
+    // =================================================
+
+    const pageCount =
+      (doc as any).internal.getNumberOfPages();
+
+    for (let page = 1; page <= pageCount; page++) {
+      doc.setPage(page);
+
+      const pageHeight =
+        doc.internal.pageSize.getHeight();
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+
+      doc.text(
+        `Página ${page} de ${pageCount}`,
+        14,
+        pageHeight - 10
+      );
+
+      doc.text(
+        'Status Report',
+        196,
+        pageHeight - 10,
+        { align: 'right' }
+      );
+    }
+
+    const filePeriod =
+      dashboardPeriod === 'Todos'
+        ? 'todos-periodos'
+        : dashboardPeriod;
+
+    const safeClient =
+      clientName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    doc.save(
+      `status-report-${safeClient || 'cliente'}-${filePeriod}.pdf`
+    );
+  };
+
 
   const request=async(path:string,options:RequestInit={})=>{
     const headers=new Headers(options.headers||{});
@@ -492,6 +763,15 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             {isAdmin&&<select value={dashboardClientFilter} onChange={e=>setDashboardClientFilter(e.target.value)}><option value="Todos">Todos os clientes</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
             <select value={dashboardPeriod} onChange={e=>setDashboardPeriod(e.target.value)}><option value="Todos">Todos os períodos</option><option value="2026-08">Agosto/2026</option><option value="2026-07">Julho/2026</option></select>
             <span className="hf-filter-count"><Filter size={15}/> {dashboard.totalDemands} demandas</span>
+<button
+  type="button"
+  className="hf-secondary"
+  onClick={exportStatusReport}
+  disabled={dashboardLoading}
+>
+  <Clipboard size={15}/>
+  Exportar Status Report
+</button>
           </section>
         ) : (
           <section className="hf-filters">
@@ -859,3 +1139,8 @@ const styles = `
 `;
 
 export default App;
+
+
+
+
+
