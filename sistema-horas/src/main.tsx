@@ -508,7 +508,7 @@ const formatPeriod = (period:string) => {
         approvedDemands:Number(d.approvedDemands||0),
         rejectedDemands:Number(d.rejectedDemands||0),
         pendingApproval:Number(d.pendingApproval||0),
-        finishedHours:Number(d.finishedHours ?? d.finalizedHours ?? 0),
+        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída').reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
         finishedDemands:Number(d.finishedDemands ?? d.finalizedDemands ?? 0),
         byStatus:d.byStatus||{},
         byClient:d.byClient||[]
@@ -1027,39 +1027,124 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   )}
 </section>
           <section className="hf-grid2">
-            <div className="hf-panel">
+
+            <div className="hf-panel hf-chart-panel">
               <PanelTitle title="Demandas por status"/>
-              <div className="hf-status-list">
-                {statuses.map((s) => {
-                  const count = dashboard.byStatus[s] || 0;
-                  const total = dashboard.totalDemands || 0;
-                  const percentage = total ? (count / total) * 100 : 0;
-                  return (
-                    <div className="hf-status-row" key={s}>
-                      <span className={"hf-status-dot dot-" + slug(s)} />
-                      <span>{s}</span>
-                      <strong>{count}</strong>
-                      <div className="hf-bar">
-                        <i style={{ width: String(percentage) + "%" }} />
+
+              <div className="hf-status-chart">
+
+                <div className="hf-donut">
+                  <div className="hf-donut-center">
+                    <strong>{dashboard.totalDemands}</strong>
+                    <span>demandas</span>
+                  </div>
+                </div>
+
+                <div className="hf-chart-legend">
+                  {statuses.map((s) => {
+                    const count = dashboard.byStatus[s] || 0;
+                    const total = dashboard.totalDemands || 0;
+                    const percentage = total ? (count / total) * 100 : 0;
+
+                    return (
+                      <div className="hf-chart-legend-row" key={s}>
+                        <div className="hf-chart-legend-label">
+                          <span className={"hf-status-dot dot-" + slug(s)} />
+                          <span>{s}</span>
+                        </div>
+
+                        <strong>{count}</strong>
+                        <small>{percentage.toFixed(0)}%</small>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
               </div>
             </div>
-            <div className="hf-panel">
-              <PanelTitle title="Resumo da empresa" icon={<CalendarDays size={18}/>}/>
-              <div className="hf-big-number">{dashboard.totalHours}h</div>
-              <p className="hf-muted">Horas totais da empresa selecionada</p>
-              <div className="hf-mini-stats">
-                <div><span>Análise</span><b>{dashboard.analysisHours}h</b></div>
-                <div><span>Necessárias</span><b>{dashboard.requiredHours}h</b></div>
-                <div><span>Aprovadas</span><b>{dashboard.approvedDemands}</b></div><div><span>Finalizadas</span><b>{dashboard.finishedHours}h</b></div>
+
+            <div className="hf-panel hf-hours-chart-panel">
+              <PanelTitle title="Resumo de horas" icon={<CalendarDays size={18}/>}/>
+
+              <div className="hf-hours-summary">
+                <div className="hf-big-number">
+                  {dashboard.totalHours}h
+                </div>
+
+                <p className="hf-muted">
+                  Horas totais da empresa selecionada
+                </p>
               </div>
+
+              <div className="hf-hours-bars">
+
+                <div className="hf-hours-bar-row">
+                  <div className="hf-hours-bar-header">
+                    <span>Análise</span>
+                    <strong>{dashboard.analysisHours}h</strong>
+                  </div>
+
+                  <div className="hf-hours-bar-track">
+                    <div
+                      className="hf-hours-bar-fill"
+                      style={{
+                        width: `${dashboard.totalHours ? Math.min(100, (dashboard.analysisHours / dashboard.totalHours) * 100) : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="hf-hours-bar-row">
+                  <div className="hf-hours-bar-header">
+                    <span>Necessárias</span>
+                    <strong>{dashboard.requiredHours}h</strong>
+                  </div>
+
+                  <div className="hf-hours-bar-track">
+                    <div
+                      className="hf-hours-bar-fill"
+                      style={{
+                        width: `${dashboard.totalHours ? Math.min(100, (dashboard.requiredHours / dashboard.totalHours) * 100) : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="hf-hours-bar-row">
+                  <div className="hf-hours-bar-header">
+                    <span>Finalizadas</span>
+                    <strong>{dashboard.finishedHours}h</strong>
+                  </div>
+
+                  <div className="hf-hours-bar-track">
+                    <div
+                      className="hf-hours-bar-fill"
+                      style={{
+                        width: `${dashboard.totalHours ? Math.min(100, (dashboard.finishedHours / dashboard.totalHours) * 100) : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="hf-hours-footer">
+                <div>
+                  <span>Demandas aprovadas</span>
+                  <b>{dashboard.approvedDemands}</b>
+                </div>
+
+                <div>
+                  <span>Demandas finalizadas</span>
+                  <b>{dashboard.finishedDemands}</b>
+                </div>
+              </div>
+
             </div>
+
           </section>
-          <section className="hf-panel"><div className="hf-panel-title"><div><h2>Últimas demandas</h2><p className="hf-muted">Acompanhe as demandas mais recentes</p></div><button className="hf-link" onClick={()=>setTab('demandas')}>Ver todas</button></div><DemandTable demands={dashboardDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient}/></section>
-        </>:<section className="hf-panel"><div className="hf-panel-title"><div><h2>Planilha de demandas</h2><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div><DemandTable demands={paginatedDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient}/><div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div><div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
+          <section className="hf-panel"><div className="hf-panel-title"><div><h2>Últimas demandas</h2><p className="hf-muted">Acompanhe as demandas mais recentes</p></div><button className="hf-link" onClick={()=>setTab('demandas')}>Ver todas</button></div><DemandTable demands={dashboardDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient} clients={clients}/></section>
+        </>:<section className="hf-panel"><div className="hf-panel-title"><div><h2>Planilha de demandas</h2><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div><DemandTable demands={paginatedDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient} clients={clients}/><div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div><div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
       </>}
     </main>
 
@@ -1138,13 +1223,62 @@ function formatExecutionMonth(value:any){if(!value)return '—';const raw=String
 function getExecutionMonthKey(value:any){if(!value)return '';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[1]}-${match[2]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[3]}-${br[2]}`;return ''}
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
 
-function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,isClient}:{demands:Demand[];remove:(id:string)=>void;approve:(d:Demand,approved?:boolean)=>void;history:(d:Demand)=>void;canEdit:boolean;canApprove:boolean;onEdit:(d:Demand)=>void;isClient:boolean}){
+function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,isClient,clients}:{demands:Demand[];remove:(id:string)=>void;approve:(d:Demand,approved?:boolean)=>void;history:(d:Demand)=>void;canEdit:boolean;canApprove:boolean;onEdit:(d:Demand)=>void;isClient:boolean;clients:any[]}){
   return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Execução</th><th>Responsável</th><th>Pago</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
-    <td><span className="hf-client-cell">{(d as any).clientName||'—'}</span></td>
+    <td>
+  {(() => {
+    const clientId = (d as any).clientId ?? (d as any).client_id;
+    const client = clients.find(
+      (c:any) => String(c.id) === String(clientId)
+    );
+
+    const clientName =
+      (d as any).clientName ||
+      (d as any).client_name ||
+      client?.name ||
+      'Cliente não informado';
+
+    return (
+      <span
+        className="hf-client-cell"
+        title={String(clientName).trim()}
+      >
+        {clientName === 'Cliente não informado'
+          ? '—'
+          : clientName}
+      </span>
+    );
+  })()}
+</td>
     <td><div className="hf-demand-text" title={d.problema}>{d.problema||'—'}</div></td>
     <td><div className="hf-demand-text" title={d.tratamento}>{d.tratamento||'—'}</div></td>
-    <td><div className="hf-hours-cell"><b>{d.horasAnalise}</b><span>+</span><b>{d.horasNecessarias}</b><small>{d.horasAnalise+d.horasNecessarias}h total</small></div></td>
+    <td>
+  <div className="hf-hours-tooltip">
+    <div className="hf-hours-cell">
+      <b>{d.horasAnalise + d.horasNecessarias}h</b>
+    </div>
+
+    <div className="hf-hours-tooltip-content">
+      <div className="hf-hours-tooltip-title">Horas</div>
+
+      <div className="hf-hours-tooltip-row">
+        <span>Análise</span>
+        <b>{d.horasAnalise}h</b>
+      </div>
+
+      <div className="hf-hours-tooltip-row">
+        <span>Necessárias</span>
+        <b>{d.horasNecessarias}h</b>
+      </div>
+
+      <div className="hf-hours-tooltip-total">
+        <span>Total</span>
+        <b>{d.horasAnalise + d.horasNecessarias}h</b>
+      </div>
+    </div>
+  </div>
+</td>
     <td><span className={`hf-priority-pill priority-${slug(d.prioridade)}`}>{d.prioridade}</span></td>
     <td><span className={`hf-status-pill status-${slug(normalizeStatus(d.status))}`}>{normalizeStatus(d.status)}</span></td>
     <td>{d.aprovacao==='Aprovada'?<span className="hf-pill approved">Aprovada</span>:d.aprovacao==='Reprovada'?<span className="hf-pill rejected">Reprovada</span>:canApprove?<div className="hf-approval-actions"><button className="hf-approve" onClick={()=>approve(d,true)}>Aprovar</button><button className="hf-reject" onClick={()=>approve(d,false)}>Reprovar</button></div>:<span className="hf-pill pending">Pendente</span>}</td>
@@ -1281,6 +1415,100 @@ function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loadi
 }
 
 const styles = `
+.hf-hours-tooltip{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+
+.hf-hours-cell{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.hf-hours-tooltip-content{
+  position:absolute;
+  z-index:99999;
+  left:50%;
+  top:calc(100% + 8px);
+  bottom:auto;
+  transform:translateX(-50%) translateY(-3px);
+  width:150px;
+  padding:9px 11px;
+  border-radius:7px;
+  background:#1f2937;
+  color:#fff;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .15s ease,transform .15s ease;
+}
+
+.hf-hours-tooltip-content::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:100%;
+  transform:translateX(-50%);
+  border:5px solid transparent;
+  border-bottom-color:#1f2937;
+}
+
+.hf-hours-tooltip:hover .hf-hours-tooltip-content{
+  opacity:1;
+  visibility:visible;
+  transform:translateX(-50%) translateY(0);
+}
+
+.hf-hours-tooltip-title{
+  font-size:11px;
+  font-weight:700;
+  margin-bottom:5px;
+}
+
+.hf-hours-tooltip-row,
+.hf-hours-tooltip-total{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-size:11px;
+  line-height:1.6;
+}
+
+.hf-hours-tooltip-row span{
+  opacity:.75;
+}
+
+.hf-hours-tooltip-total{
+  margin-top:4px;
+  padding-top:4px;
+  border-top:1px solid rgba(255,255,255,.15);
+  font-weight:700;
+}
+.hf-hours-tooltip-row span{
+  opacity:.75;
+}
+
+.hf-hours-tooltip-total{
+  margin-top:4px;
+  padding-top:4px;
+  border-top:1px solid rgba(255,255,255,.15);
+  font-weight:700;
+}
+.hf-hours-tooltip-row span{
+  opacity:.75;
+}
+
+.hf-hours-tooltip-total{
+  margin-top:6px;
+  padding-top:6px;
+  border-top:1px solid rgba(255,255,255,.15);
+  font-weight:700;
+}
+
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#172033}button,input,select,textarea{font-family:Poppins,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.55}
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
 .hf-brand-logo{padding:8px 10px 28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:88px;line-height:.92}.hf-brand-logo strong{color:#fff;font-size:24px;font-weight:800;letter-spacing:-.8px}.hf-brand-logo span{color:#5f82ff;font-size:21px;font-weight:500;letter-spacing:1.2px;margin-left:2px}.hf-execution{font-weight:700;color:#315efb}.hf-number-badge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:28px;padding:0 8px;border-radius:9px;background:#f1f5ff;color:#315efb;font-weight:800;font-size:11px}.hf-demand-text{max-width:220px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#344158}.hf-hours-cell{display:grid;grid-template-columns:auto 8px auto;align-items:center;gap:3px;white-space:nowrap}.hf-hours-cell b{font-size:12px}.hf-hours-cell span{color:#a2acbb}.hf-hours-cell small{grid-column:1/-1;color:#9aa4b3;font-size:9px}.hf-priority-pill,.hf-status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}.hf-priority-pill:before,.hf-status-pill:before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}.priority-baixa{background:#eef8f2;color:#258153}.priority-media{background:#f3f5f8;color:#667286}.priority-alta{background:#fff5e7;color:#b66a00}.priority-urgente{background:#fff0f1;color:#c83d4b}.status-aguardando-analise,.status-pendente{background:#fff8e9;color:#a56b00}.status-em-analise{background:#eef4ff;color:#315efb}.status-aguardando-aprovacao{background:#f4efff;color:#7b55c7}.status-em-desenvolvimento{background:#edf8f8;color:#15818a}.status-em-homologacao{background:#f1efff;color:#6b59c9}.status-concluida{background:#edf8f2;color:#258153}.status-reprovada{background:#fff0f1;color:#c83d4b}.hf-paid-dot{display:inline-flex;align-items:center;gap:6px;color:#7d899b;font-size:11px}.hf-paid-dot i{width:7px;height:7px;border-radius:50%;background:#c7ced8}.hf-paid-dot.on{color:#258153;font-weight:700}.hf-paid-dot.on i{background:#2fa66e}.hf-row-actions{display:flex;align-items:center;gap:5px;min-width:220px}.hf-action-btn{height:32px;border:1px solid #e0e6ef;background:#fff;color:#68758a;border-radius:8px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:600;transition:.18s}.hf-action-btn:hover{border-color:#c9d3e2;background:#f8fafc;transform:translateY(-1px)}.hf-action-btn.primary{color:#315efb;border-color:#d8e1ff;background:#f5f7ff}.hf-action-btn.primary:hover{background:#edf2ff}.hf-action-btn.danger{color:#c83d4b;border-color:#f0d5d9;background:#fff8f8}.hf-action-btn.danger:hover{background:#fff0f1}.actions-head{min-width:220px}.hf-pill.pending{background:#f3f5f8;color:#68758a}.hf-history-modal{width:min(720px,100%)}.hf-history-loading,.hf-history-empty{min-height:220px;display:grid;place-items:center;align-content:center;gap:10px;color:#8793a5;text-align:center}.hf-history-loading svg{animation:spin 1s linear infinite;color:#315efb}.hf-history-empty svg{color:#b7c0ce}.hf-history-empty strong{color:#354259}.hf-history-empty span{font-size:12px}@keyframes spin{to{transform:rotate(360deg)}}.hf-history-content{flex:1;background:#f8fafc;border:1px solid #e7ebf1;border-radius:12px;padding:12px 14px}.hf-history-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.hf-history-top span{font-size:10px;color:#8a95a6;background:#fff;border:1px solid #e4e9f0;border-radius:999px;padding:4px 7px}.hf-history-content p{display:flex;gap:8px;align-items:center;margin:9px 0 5px;font-size:12px;flex-wrap:wrap}.hf-history-content p span{color:#7d899b}.hf-history-content p b{color:#b0b8c5}.hf-history-content p strong{color:#315efb}.hf-history-content small{color:#9aa4b3;font-size:10px}.hf-history-row{align-items:flex-start}.hf-history-line{margin-top:18px;box-shadow:0 0 0 4px #315efb12}.hf-table-wrap table tbody tr:hover{background:#fbfcfe}.hf-table-wrap table td{vertical-align:middle}.hf-demand-modal{width:min(700px,100%)}
@@ -1299,7 +1527,7 @@ const styles = `
 .hf-client-metrics b,.hf-client-metrics span{display:block}.hf-client-metrics b{font-size:18px}.hf-client-metrics span{font-size:10px;color:#8793a5;margin-top:2px}
 .hf-client-demand-list{display:grid;gap:6px}.hf-client-demand-list button{border:1px solid #e8ecf2;background:#fff;border-radius:8px;padding:8px;text-align:left;display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center}
 .hf-client-demand-list button span{font-size:10px;color:#315efb;font-weight:800}.hf-client-demand-list strong{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hf-client-demand-list small{font-size:9px;color:#8793a5}
-.hf-client-cell{font-size:11px;font-weight:700;color:#556177;white-space:nowrap}
+.hf-client-cell{display:block;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700;color:#556177;cursor:help}
 .hf-approval-actions{display:flex;gap:5px}.hf-reject{border:0;background:#fff0f0;color:#c73a3a;border-radius:7px;padding:7px 8px;font-size:11px;font-weight:700}
 .hf-pill.rejected{background:#fff0f0;color:#c73a3a}.hf-rejection-reason{display:inline-block;max-width:220px;color:#a33a3a;background:#fff5f5;border:1px solid #ffd7d7;border-radius:8px;padding:6px 8px;line-height:1.35;font-size:11px;white-space:normal}.hf-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
@@ -1909,9 +2137,233 @@ const styles = `
 
 }
 
+
+/* ===== GRAFICOS DASHBOARD ===== */
+
+.hf-chart-panel{
+  min-height:290px;
+}
+
+.hf-status-chart{
+  display:flex;
+  align-items:center;
+  gap:34px;
+  margin-top:20px;
+}
+
+.hf-donut{
+  width:190px;
+  height:190px;
+  flex:0 0 190px;
+  border-radius:50%;
+  background:conic-gradient(
+    #98a8bd 0% 23.5%,
+    #4770f5 23.5% 29.4%,
+    #4770f5 29.4% 29.4%,
+    #22c55e 29.4% 100%
+  );
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+
+.hf-donut::after{
+  content:"";
+  position:absolute;
+  width:118px;
+  height:118px;
+  border-radius:50%;
+  background:#fff;
+}
+
+.hf-donut-center{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+
+.hf-donut-center strong{
+  font-size:30px;
+  line-height:1;
+  color:#18243b;
+}
+
+.hf-donut-center span{
+  margin-top:5px;
+  font-size:12px;
+  color:#98a2b3;
+}
+
+.hf-chart-legend{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.hf-chart-legend-row{
+  display:grid;
+  grid-template-columns:1fr auto 42px;
+  align-items:center;
+  gap:12px;
+  font-size:13px;
+}
+
+.hf-chart-legend-label{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#344054;
+}
+
+.hf-chart-legend-row strong{
+  color:#18243b;
+  font-size:13px;
+}
+
+.hf-chart-legend-row small{
+  color:#98a2b3;
+  text-align:right;
+  font-size:12px;
+}
+
+/* ===== RESUMO DE HORAS ===== */
+
+.hf-hours-chart-panel{
+  min-height:290px;
+}
+
+.hf-hours-summary{
+  margin-top:2px;
+}
+
+.hf-hours-bars{
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+  margin-top:22px;
+}
+
+.hf-hours-bar-row{
+  width:100%;
+}
+
+.hf-hours-bar-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+  font-size:12px;
+}
+
+.hf-hours-bar-header span{
+  color:#667085;
+  font-weight:500;
+}
+
+.hf-hours-bar-header strong{
+  color:#18243b;
+  font-size:12px;
+  font-weight:700;
+}
+
+.hf-hours-bar-track{
+  width:100%;
+  height:9px;
+  border-radius:999px;
+  background:#edf1f7;
+  overflow:hidden;
+}
+
+.hf-hours-bar-fill{
+  height:100%;
+  min-width:2px;
+  border-radius:999px;
+  background:#4770f5;
+  transition:width .3s ease;
+}
+
+.hf-hours-bar-row:nth-child(2) .hf-hours-bar-fill{
+  background:#7c5cff;
+}
+
+.hf-hours-bar-row:nth-child(3) .hf-hours-bar-fill{
+  background:#22a06b;
+}
+
+.hf-hours-footer{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:20px;
+  padding-top:15px;
+  border-top:1px solid #edf0f5;
+}
+
+.hf-hours-footer div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.hf-hours-footer span{
+  color:#98a2b3;
+  font-size:11px;
+}
+
+.hf-hours-footer b{
+  color:#18243b;
+  font-size:15px;
+}
+
+@media (max-width:640px){
+  .hf-status-chart{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .hf-donut{
+    margin:0 auto;
+  }
+
+  .hf-hours-bars{
+    gap:13px;
+  }
+
+  .hf-hours-footer{
+    grid-template-columns:1fr;
+  }
+}
+
+/* ===== FIM GRAFICOS DASHBOARD ===== */
 `;
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
