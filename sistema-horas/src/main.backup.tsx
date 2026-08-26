@@ -667,7 +667,7 @@ function App() {
               onChange={(e) =>
                 setSearch(e.target.value)
               }
-              placeholder="Buscar por nº, problema, tratamento ou responsável..."
+              placeholder="Buscar..."
             />
           </div>
 
@@ -714,7 +714,7 @@ function App() {
             }
           >
             <option value="Todos">
-              Todos os períodos
+              Períodos
             </option>
 
             <option value="2026-08">
@@ -1550,3 +1550,4 @@ createRoot(
     <App />
   </React.StrictMode>
 );
+

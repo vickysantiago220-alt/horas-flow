@@ -1,0 +1,337 @@
+
+/* =========================================================
+   CORREÇÃO FINAL DOS FILTROS - RESPONSIVO
+   ========================================================= */
+
+.hf-filters {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+
+  gap: 8px !important;
+
+  overflow: hidden !important;
+}
+
+/* TODOS OS FILTROS */
+.hf-filters > * {
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* BUSCA */
+.hf-filters > .hf-search {
+  flex: 1.05 1 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.hf-filters > .hf-search input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* SELECTS */
+.hf-filters > select {
+  flex: 1 1 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+/* CLIENTES - um pouco maior */
+.hf-filters > select:nth-child(5) {
+  flex: 1.35 1 0 !important;
+}
+
+/* PERÍODOS */
+.hf-filters > select:nth-child(6) {
+  flex: .95 1 0 !important;
+}
+
+/* EXECUÇÃO */
+.hf-filters > .hf-filter-month {
+  flex: 1.15 1 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+
+  overflow: hidden !important;
+}
+
+.hf-filters > .hf-filter-month input {
+  flex: 1 1 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* TEXTO INTERNO DOS CAMPOS */
+.hf-filters input,
+.hf-filters select {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* CONTADOR NÃO DEVE AUMENTAR A LARGURA */
+.hf-filters .hf-filter-count {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+
+
+/* =========================================================
+   TELAS MENORES
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .hf-filters {
+    gap: 6px !important;
+  }
+
+  .hf-filters > .hf-search {
+    flex: .9 1 0 !important;
+  }
+
+  .hf-filters > select:nth-child(5) {
+    flex: 1.1 1 0 !important;
+  }
+
+  .hf-filters > .hf-filter-month {
+    flex: 1 1 0 !important;
+  }
+}
+
+
+/* =========================================================
+   CELULAR
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .hf-filters {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  .hf-filters > *,
+  .hf-filters > .hf-search,
+  .hf-filters > .hf-filter-month,
+  .hf-filters > select {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+}
+
+
+/* =========================================================
+   AJUSTE DEFINITIVO DOS FILTROS
+   Buscar | Status | Aprovações | Clientes | Períodos | Execução
+   ========================================================= */
+
+.hf-filters {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* ---------------------------------------------------------
+   REMOVE O FILTRO "TODAS"
+   Ordem atual:
+   1 Buscar
+   2 Status
+   3 Aprovações
+   4 Todas       <- remover
+   5 Clientes
+   6 Períodos
+   7 Execução
+   8 Contador
+   --------------------------------------------------------- */
+
+.hf-filters > select:nth-child(4) {
+  display: none !important;
+}
+
+/* Remove o contador da barra */
+.hf-filters > .hf-filter-count {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------
+   BUSCA
+   --------------------------------------------------------- */
+
+.hf-filters > .hf-search {
+  flex: 1.1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.hf-filters > .hf-search input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ---------------------------------------------------------
+   STATUS
+   --------------------------------------------------------- */
+
+.hf-filters > select:nth-child(2) {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* ---------------------------------------------------------
+   APROVAÇÕES
+   --------------------------------------------------------- */
+
+.hf-filters > select:nth-child(3) {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* ---------------------------------------------------------
+   CLIENTES
+   Depois de esconder o child 4:
+   Clientes continua sendo child 5
+   --------------------------------------------------------- */
+
+.hf-filters > select:nth-child(5) {
+  flex: 1.35 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* ---------------------------------------------------------
+   PERÍODOS
+   --------------------------------------------------------- */
+
+.hf-filters > select:nth-child(6) {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+
+/* ---------------------------------------------------------
+   EXECUÇÃO
+   --------------------------------------------------------- */
+
+.hf-filters > .hf-filter-month {
+  flex: 1.2 1 0 !important;
+
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.hf-filters > .hf-filter-month input {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  flex: 1 1 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* textos não podem aumentar o campo */
+.hf-filters select,
+.hf-filters input {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+
+/* =========================================================
+   TELAS MENORES
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+  .hf-filters {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+  }
+
+  .hf-filters > .hf-search,
+  .hf-filters > select,
+  .hf-filters > .hf-filter-month {
+    flex: 1 1 calc(50% - 8px) !important;
+  }
+
+}
+
+
+/* =========================================================
+   CELULAR
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .hf-filters {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .hf-filters > .hf-search,
+  .hf-filters > select,
+  .hf-filters > .hf-filter-month {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+}
+

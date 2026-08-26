@@ -557,7 +557,7 @@ setShowDemandModal(false);
               onChange={(event) =>
                 setSearch(event.target.value)
               }
-              placeholder="Buscar por nº, problema, tratamento ou responsável..."
+              placeholder="Buscar..."
             />
           </div>
 
@@ -612,7 +612,7 @@ setShowDemandModal(false);
             }
           >
             <option value="Todos">
-              Todos os períodos
+              Períodos
             </option>
 
             <option value="2026-08">
@@ -1192,3 +1192,5 @@ createRoot(
     <App />
   </React.StrictMode>
 );
+
+

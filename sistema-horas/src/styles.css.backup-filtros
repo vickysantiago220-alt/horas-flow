@@ -1,0 +1,324 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: Poppins, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f4f7fb;
+  color: #172033;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* LAYOUT */
+
+.hf-app {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  min-width: 0;
+}
+
+.hf-main {
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  max-width: calc(100% - 240px);
+  min-width: 0;
+  padding: 30px 34px 50px;
+  overflow-x: hidden;
+}
+
+.hf-content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* TABELA */
+
+.hf-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hf-table-wrap table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+/* MODAIS */
+
+.hf-modal-backdrop {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.hf-decision-modal {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: calc(100vw - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.hf-decision-modal * {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hf-decision-modal input,
+.hf-decision-modal select,
+.hf-decision-modal textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 1000px) {
+  .hf-main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 22px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hf-main {
+    padding: 16px;
+  }
+
+  .hf-decision-modal {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+  }
+
+  .hf-modal-backdrop {
+    padding: 10px;
+  }
+}
+
+/* deploy refresh */
+
+/* =========================================================
+   CORREÇÃO DOS FILTROS - EXECUÇÃO EM SEGUNDA LINHA
+   ========================================================= */
+
+.hf-filters {
+  display: grid !important;
+  grid-template-columns:
+    minmax(220px, 1.4fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    minmax(100px, .7fr)
+    minmax(180px, 1.4fr)
+    minmax(150px, 1fr) !important;
+
+  gap: 8px !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* Busca */
+.hf-filters > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* EXECUÇÃO - segunda linha */
+.hf-filters > :nth-child(7) {
+  grid-column: 1 / 2 !important;
+  width: 100% !important;
+  max-width: 320px !important;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1200px) {
+
+  .hf-filters {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .hf-filters > :nth-child(7) {
+    grid-column: 1 / 2 !important;
+    max-width: 100% !important;
+  }
+
+}
+
+@media (max-width: 800px) {
+
+  .hf-filters {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .hf-filters {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hf-filters > :nth-child(7) {
+    grid-column: 1 !important;
+    max-width: 100% !important;
+  }
+
+}
+
+
+/* =========================================================
+   FILTROS DE DEMANDAS - EXECUÇÃO EM SEGUNDA LINHA
+   ========================================================= */
+
+.hf-demand-filters {
+  display: grid !important;
+  grid-template-columns:
+    minmax(240px, 2fr)
+    minmax(150px, 1.2fr)
+    minmax(150px, 1.2fr)
+    minmax(100px, .8fr)
+    minmax(180px, 1.5fr)
+    minmax(150px, 1.1fr) !important;
+
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  align-items: stretch !important;
+}
+
+/* Execução sempre começa uma nova linha */
+.hf-demand-filters .hf-filter-month {
+  grid-column: 1 / 2 !important;
+  grid-row: 2 !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* Contador fica ao lado do filtro de execução */
+.hf-demand-filters .hf-filter-count {
+  grid-column: 2 / 3 !important;
+  grid-row: 2 !important;
+
+  align-self: center !important;
+}
+
+/* Evita que qualquer filtro estoure a largura */
+.hf-demand-filters > * {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.hf-demand-filters select,
+.hf-demand-filters .hf-search,
+.hf-demand-filters .hf-filter-month {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Notebook */
+@media (max-width: 1200px) {
+  .hf-demand-filters {
+    grid-template-columns:
+      minmax(220px, 2fr)
+      repeat(2, minmax(140px, 1fr))
+      minmax(100px, .8fr) !important;
+  }
+
+  .hf-demand-filters .hf-filter-month {
+    grid-column: 1 / 2 !important;
+    grid-row: 3 !important;
+  }
+
+  .hf-demand-filters .hf-filter-count {
+    grid-column: 2 / 3 !important;
+    grid-row: 3 !important;
+  }
+}
+
+/* Tablet */
+@media (max-width: 800px) {
+  .hf-demand-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .hf-demand-filters .hf-filter-month {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+  }
+
+  .hf-demand-filters .hf-filter-count {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+  }
+}
+
+/* Celular */
+@media (max-width: 600px) {
+  .hf-demand-filters {
+    grid-template-columns: 1fr !important;
+  }
+
+  .hf-demand-filters .hf-filter-month,
+  .hf-demand-filters .hf-filter-count {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+}
+

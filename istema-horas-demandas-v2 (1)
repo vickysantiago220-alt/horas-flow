@@ -1,0 +1,148 @@
+[1mdiff --git a/backend/src/server.ts b/backend/src/server.ts[m
+[1mindex 0ef4d24..b36bc65 100644[m
+[1m--- a/backend/src/server.ts[m
+[1m+++ b/backend/src/server.ts[m
+[36m@@ -50,7 +50,53 @@[m [masync function clientExists(clientId: number | null): Promise<boolean> {[m
+ [m
+   return (rows as any[]).length > 0;[m
+ }[m
+[32m+[m[32mconst period =[m
+[32m+[m[32m  typeof req.query.period === 'string'[m
+[32m+[m[32m    ? req.query.period[m
+[32m+[m[32m    : null;[m
+ [m
+[32m+[m[32mlet finishedWhere = '';[m
+[32m+[m
+[32m+[m[32mconst finishedParams: any[] = [];[m
+[32m+[m
+[32m+[m[32mif (req.user?.role === 'CLIENTE') {[m
+[32m+[m[32m  finishedWhere = ' WHERE client_id = ? ';[m
+[32m+[m[32m  finishedParams.push(req.user.clientId);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mif (period) {[m
+[32m+[m[32m  finishedWhere += finishedWhere[m
+[32m+[m[32m    ? ' AND '[m
+[32m+[m[32m    : ' WHERE ';[m
+[32m+[m
+[32m+[m[32m  finishedWhere += `[m
+[32m+[m[32m    DATE_FORMAT(execution_month, '%Y-%m') = ?[m
+[32m+[m[32m  `;[m
+[32m+[m
+[32m+[m[32m  finishedParams.push(period);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mconst [finishedRows] =[m
+[32m+[m[32m  await pool.query([m
+[32m+[m[32m    `[m
+[32m+[m[32m    SELECT[m
+[32m+[m[32m      COALESCE([m
+[32m+[m[32m        SUM([m
+[32m+[m[32m          CASE[m
+[32m+[m[32m            WHEN status = 'Concluída'[m
+[32m+[m[32m            THEN[m
+[32m+[m[32m              COALESCE(analysis_hours, 0) +[m
+[32m+[m[32m              COALESCE(required_hours, 0)[m
+[32m+[m[32m            ELSE 0[m
+[32m+[m[32m          END[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        0[m
+[32m+[m[32m      ) AS finishedHours[m
+[32m+[m[32m    FROM demands[m
+[32m+[m[32m    ${finishedWhere}[m
+[32m+[m[32m    `,[m
+[32m+[m[32m    finishedParams[m
+[32m+[m[32m  );[m
+ async function recordDemandHistory([m
+   demandId: number,[m
+   req: AuthenticatedRequest,[m
+[36m@@ -190,7 +236,9 @@[m [mapp.post('/api/auth/login', async (req, res) => {[m
+     };[m
+ [m
+     const token = createToken(authUser);[m
+[31m-[m
+[32m+[m[32mconst finishedSummary =[m
+[32m+[m[32m  (finishedRows as any[])[0];[m
+[32m+[m[41m  [m
+     return res.json({[m
+       success: true,[m
+       message: 'Login realizado com sucesso.',[m
+[36m@@ -2413,6 +2461,11 @@[m [mapp.get([m
+         );[m
+       }[m
+ [m
+[32m+[m[32m      const period =[m
+[32m+[m[32m        typeof req.query.period === 'string'[m
+[32m+[m[32m          ? req.query.period[m
+[32m+[m[32m          : null;[m
+[32m+[m
+       const [rows] =[m
+         await pool.query([m
+           `[m
+[36m@@ -2435,12 +2488,34 @@[m [mapp.get([m
+                 required_hours[m
+               ),[m
+               0[m
+[31m-            ) AS totalHours[m
+[32m+[m[32m            ) AS totalHours,[m
+[32m+[m
+[32m+[m[32m            COALESCE([m
+[32m+[m[32m              SUM([m
+[32m+[m[32m                CASE[m
+[32m+[m[32m                  WHEN status = 'Concluída'[m
+[32m+[m[32m                    AND ([m
+[32m+[m[32m                      ? IS NULL[m
+[32m+[m[32m                      OR DATE_FORMAT([m
+[32m+[m[32m                        execution_month,[m
+[32m+[m[32m                        '%Y-%m'[m
+[32m+[m[32m                      ) = ?[m
+[32m+[m[32m                    )[m
+[32m+[m[32m                  THEN[m
+[32m+[m[32m                    COALESCE(analysis_hours, 0) +[m
+[32m+[m[32m                    COALESCE(required_hours, 0)[m
+[32m+[m[32m                  ELSE 0[m
+[32m+[m[32m                END[m
+[32m+[m[32m              ),[m
+[32m+[m[32m              0[m
+[32m+[m[32m            ) AS finishedHours[m
+ [m
+           FROM demands[m
+           ${where}[m
+           `,[m
+[31m-          params[m
+[32m+[m[32m          period[m
+[32m+[m[32m            ? [period, period, ...params][m
+[32m+[m[32m            : [null, null, ...params][m
+         );[m
+ [m
+       const [statusRows] =[m
+[36m@@ -2493,6 +2568,11 @@[m [mapp.get([m
+               summary.requiredHours[m
+             ),[m
+ [m
+[32m+[m[32m          finishedHours:[m
+[32m+[m[32m            Number([m
+[32m+[m[32m              summary.finishedHours[m
+[32m+[m[32m            ),[m
+[32m+[m
+           byStatus,[m
+         },[m
+       });[m
+[36m@@ -2515,8 +2595,6 @@[m [mapp.get([m
+     }[m
+   }[m
+ );[m
+[31m-[m
+[31m-[m
+ // =====================================================[m
+ // 404[m
+ // =====================================================[m
+[36m@@ -2530,8 +2608,6 @@[m [mapp.use([m
+     });[m
+   }[m
+ );[m
+[31m-[m
+[31m-[m
+ // =====================================================[m
+ // ERRO GLOBAL[m
+ // =====================================================[m
