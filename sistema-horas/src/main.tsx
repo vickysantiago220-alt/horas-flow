@@ -627,7 +627,11 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     if(!demandForm.problema.trim()||!demandForm.tratamento.trim()){setDemandError('Informe o problema e o tratamento.');return}
     if(!demandForm.clientId){setDemandError('Selecione o cliente vinculado.');return}
 
-    if(normalizeStatus(demandForm.status)==='Analisada' -and (Number() -le 0)){setDemandError('Informe as horas de análise para marcar a demanda como Analisada.');return}
+    if(normalizeStatus(demandForm.status)==='Analisada' && Number(demandForm.horasAnalise)<=0){
+      setDemandError('Informe as horas de análise para marcar a demanda como Analisada.');
+      return;
+    }
+
     try{
       setDemandSaving(true);
       const payload={
