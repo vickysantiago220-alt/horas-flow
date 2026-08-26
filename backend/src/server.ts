@@ -2605,7 +2605,7 @@ app.get(
 
       const [analyzedRows] =
         await pool.query(
-          
+          `
           SELECT
             COALESCE(
               SUM(
@@ -2618,8 +2618,8 @@ app.get(
               0
             ) AS analyzedHours
           FROM demands
-          
-          ,
+          ${analyzedHoursWhere}
+          `,
           analyzedHoursParams
         );
 
@@ -2776,6 +2776,7 @@ app.listen(
     );
   }
 );
+
 
 
 
