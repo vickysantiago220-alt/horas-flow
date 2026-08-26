@@ -2548,14 +2548,7 @@ app.get(
             COALESCE(
               SUM(
                 CASE
-                  WHEN status IN (
-                    'Analisada',
-                    'Aguardando aprovação',
-                    'Aprovada',
-                    'Em desenvolvimento',
-                    'Em homologação',
-                    'Concluída'
-                  )
+                  WHEN status = 'Analisada'
                   THEN COALESCE(analysis_hours, 0)
                   ELSE 0
                 END
@@ -2747,6 +2740,7 @@ app.listen(
     );
   }
 );
+
 
 
 
