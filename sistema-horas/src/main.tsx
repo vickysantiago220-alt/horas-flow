@@ -10,18 +10,18 @@ import {
 } from 'lucide-react';
 
 type Role = 'ADMIN' | 'INTERNO' | 'CLIENTE';
-type Status = 'Aguardando análise' | 'Em análise' | 'Aguardando aprovação' | 'Em desenvolvimento' | 'Em homologação' | 'Concluída' | 'Reprovada';
+type Status = 'Aguardando análise' | 'Em análise' | 'Analisada' | 'Aguardando aprovação' | 'Em desenvolvimento' | 'Em homologação' | 'Concluída' | 'Reprovada';
 type Priority = 'Baixa' | 'Média' | 'Alta' | 'Urgente';
 
 type AuthUser = { id:number; name:string; email:string; role:Role; clientId:number|null };
 type Client = { id:number; name:string; email?:string; active?:number|boolean };
 type DashboardSummary = {
   totalDemands:number; totalHours:number; analysisHours:number; requiredHours:number;
-  approvedDemands:number; rejectedDemands:number; pendingApprovalDemands:number; pendingApprovalHoursTotal:number; finishedHours:number; finishedDemands:number;
+  approvedDemands:number; analyzedHours:number; rejectedDemands:number; pendingApprovalDemands:number; pendingApprovalHoursTotal:number; finishedHours:number; finishedDemands:number;
   byStatus:Record<string,number>;
   byClient:Array<{
     clientId:number; clientName:string; totalDemands:number; analysisHours:number;
-    requiredHours:number; totalHours:number; approvedDemands:number; rejectedDemands:number; pendingApprovalDemands:number; pendingApprovalHoursTotal:number;
+    requiredHours:number; totalHours:number; approvedDemands:number; analyzedHours:number; rejectedDemands:number; pendingApprovalDemands:number; pendingApprovalHoursTotal:number;
   }>;
 };
 type User = { id:number; name:string; email:string; role:Role; clientId:number|null; clientName?:string|null; active:number|boolean };
@@ -35,7 +35,7 @@ type Demand = {
 
 const API = 'https://horas-flow.onrender.com/api';
 
-const statuses:Status[] = ['Aguardando análise','Em análise','Em desenvolvimento','Em homologação','Concluída'];
+const statuses:Status[] = ['Aguardando análise','Em análise','Analisada','Em desenvolvimento','Em homologação','Concluída'];
 const priorities:Priority[] = ['Baixa','Média','Alta','Urgente'];
 const uid = () => crypto.randomUUID();
 
@@ -59,6 +59,7 @@ function normalizeStatus(value:any){
   const map:Record<string,string>={
     'aguardando analise':'Aguardando análise',
     'em analise':'Em análise',
+    'analisada':'Analisada',
     'aguardando aprovacao':'Aguardando aprovação',
     'em desenvolvimento':'Em desenvolvimento',
     'em homologacao':'Em homologação',
@@ -105,7 +106,7 @@ function App(){
   const [clients,setClients]=useState<Client[]>([]);
   const [dashboard,setDashboard]=useState<DashboardSummary>({
     totalDemands:0,totalHours:0,analysisHours:0,requiredHours:0,
-    approvedDemands:0,rejectedDemands:0,pendingApprovalDemands:0,pendingApprovalHoursTotal:0,finishedHours:0,finishedDemands:0,byStatus:{},byClient:[]
+    approvedDemands:0,analyzedHours:0,rejectedDemands:0,pendingApprovalDemands:0,pendingApprovalHoursTotal:0,finishedHours:0,finishedDemands:0,byStatus:{},byClient:[]
   });
   const [dashboardLoading,setDashboardLoading]=useState(false);
   const [dashboardClientFilter,setDashboardClientFilter]=useState('Todos');
@@ -505,6 +506,7 @@ const formatPeriod = (period:string) => {
         totalHours:Number(d.totalHours||0),
         analysisHours:Number(d.analysisHours||0),
         requiredHours:Number(d.requiredHours||0),
+        analyzedHours:Number(d.analyzedHours ?? 0),
         approvedDemands:Number(d.approvedDemands||0),
         rejectedDemands:Number(d.rejectedDemands||0),
         pendingApprovalDemands:Number(d.pendingApprovalDemands ?? 0),
@@ -1001,6 +1003,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
           <section className="hf-cards">
             <Card title="Demandas" value={dashboardLoading?'…':dashboard.totalDemands} icon={<BarChart3/>}/>
             <Card title="Horas de análise" value={dashboardLoading?'…':`${dashboard.analysisHours}h`} icon={<Clock3/>}/>
+            <Card title="Horas analisadas" value={dashboardLoading?'…':`${dashboard.analyzedHours}h`} icon={<CheckCircle2/>}/>
             <Card title="Horas necessárias" value={dashboardLoading?'…':`${dashboard.requiredHours}h`} icon={<Clock3/>}/>
             <Card title="Horas totais" value={dashboardLoading?'…':`${dashboard.totalHours}h`} icon={<CheckCircle2/>}/>
           </section>
@@ -2330,6 +2333,10 @@ const styles = `
 `;
 
 export default App;
+
+
+
+
 
 
 

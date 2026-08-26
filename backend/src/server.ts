@@ -2543,7 +2543,25 @@ app.get(
                 END
               ),
               0
-            ) AS pendingApprovalHoursTotal
+            ) AS pendingApprovalHoursTotal,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN status IN (
+                    'Analisada',
+                    'Aguardando aprovação',
+                    'Aprovada',
+                    'Em desenvolvimento',
+                    'Em homologação',
+                    'Concluída'
+                  )
+                  THEN COALESCE(analysis_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS analyzedHours
 
           FROM demands
           ${where}
@@ -2611,6 +2629,11 @@ app.get(
           requiredHours:
             Number(
               summary.requiredHours
+            ),
+
+          analyzedHours:
+            Number(
+              summary.analyzedHours ?? 0
             ),
 
           approvedDemands:
@@ -2724,6 +2747,7 @@ app.listen(
     );
   }
 );
+
 
 
 
