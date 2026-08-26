@@ -17,11 +17,11 @@ type AuthUser = { id:number; name:string; email:string; role:Role; clientId:numb
 type Client = { id:number; name:string; email?:string; active?:number|boolean };
 type DashboardSummary = {
   totalDemands:number; totalHours:number; analysisHours:number; requiredHours:number;
-  approvedDemands:number; rejectedDemands:number; pendingApproval:number; finishedHours:number; finishedDemands:number;
+  approvedDemands:number; rejectedDemands:number; pendingApprovalDemands:number; finishedHours:number; finishedDemands:number;
   byStatus:Record<string,number>;
   byClient:Array<{
     clientId:number; clientName:string; totalDemands:number; analysisHours:number;
-    requiredHours:number; totalHours:number; approvedDemands:number; rejectedDemands:number; pendingApproval:number;
+    requiredHours:number; totalHours:number; approvedDemands:number; rejectedDemands:number; pendingApprovalDemands:number;
   }>;
 };
 type User = { id:number; name:string; email:string; role:Role; clientId:number|null; clientName?:string|null; active:number|boolean };
@@ -105,7 +105,7 @@ function App(){
   const [clients,setClients]=useState<Client[]>([]);
   const [dashboard,setDashboard]=useState<DashboardSummary>({
     totalDemands:0,totalHours:0,analysisHours:0,requiredHours:0,
-    approvedDemands:0,rejectedDemands:0,pendingApproval:0,finishedHours:0,finishedDemands:0,byStatus:{},byClient:[]
+    approvedDemands:0,rejectedDemands:0,pendingApprovalDemands:0,finishedHours:0,finishedDemands:0,byStatus:{},byClient:[]
   });
   const [dashboardLoading,setDashboardLoading]=useState(false);
   const [dashboardClientFilter,setDashboardClientFilter]=useState('Todos');
@@ -507,8 +507,8 @@ const formatPeriod = (period:string) => {
         requiredHours:Number(d.requiredHours||0),
         approvedDemands:Number(d.approvedDemands||0),
         rejectedDemands:Number(d.rejectedDemands||0),
-        pendingApproval:Number(d.pendingApproval||0),
-        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída').reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
+        pendingApprovalDemands:Number(d.pendingApprovalDemands ?? 0),
+        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.executionMonth)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
         finishedDemands:Number(d.finishedDemands ?? d.finalizedDemands ?? 0),
         byStatus:d.byStatus||{},
         byClient:d.byClient||[]
@@ -708,7 +708,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const dashboardDemands=useMemo(()=>demands.filter(d=>{
     const matchesClient = dashboardClientFilter==='Todos' || String((d as any).clientId||'')===String(dashboardClientFilter);
-    const matchesPeriod = dashboardPeriod==='Todos' || d.criadoEm.startsWith(dashboardPeriod);
+    const matchesPeriod = dashboardPeriod==='Todos' || getExecutionMonthKey(d.executionMonth)===dashboardPeriod;
     return matchesClient && matchesPeriod;
   }).slice(0,5),[demands,dashboardClientFilter,dashboardPeriod]);
 
@@ -1012,9 +1012,11 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     <Card title="Reprovadas" value={dashboardLoading?'…':dashboard.rejectedDemands} icon={<X/>}/>
   )}
 
-  {dashboard.pendingApproval > 0 && (
-    <Card title="Aguardando aprovação" value={dashboardLoading?'…':dashboard.pendingApproval} icon={<Clock3/>}/>
-  )}
+  <Card
+    title="Demandas pendentes de aprovação"
+    value={dashboardLoading?'…':dashboard.pendingApprovalDemands}
+    icon={<Clock3/>}
+  />
 
   {(dashboard.byStatus['Em desenvolvimento'] || 0) > 0 && (
     <Card title="Em desenvolvimento" value={dashboardLoading?'…':(dashboard.byStatus['Em desenvolvimento']||0)} icon={<BarChart3/>}/>
@@ -1089,22 +1091,6 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                       className="hf-hours-bar-fill"
                       style={{
                         width: `${dashboard.totalHours ? Math.min(100, (dashboard.analysisHours / dashboard.totalHours) * 100) : 0}%`
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="hf-hours-bar-row">
-                  <div className="hf-hours-bar-header">
-                    <span>Necessárias</span>
-                    <strong>{dashboard.requiredHours}h</strong>
-                  </div>
-
-                  <div className="hf-hours-bar-track">
-                    <div
-                      className="hf-hours-bar-fill"
-                      style={{
-                        width: `${dashboard.totalHours ? Math.min(100, (dashboard.requiredHours / dashboard.totalHours) * 100) : 0}%`
                       }}
                     />
                   </div>
@@ -2343,6 +2329,15 @@ const styles = `
 `;
 
 export default App;
+
+
+
+
+
+
+
+
+
 
 
 

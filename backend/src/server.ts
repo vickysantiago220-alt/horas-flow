@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Response } from 'express';
 import cors from 'cors';
 
@@ -2445,6 +2446,24 @@ app.get(
             COALESCE(
               SUM(
                 CASE
+                  WHEN approval = 'Aprovada'
+                    AND (
+                      ? IS NULL
+                      OR DATE_FORMAT(
+                        execution_month,
+                        '%Y-%m'
+                      ) = ?
+                    )
+                  THEN 1
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS approvedDemands,
+
+            COALESCE(
+              SUM(
+                CASE
                   WHEN status = 'Concluída'
                     AND (
                       ? IS NULL
@@ -2460,12 +2479,73 @@ app.get(
                 END
               ),
               0
-            ) AS finishedHours
+            ) AS finishedHours,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN status = 'Concluída'
+                    AND (
+                      ? IS NULL
+                      OR DATE_FORMAT(
+                        execution_month,
+                        '%Y-%m'
+                      ) = ?
+                    )
+                  THEN 1
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS finishedDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN approval = 'Pendente'
+                    AND (
+                      ? IS NULL
+                      OR DATE_FORMAT(
+                        execution_month,
+                        '%Y-%m'
+                      ) = ?
+                    )
+                  THEN
+                    COALESCE(analysis_hours, 0) +
+                    COALESCE(required_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS pendingApprovalHours,
+
+            SUM(
+              CASE
+                WHEN approval = 'Pendente'
+                  AND (
+                    ? IS NULL
+                    OR DATE_FORMAT(
+                      execution_month,
+                      '%Y-%m'
+                    ) = ?
+                  )
+                THEN 1
+                ELSE 0
+              END
+            ) AS pendingApprovalDemands
 
           FROM demands
           ${where}
           `,
           [
+            period,
+            period,
+            period,
+            period,
+            period,
+            period,
+            period,
+            period,
             period,
             period,
             ...params
@@ -2524,7 +2604,25 @@ app.get(
 
           finishedHours:
             Number(
-              summary.finishedHours
+              summary.finishedHours || 0
+            ),
+
+          finishedDemands:
+            Number(summary.finishedDemands ?? 0),
+
+          pendingApproval:
+            Number(
+              summary.pendingApprovalDemands || 0
+            ),
+
+          pendingApprovalHours:
+            Number(
+              summary.pendingApprovalHours || 0
+            ),
+
+          pendingApprovalDemands:
+            Number(
+              summary.pendingApprovalDemands || 0
             ),
 
           byStatus,
@@ -2605,5 +2703,18 @@ app.listen(
     );
   }
 );
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
