@@ -2613,6 +2613,11 @@ app.get(
               summary.requiredHours
             ),
 
+          approvedDemands:
+            Number(
+              summary.approvedDemands ?? 0
+            ),
+
           finishedHours:
             Number(
               summary.finishedHours || 0
@@ -2719,6 +2724,7 @@ app.listen(
     );
   }
 );
+
 
 
 
