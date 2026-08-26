@@ -1077,146 +1077,183 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             <div className="hf-panel hf-chart-panel">
               <PanelTitle title="Demandas por status"/>
 
-              <div className="hf-status-chart" style={{display:"grid",gridTemplateColumns:"190px minmax(0,1fr)",alignItems:"center",gap:"28px",marginTop:"20px"}}>
+              <div className="hf-status-chart" style={{
+  display:"grid",
+  gridTemplateColumns:"220px minmax(0,1fr)",
+  alignItems:"center",
+  gap:"30px",
+  width:"100%",
+  minHeight:"240px"
+}}>
 
-                <div className="hf-donut">
-                  <div className="hf-donut-center">
-                    <strong>{dashboard.totalDemands}</strong>
-                    <span>demandas</span>
-                  </div>
-                </div>
+  <div style={{
+    width:"210px",
+    height:"210px",
+    minWidth:"210px",
+    minHeight:"210px",
+    position:"relative",
+    margin:"0 auto"
+  }}>
 
-                <div className="hf-chart-legend" style={{display:"flex",flexDirection:"column",gap:"0",minWidth:0}}>
-                  {statuses.map((s) => {
-                    const count = dashboard.byStatus[s] || 0;
-                    const total = dashboard.totalDemands || 0;
-                    const percentage = total ? (count / total) * 100 : 0;
+    <div
+      style={{
+        position:"absolute",
+        inset:"0",
+        borderRadius:"50%",
+        background:(() => {
+          const total = dashboard.totalDemands || 0;
 
-                    return (
-                      <div className="hf-chart-legend-row" key={s} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 45px 45px",alignItems:"center",minHeight:"42px",padding:"4px 0",borderBottom:"1px solid #edf1f5"}}>
-                        <div className="hf-chart-legend-label" style={{display:"flex",alignItems:"center",gap:"9px"}}>
-                          <span className={"hf-status-dot dot-" + slug(s)} />
-                          <span>{s}</span>
-                        </div>
+          if (!total) return "#edf1f7";
 
-                        <strong>{count}</strong>
-                        <small>{percentage.toFixed(0)}%</small>
-                      </div>
-                    );
-                  })}
-                </div>
+          const colors:Record<string,string> = {
+            "Aguardando análise":"#94a3b8",
+            "Em análise":"#3b82f6",
+            "Analisada":"#8b5cf6",
+            "Em desenvolvimento":"#06b6d4",
+            "Em homologação":"#f59e0b",
+            "Concluída":"#22c55e"
+          };
 
-              </div>
-            </div>
+          let current = 0;
 
-            <div className="hf-panel hf-hours-chart-panel">
-              <PanelTitle
-                title="Resumo de horas"
-                icon={<CalendarDays size={18}/>}
-              />
+          const pieces = statuses
+            .map((s) => {
+              const count = dashboard.byStatus[s] || 0;
+              const percent = (count / total) * 100;
+              const startPercent = current;
+              const endPercent = current + percent;
 
-              <div className="hf-hours-summary">
-                <span className="hf-dashboard-eyebrow">TOTAL PLANEJADO</span>
-                <div className="hf-big-number">
-                  {dashboard.totalHours}h
-                </div>
-                <p className="hf-muted">
-                  Horas totais das demandas no período selecionado.
-                </p>
-              </div>
+              current = endPercent;
 
-              <div className="hf-hours-bars">
+              return `${colors[s] || "#64748b"} ${startPercent}% ${endPercent}%`;
+            })
+            .filter(Boolean);
 
-                <div className="hf-hours-bar-row">
-                  <div className="hf-hours-bar-header">
-                    <span>Análise</span>
-                    <strong>{dashboard.analysisHours}h</strong>
-                  </div>
+          return `conic-gradient(${pieces.join(",")})`;
+        })()
+      }}
+    />
 
-                  <div className="hf-hours-bar-track">
-                    <div
-                      className="hf-hours-bar-fill"
-                      style={{
-                        width:`${
-                          dashboard.totalHours
-                            ? Math.min(
-                                100,
-                                (dashboard.analysisHours / dashboard.totalHours) * 100
-                              )
-                            : 0
-                        }%`
-                      }}
-                    />
-                  </div>
-                </div>
+    <div style={{
+      position:"absolute",
+      top:"50%",
+      left:"50%",
+      transform:"translate(-50%,-50%)",
+      width:"118px",
+      height:"118px",
+      borderRadius:"50%",
+      background:"#fff",
+      display:"flex",
+      flexDirection:"column",
+      alignItems:"center",
+      justifyContent:"center",
+      boxShadow:"0 2px 8px rgba(15,23,42,.06)"
+    }}>
+      <strong style={{
+        fontSize:"32px",
+        fontWeight:800,
+        lineHeight:1,
+        color:"#18243b"
+      }}>
+        {dashboard.totalDemands}
+      </strong>
 
-                <div className="hf-hours-bar-row">
-                  <div className="hf-hours-bar-header">
-                    <span>Necessárias</span>
-                    <strong>{dashboard.requiredHours}h</strong>
-                  </div>
+      <span style={{
+        marginTop:"6px",
+        fontSize:"12px",
+        color:"#8b97a8"
+      }}>
+        demandas
+      </span>
+    </div>
 
-                  <div className="hf-hours-bar-track">
-                    <div
-                      className="hf-hours-bar-fill"
-                      style={{
-                        width:`${
-                          dashboard.totalHours
-                            ? Math.min(
-                                100,
-                                (dashboard.requiredHours / dashboard.totalHours) * 100
-                              )
-                            : 0
-                        }%`
-                      }}
-                    />
-                  </div>
-                </div>
+  </div>
 
-                <div className="hf-hours-bar-row">
-                  <div className="hf-hours-bar-header">
-                    <span>Finalizadas</span>
-                    <strong>{dashboard.finishedHours}h</strong>
-                  </div>
+  <div style={{
+    display:"flex",
+    flexDirection:"column",
+    width:"100%",
+    minWidth:"0"
+  }}>
 
-                  <div className="hf-hours-bar-track">
-                    <div
-                      className="hf-hours-bar-fill"
-                      style={{
-                        width:`${
-                          dashboard.totalHours
-                            ? Math.min(
-                                100,
-                                (dashboard.finishedHours / dashboard.totalHours) * 100
-                              )
-                            : 0
-                        }%`
-                      }}
-                    />
-                  </div>
-                </div>
+    {statuses.map((s) => {
+      const count = dashboard.byStatus[s] || 0;
+      const total = dashboard.totalDemands || 0;
+      const percentage = total ? (count / total) * 100 : 0;
 
-              </div>
+      const colors:Record<string,string> = {
+        "Aguardando análise":"#94a3b8",
+        "Em análise":"#3b82f6",
+        "Analisada":"#8b5cf6",
+        "Em desenvolvimento":"#06b6d4",
+        "Em homologação":"#f59e0b",
+        "Concluída":"#22c55e"
+      };
 
-              <div className="hf-hours-footer">
-                <div>
-                  <span>Demandas aprovadas</span>
-                  <b>{dashboard.approvedDemands}</b>
-                </div>
+      return (
+          <div
+            title={`${s}: ${count} demandas — ${percentage.toFixed(0)}%`}
+          key={s}
+          style={{
+            display:"grid",
+            gridTemplateColumns:"minmax(0,1fr) 45px 45px",
+            alignItems:"center",
+            minHeight:"42px",
+            padding:"6px 8px",
+            boxSizing:"border-box",
+            borderBottom:"1px solid #edf0f5",
+            borderRadius:"7px"
+          }}
+        >
 
-                <div>
-                  <span>Demandas finalizadas</span>
-                  <b>{dashboard.finishedDemands}</b>
-                </div>
-              </div>
-            </div>
+          <div style={{
+            display:"flex",
+            alignItems:"center",
+            gap:"10px",
+            fontSize:"14px",
+            color:"#334155"
+          }}>
+            <span style={{
+              width:"10px",
+              height:"10px",
+              minWidth:"10px",
+              borderRadius:"50%",
+              background:colors[s] || "#64748b"
+            }} />
 
-          </section>
+            <span>{s}</span>
+          </div>
 
-          <section className="hf-panel hf-dashboard-demand-panel">
+          <strong style={{
+            textAlign:"right",
+            fontSize:"14px",
+            fontWeight:700,
+            color:"#18243b"
+          }}>
+            {count}
+          </strong>
+
+          <small style={{
+            textAlign:"right",
+            fontSize:"12px",
+            color:"#8b97a8"
+          }}>
+            {percentage.toFixed(0)}%
+          </small>
+
+        </div>
+      );
+    })}
+
+  </div>
+
+</div>
+            </div></section>
+
+          <section className="hf-panel hf-dashboard-demand-panel hf-ultimas-demandas" style={{marginTop:"36px",padding:"0 0 18px",borderRadius:"16px",overflow:"hidden"}}>
             <div className="hf-panel-title">
               <div>
-                <span className="hf-dashboard-eyebrow">ACOMPANHAMENTO</span>
+                
                 <h2>Últimas demandas</h2>
                 <p className="hf-muted">
                   Acompanhe as demandas mais recentes.
@@ -2564,4 +2601,553 @@ const styles = `
 }
 
 .hf-donut-segment{cursor:pointer!important;transition:stroke-width .2s ease,opacity .2s ease,filter .2s ease!important}.hf-donut-segment:hover{stroke-width:23!important;opacity:1!important;filter:drop-shadow(0 4px 8px rgba(15,23,42,.28))!important}.hf-donut-dynamic:hover .hf-donut-segment:not(:hover){opacity:.22!important}.hf-chart-legend-row:hover{background:#f5f8ff!important;transform:translateX(4px)!important;box-shadow:0 3px 10px rgba(15,23,42,.06)!important}.hf-chart-legend-row:hover .hf-status-dot{transform:scale(1.35)!important;box-shadow:0 0 0 4px rgba(71,112,245,.10)!important}.hf-status-dot{transition:transform .18s ease,box-shadow .18s ease!important}.hf-chart-legend-row{cursor:default!important;transition:background .18s ease,transform .18s ease,box-shadow .18s ease!important}
+ 
+/* =====================================================
+   DASHBOARD MODERNA - GRAFICO DE PIZZA
+   ===================================================== */
+
+.hf-status-modern{
+  display:grid !important;
+  grid-template-columns:240px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:32px !important;
+  width:100% !important;
+  min-height:280px !important;
+  margin-top:18px !important;
+}
+
+.hf-pie-wrap{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.hf-pie-chart{
+  width:215px !important;
+  height:215px !important;
+  border-radius:50% !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-shadow:0 8px 25px rgba(15,23,42,.08) !important;
+}
+
+.hf-pie-hole{
+  width:120px !important;
+  height:120px !important;
+  border-radius:50% !important;
+  background:#fff !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-shadow:0 2px 8px rgba(15,23,42,.06) !important;
+}
+
+.hf-pie-hole strong{
+  font-size:32px !important;
+  font-weight:800 !important;
+  line-height:1 !important;
+  color:#18243b !important;
+}
+
+.hf-pie-hole span{
+  margin-top:6px !important;
+  font-size:12px !important;
+  color:#8b97a8 !important;
+}
+
+.hf-pie-legend{
+  display:flex !important;
+  flex-direction:column !important;
+  width:100% !important;
+}
+
+.hf-pie-row{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 55px 45px !important;
+  align-items:center !important;
+  min-height:44px !important;
+  padding:7px 10px !important;
+  border-bottom:1px solid #edf1f6 !important;
+  border-radius:8px !important;
+  transition:background .18s ease,transform .18s ease !important;
+}
+
+.hf-pie-row:last-child{
+  border-bottom:0 !important;
+}
+
+.hf-pie-row:hover{
+  background:#f7f9fc !important;
+  transform:translateX(3px) !important;
+}
+
+.hf-pie-name{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  font-size:14px !important;
+  color:#334155 !important;
+}
+
+.hf-pie-dot{
+  width:10px !important;
+  height:10px !important;
+  min-width:10px !important;
+  border-radius:50% !important;
+}
+
+.hf-pie-row strong{
+  text-align:right !important;
+  font-size:14px !important;
+  color:#18243b !important;
+}
+
+.hf-pie-row small{
+  text-align:right !important;
+  font-size:12px !important;
+  color:#8b97a8 !important;
+}
+
+@media(max-width:900px){
+
+  .hf-status-modern{
+    grid-template-columns:190px minmax(0,1fr) !important;
+    gap:22px !important;
+  }
+
+  .hf-pie-chart{
+    width:180px !important;
+    height:180px !important;
+  }
+
+  .hf-pie-hole{
+    width:100px !important;
+    height:100px !important;
+  }
+
+}
+
+@media(max-width:700px){
+
+  .hf-status-modern{
+    grid-template-columns:1fr !important;
+    gap:22px !important;
+  }
+
+  .hf-pie-chart{
+    width:175px !important;
+    height:175px !important;
+  }
+
+  .hf-pie-hole{
+    width:98px !important;
+    height:98px !important;
+  }
+
+}
+/* =========================================================
+   CORRECAO DEFINITIVA - GRAFICO DE STATUS
+   ========================================================= */
+
+.hf-status-modern{
+  display:grid !important;
+  grid-template-columns:240px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:32px !important;
+  width:100% !important;
+  min-height:260px !important;
+  margin-top:18px !important;
+  box-sizing:border-box !important;
+}
+
+.hf-status-modern .hf-pie-wrap{
+  width:240px !important;
+  height:240px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  position:relative !important;
+  flex:none !important;
+}
+
+.hf-status-modern .hf-pie-chart{
+  width:210px !important;
+  height:210px !important;
+  min-width:210px !important;
+  min-height:210px !important;
+  max-width:210px !important;
+  max-height:210px !important;
+  flex:none !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  position:relative !important;
+  border-radius:50% !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+  background-color:#edf1f7 !important;
+}
+
+.hf-status-modern .hf-pie-hole{
+  width:118px !important;
+  height:118px !important;
+  min-width:118px !important;
+  min-height:118px !important;
+  border-radius:50% !important;
+  background:#ffffff !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  position:absolute !important;
+  top:50% !important;
+  left:50% !important;
+  transform:translate(-50%,-50%) !important;
+  z-index:20 !important;
+  box-sizing:border-box !important;
+}
+
+.hf-status-modern .hf-pie-hole strong{
+  display:block !important;
+  font-size:32px !important;
+  font-weight:800 !important;
+  line-height:1 !important;
+  color:#18243b !important;
+}
+
+.hf-status-modern .hf-pie-hole span{
+  display:block !important;
+  margin-top:6px !important;
+  font-size:12px !important;
+  line-height:1 !important;
+  color:#8b97a8 !important;
+}
+
+.hf-status-modern .hf-pie-legend{
+  display:flex !important;
+  flex-direction:column !important;
+  width:100% !important;
+  min-width:0 !important;
+  gap:0 !important;
+}
+
+.hf-status-modern .hf-pie-row{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) 50px 50px !important;
+  align-items:center !important;
+  width:100% !important;
+  min-height:42px !important;
+  padding:6px 10px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  border-bottom:1px solid #edf1f6 !important;
+  border-radius:7px !important;
+}
+
+.hf-status-modern .hf-pie-row:last-child{
+  border-bottom:0 !important;
+}
+
+.hf-status-modern .hf-pie-row:hover{
+  background:#f7f9fc !important;
+  transform:translateX(3px) !important;
+}
+
+.hf-status-modern .hf-pie-name{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  min-width:0 !important;
+  font-size:14px !important;
+  line-height:1.2 !important;
+  color:#334155 !important;
+}
+
+.hf-status-modern .hf-pie-dot{
+  display:block !important;
+  width:10px !important;
+  height:10px !important;
+  min-width:10px !important;
+  max-width:10px !important;
+  border-radius:50% !important;
+}
+
+.hf-status-modern .hf-pie-row strong{
+  display:block !important;
+  text-align:right !important;
+  font-size:14px !important;
+  font-weight:700 !important;
+  line-height:1.2 !important;
+  color:#18243b !important;
+}
+
+.hf-status-modern .hf-pie-row small{
+  display:block !important;
+  text-align:right !important;
+  font-size:12px !important;
+  line-height:1.2 !important;
+  color:#8b97a8 !important;
+}
+
+@media(max-width:900px){
+
+  .hf-status-modern{
+    grid-template-columns:190px minmax(0,1fr) !important;
+    gap:20px !important;
+  }
+
+  .hf-status-modern .hf-pie-wrap{
+    width:190px !important;
+    height:190px !important;
+  }
+
+  .hf-status-modern .hf-pie-chart{
+    width:175px !important;
+    height:175px !important;
+    min-width:175px !important;
+    min-height:175px !important;
+    max-width:175px !important;
+    max-height:175px !important;
+  }
+
+  .hf-status-modern .hf-pie-hole{
+    width:98px !important;
+    height:98px !important;
+    min-width:98px !important;
+    min-height:98px !important;
+  }
+
+}
+
+@media(max-width:700px){
+
+  .hf-status-modern{
+    grid-template-columns:1fr !important;
+    justify-items:center !important;
+    gap:20px !important;
+  }
+
+  .hf-status-modern .hf-pie-legend{
+    width:100% !important;
+  }
+
+}
+
+/* =========================================================
+   ESPACAMENTO - ULTIMAS DEMANDAS
+   Nao altera o grafico ou os dados
+   ========================================================= */
+
+.hf-dashboard-demand-panel{
+  margin-top:28px !important;
+  padding:0 !important;
+  border-radius:16px !important;
+  overflow:hidden !important;
+}
+
+.hf-dashboard-demand-panel .hf-panel-title{
+  padding:24px 24px 18px !important;
+  margin:0 !important;
+}
+
+.hf-dashboard-demand-panel .hf-panel-title h2{
+  margin:0 !important;
+  font-size:18px !important;
+  line-height:1.3 !important;
+}
+
+.hf-dashboard-demand-panel .hf-panel-title p{
+  margin:7px 0 0 !important;
+  font-size:13px !important;
+  line-height:1.5 !important;
+  color:#8b97a8 !important;
+}
+
+.hf-dashboard-demand-panel .hf-dashboard-demand-table{
+  margin-top:4px !important;
+}
+
+.hf-dashboard-demand-panel table{
+  border-collapse:separate !important;
+  border-spacing:0 !important;
+}
+
+.hf-dashboard-demand-panel th{
+  padding:13px 12px !important;
+  height:44px !important;
+  vertical-align:middle !important;
+}
+
+.hf-dashboard-demand-panel td{
+  padding:15px 12px !important;
+  height:62px !important;
+  vertical-align:middle !important;
+}
+
+.hf-dashboard-demand-panel tbody tr{
+  transition:background .18s ease !important;
+}
+
+.hf-dashboard-demand-panel tbody tr:hover{
+  background:#f8fafc !important;
+}
+
+.hf-dashboard-demand-panel .hf-table-actions{
+  padding-right:18px !important;
+}
+
+@media(max-width:900px){
+  .hf-dashboard-demand-panel .hf-panel-title{
+    padding:20px 18px 15px !important;
+  }
+
+  .hf-dashboard-demand-panel td{
+    padding:13px 9px !important;
+  }
+
+  .hf-dashboard-demand-panel th{
+    padding:11px 9px !important;
+  }
+}
+
+/* ESPACO REAL DA SECAO ULTIMAS DEMANDAS */
+.hf-ultimas-demandas{
+  margin-top:32px !important;
+  padding:0 !important;
+  border-radius:16px !important;
+  overflow:hidden !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title{
+  padding:26px 24px 20px !important;
+  margin:0 !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title h2{
+  margin:0 !important;
+  line-height:1.35 !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title p{
+  margin-top:8px !important;
+  margin-bottom:0 !important;
+  line-height:1.5 !important;
+}
+
+.hf-ultimas-demandas table{
+  margin-top:8px !important;
+}
+
+.hf-ultimas-demandas th{
+  padding-top:14px !important;
+  padding-bottom:14px !important;
+}
+
+.hf-ultimas-demandas td{
+  padding-top:16px !important;
+  padding-bottom:16px !important;
+}
+
+.hf-ultimas-demandas tbody tr{
+  min-height:62px !important;
+}
+
+@media(max-width:900px){
+  .hf-ultimas-demandas > .hf-panel-title{
+    padding:22px 18px 17px !important;
+  }
+
+  .hf-ultimas-demandas td{
+    padding-top:13px !important;
+    padding-bottom:13px !important;
+  }
+}
+
+/* =========================================================
+   ULTIMAS DEMANDAS - RESPIRO VISUAL
+   ========================================================= */
+
+.hf-ultimas-demandas{
+  margin-top:36px !important;
+  padding-bottom:20px !important;
+  border-radius:16px !important;
+  overflow:hidden !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title{
+  padding:24px 24px 20px !important;
+  margin:0 !important;
+  min-height:76px !important;
+  box-sizing:border-box !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title h2{
+  margin:0 !important;
+  font-size:18px !important;
+  line-height:1.35 !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title p{
+  margin:8px 0 0 !important;
+  line-height:1.5 !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title .hf-link{
+  margin-left:20px !important;
+  white-space:nowrap !important;
+}
+
+.hf-ultimas-demandas table{
+  width:100% !important;
+  border-collapse:separate !important;
+  border-spacing:0 4px !important;
+}
+
+.hf-ultimas-demandas thead th{
+  padding:12px 16px !important;
+  height:44px !important;
+  vertical-align:middle !important;
+}
+
+.hf-ultimas-demandas tbody td{
+  padding:15px 16px !important;
+  height:58px !important;
+  vertical-align:middle !important;
+}
+
+.hf-ultimas-demandas tbody tr{
+  transition:background .15s ease !important;
+}
+
+.hf-ultimas-demandas tbody tr:hover{
+  background:#f8fafc !important;
+}
+
+@media(max-width:900px){
+  .hf-ultimas-demandas > .hf-panel-title{
+    padding:20px 18px 17px !important;
+  }
+
+  .hf-ultimas-demandas thead th{
+    padding:10px 10px !important;
+  }
+
+  .hf-ultimas-demandas tbody td{
+    padding:13px 10px !important;
+  }
+}
 `
+
+
+
+
+
+
+
+
+
+
+
+
