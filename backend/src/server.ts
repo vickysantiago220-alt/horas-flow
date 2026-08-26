@@ -2590,6 +2590,44 @@ app.get(
       const summary =
         (rows as any[])[0];
 
+      // Horas analisadas: independente do período selecionado.
+      // Considera somente demandas com status "Analisada".
+      // Para CLIENTE, respeita apenas o cliente logado.
+      const analyzedHoursWhere =
+        req.user?.role === 'CLIENTE'
+          ? 'WHERE client_id = ?'
+          : '';
+
+      const analyzedHoursParams =
+        req.user?.role === 'CLIENTE'
+          ? [req.user.clientId]
+          : [];
+
+      const [analyzedRows] =
+        await pool.query(
+          
+          SELECT
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN status = 'Analisada'
+                  THEN COALESCE(analysis_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS analyzedHours
+          FROM demands
+          
+          ,
+          analyzedHoursParams
+        );
+
+      const analyzedHoursGlobal =
+        Number(
+          (analyzedRows as any[])[0]?.analyzedHours ?? 0
+        );
+
       const byStatus:
         Record<string, number> = {};
 
@@ -2625,9 +2663,7 @@ app.get(
             ),
 
           analyzedHours:
-            Number(
-              summary.analyzedHours ?? 0
-            ),
+            analyzedHoursGlobal,
 
           approvedDemands:
             Number(
@@ -2740,6 +2776,8 @@ app.listen(
     );
   }
 );
+
+
 
 
 
