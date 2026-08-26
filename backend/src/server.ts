@@ -109,6 +109,7 @@ const DEMAND_SELECT = `
     approved_at AS approvedAt,
     rejection_reason AS rejectionReason,
     execution_month AS executionMonth,
+    analysis_month AS analysisMonth,
     responsible,
     client_id AS clientId,
     paid,
@@ -1298,6 +1299,7 @@ app.post(
         treatment,
         analysisHours = 0,
         requiredHours = 0,
+        analysisMonth = null,
         priority = 'Média',
         status = 'Aguardando análise',
         clientId = null,
@@ -1382,6 +1384,7 @@ app.post(
             approved_at,
             rejection_reason,
             execution_month,
+            analysis_month,
             responsible,
             client_id,
             paid
@@ -1399,7 +1402,7 @@ app.post(
             NULL,
             NULL,
             NULL,
-            NULL,
+            ?,
             ?,
             ?,
             0
@@ -1413,6 +1416,9 @@ app.post(
             Number(requiredHours) || 0,
             priority,
             status,
+            analysisMonth
+              ? `${String(analysisMonth)}-01`
+              : null,
             responsible?.trim()
               ? responsible.trim()
               : null,
@@ -1494,6 +1500,8 @@ app.put(
         requiredHours = 0,
         priority = 'Média',
         status = 'Aguardando análise',
+        analysisMonth = null,
+        executionMonth = null,
         clientId = null,
         responsible = null,
       } = req.body;
@@ -1555,6 +1563,8 @@ app.put(
           required_hours = ?,
           priority = ?,
           status = ?,
+          analysis_month = ?,
+          execution_month = ?,
           client_id = ?,
           responsible = ?,
           updated_at = NOW()
@@ -1567,8 +1577,11 @@ app.put(
           Number(requiredHours) || 0,
           priority,
           status,
-          clientId
-            ? Number(clientId)
+          analysisMonth
+            ? `${String(analysisMonth)}-01`
+            : null,
+          executionMonth
+            ? `${String(executionMonth)}-01`
             : null,
           responsible?.trim()
             ? responsible.trim()
@@ -2548,10 +2561,16 @@ app.get(
             COALESCE(
               SUM(
                 CASE
-                  WHEN status = 'Analisada'
-                  THEN COALESCE(analysis_hours, 0)
-                  ELSE 0
-                END
+                   WHEN (
+                     ? IS NULL
+                     OR DATE_FORMAT(
+                       analysis_month,
+                       '%Y-%m'
+                     ) = ?
+                   )
+                   THEN COALESCE(analysis_hours, 0)
+                   ELSE 0
+                 END
               ),
               0
             ) AS analyzedHours
@@ -2776,6 +2795,9 @@ app.listen(
     );
   }
 );
+
+
+
 
 
 
