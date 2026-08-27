@@ -2595,33 +2595,34 @@ app.get(
         );
 
       const summary =
-        (rows as any[])[0];
+        (rows as any[])[0];      
+      // Horas analisadas: usa o mês de análise quando um período é selecionado.
+      const analyzedHoursConditions: string[] = [];
+      const analyzedHoursParams: any[] = [];
 
-      // Horas analisadas: independente do período selecionado.
-      // Considera somente demandas com status "Analisada".
-      // Para CLIENTE, respeita apenas o cliente logado.
+      analyzedHoursConditions.push("status = 'Analisada'");
+
+      if (period && period !== 'Todos') {
+        analyzedHoursConditions.push(
+          "DATE_FORMAT(analysis_month, '%Y-%m') = ?"
+        );
+        analyzedHoursParams.push(period);
+      }
+
+      if (req.user?.role === 'CLIENTE') {
+        analyzedHoursConditions.push('client_id = ?');
+        analyzedHoursParams.push(req.user.clientId);
+      }
+
       const analyzedHoursWhere =
-        req.user?.role === 'CLIENTE'
-          ? 'WHERE client_id = ?'
-          : '';
-
-      const analyzedHoursParams =
-        req.user?.role === 'CLIENTE'
-          ? [req.user.clientId]
-          : [];
+        `WHERE ${analyzedHoursConditions.join(' AND ')}`;
 
       const [analyzedRows] =
         await pool.query(
           `
           SELECT
             COALESCE(
-              SUM(
-                CASE
-                  WHEN status = 'Analisada'
-                  THEN COALESCE(analysis_hours, 0)
-                  ELSE 0
-                END
-              ),
+              SUM(analysis_hours),
               0
             ) AS analyzedHours
           FROM demands
@@ -2826,5 +2827,7 @@ async function startServer() {
 }
 
 startServer();
+
+
 
 
