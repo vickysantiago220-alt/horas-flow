@@ -100,6 +100,7 @@ const DEMAND_SELECT = `
     problem,
     treatment,
     analysis_hours AS analysisHours,
+    analysis_month AS analysisMonth,
     required_hours AS requiredHours,
     priority,
     status,
@@ -1373,6 +1374,7 @@ app.post(
             problem,
             treatment,
             analysis_hours,
+            analysis_month,
             required_hours,
             priority,
             status,
@@ -1387,6 +1389,7 @@ app.post(
             paid
           )
           VALUES (
+            ?,
             ?,
             ?,
             ?,
@@ -1410,6 +1413,7 @@ app.post(
             problem.trim(),
             treatment.trim(),
             Number(analysisHours) || 0,
+            req.body.analysisMonth ? (String(req.body.analysisMonth) + '-01') : null,
             Number(requiredHours) || 0,
             priority,
             status,
@@ -1552,6 +1556,7 @@ app.put(
           problem = ?,
           treatment = ?,
           analysis_hours = ?,
+          analysis_month = ?,
           required_hours = ?,
           priority = ?,
           status = ?,
@@ -1564,6 +1569,7 @@ app.put(
           problem.trim(),
           treatment.trim(),
           Number(analysisHours) || 0,
+          analysisMonth ? (String(analysisMonth) + '-01') : null,
           Number(requiredHours) || 0,
           priority,
           status,
@@ -2776,6 +2782,18 @@ app.listen(
     );
   }
 );
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
