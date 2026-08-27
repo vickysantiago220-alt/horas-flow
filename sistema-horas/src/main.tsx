@@ -1045,7 +1045,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             />
           </section>
 
-          <section className="hf-dashboard-secondary" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"0",marginBottom:"18px"}}>
+          <section className="hf-dashboard-secondary" style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"10px",marginBottom:"18px"}}>
             <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
               <span className="hf-dashboard-mini-label">Aprovadas</span>
               <strong>{dashboardLoading?'…':dashboard.approvedDemands}</strong>
@@ -1070,8 +1070,14 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
               <span className="hf-dashboard-mini-label">Finalizadas</span>
               <strong>{dashboardLoading?'…':dashboard.finishedDemands}</strong>
             </div>
-          </section>
 
+            <div className="hf-dashboard-mini hf-hours-completed-card" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"4px",width:"100%"}}>
+                <span className="hf-dashboard-mini-label">Horas concluídas</span>
+                <strong>{dashboardLoading?'…':`${dashboard.finishedHours}h`}</strong>
+              </div>
+            </div>
+          </section>
           <section className="hf-grid2 hf-dashboard-main-grid">
 
             <div className="hf-panel hf-chart-panel">
@@ -3065,6 +3071,14 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
 
 
 
