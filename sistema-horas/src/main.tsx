@@ -194,37 +194,22 @@ const formatPeriod = (period:string) => {
     const doc = new jsPDF();
 
     const formatReportPeriod = (period: string) => {
-    if (period === 'Todos') {
-      return 'Todos os períodos';
-    }
+      if (period === 'Todos') return 'Todos os períodos';
 
-    const [year, month] = period.split('-');
+      const [year, month] = period.split('-');
 
-    const months = [
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro'
-    ];
+      const months = [
+        'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+      ];
 
-    const monthName =
-      months[Number(month) - 1];
+      return months[Number(month) - 1]
+        ? `${months[Number(month) - 1]}/${year}`
+        : period;
+    };
 
-    return monthName
-      ? monthName + '/' + year
-      : period;
-  };
-
-  const periodLabel =
-    formatReportPeriod(dashboardPeriod);
+    const periodLabel =
+      formatReportPeriod(dashboardPeriod);
 
     const selectedClient =
       dashboardClientFilter !== 'Todos'
@@ -237,49 +222,110 @@ const formatPeriod = (period:string) => {
       selectedClient?.name ||
       (isClient ? user?.name : 'Todos os clientes');
 
-    const reportDemands = demands.filter((d) => {
-      const normalizedStatus = normalizeStatus(d.status);
+    const clientMatches = (d: Demand) => {
+      if (dashboardClientFilter === 'Todos') return true;
 
-      if (normalizedStatus !== 'Concluída') {
+      const demandClientId =
+        (d as any).clientId ??
+        (d as any).client_id ??
+        '';
+
+      return String(demandClientId) ===
+        String(dashboardClientFilter);
+    };
+
+    const periodMatches = (
+      value: string | undefined
+    ) => {
+      if (dashboardPeriod === 'Todos') return true;
+
+      return String(value || '').slice(0, 7) ===
+        dashboardPeriod;
+    };
+
+    // =================================================
+    // DEMANDAS ANALISADAS
+    // =================================================
+
+    const analyzedDemands = demands.filter(d => {
+      if (!clientMatches(d)) return false;
+
+      if (normalizeStatus(d.status) !== 'Analisada') {
         return false;
       }
 
-      if (
-        dashboardPeriod !== 'Todos' &&
-        !String(d.executionMonth || '').startsWith(dashboardPeriod)
-      ) {
-        return false;
-      }
-
-      if (dashboardClientFilter !== 'Todos') {
-        const demandClientId =
-          (d as any).clientId ??
-          (d as any).client_id ??
-          '';
-
-        if (
-          String(demandClientId) !==
-          String(dashboardClientFilter)
-        ) {
-          return false;
-        }
-      }
-
-      return true;
+      return periodMatches(d.analysisMonth);
     });
 
-    const analysisHours = reportDemands.reduce(
-      (sum, d) => sum + Number(d.horasAnalise || 0),
-      0
-    );
+    // =================================================
+    // DEMANDAS CONCLUÍDAS
+    // =================================================
 
-    const requiredHours = reportDemands.reduce(
-      (sum, d) => sum + Number(d.horasNecessarias || 0),
-      0
-    );
+    const completedDemands = demands.filter(d => {
+      if (!clientMatches(d)) return false;
 
-    const totalHours =
-      analysisHours + requiredHours;
+      if (normalizeStatus(d.status) !== 'Concluída') {
+        return false;
+      }
+
+      return periodMatches(d.executionMonth);
+    });
+
+    const analysisHours =
+      analyzedDemands.reduce(
+        (sum, d) =>
+          sum + Number(d.horasAnalise || 0),
+        0
+      );
+
+    const finishedHours =
+      completedDemands.reduce(
+        (sum, d) =>
+          sum +
+          Number(d.horasAnalise || 0) +
+          Number(d.horasNecessarias || 0),
+        0
+      );
+
+    const totalMonthHours =
+      analysisHours + finishedHours;
+
+    // =================================================
+    // INDICADORES GERAIS
+    // =================================================
+
+    const generalDemands =
+      demands.filter(d => clientMatches(d));
+
+    const totalDemands =
+      generalDemands.length;
+
+    const approvedDemands =
+      generalDemands.filter(
+        d =>
+          normalizeApproval(d.aprovacao) ===
+          'Aprovada'
+      ).length;
+
+    const rejectedDemands =
+      generalDemands.filter(
+        d =>
+          normalizeApproval(d.aprovacao) ===
+          'Reprovada'
+      ).length;
+
+    const pendingApprovalHours =
+      generalDemands
+        .filter(
+          d =>
+            normalizeApproval(d.aprovacao) ===
+            'Pendente'
+        )
+        .reduce(
+          (sum, d) =>
+            sum + Number(d.horasNecessarias || 0),
+          0
+        );
 
     const today = new Date();
 
@@ -292,122 +338,340 @@ const formatPeriod = (period:string) => {
       });
 
     // =================================================
-    // CABEÇALHO
+    // CABEÇALHO EXECUTIVO
+    // =================================================
+
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 210, 30, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text(
+      'SAPHIRE SHEET',
+      14,
+      13
+    );
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(
+      'STATUS REPORT EXECUTIVO',
+      14,
+      20
+    );
+
+    doc.setFontSize(7.5);
+    doc.text(
+      `${periodLabel}  •  ${clientName}`,
+      14,
+      26
+    );
+
+    doc.setTextColor(22, 35, 59);
+
+    // =================================================
+    // CONTEXTO
     // =================================================
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('STATUS REPORT', 14, 20);
+    doc.setFontSize(10.5);
+
+    doc.text(
+      'VISÃO EXECUTIVA',
+      14,
+      41
+    );
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(8);
+
     doc.text(
       `Período: ${periodLabel}`,
       14,
-      29
+      48
     );
 
     doc.text(
       `Cliente: ${clientName}`,
       14,
-      35
+      54
     );
 
     doc.text(
       `Gerado em: ${generatedAt}`,
       14,
-      41
+      60
     );
 
     // =================================================
-    // RESUMO
+    // FUNÇÃO DE CARD
     // =================================================
 
-    const summaryY = 52;
+    const drawMetric = (
+      x: number,
+      y: number,
+      width: number,
+      title: string,
+      value: string
+    ) => {
+      doc.setDrawColor(225, 231, 239);
+      doc.setFillColor(248, 250, 252);
 
-    doc.setFontSize(10);
+      doc.roundedRect(
+        x,
+        y,
+        width,
+        24,
+        3,
+        3,
+        'FD'
+      );
+
+      doc.setTextColor(108, 122, 142);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+
+      doc.text(
+        title,
+        x + 5,
+        y + 8
+      );
+
+      doc.setTextColor(22, 35, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+
+      doc.text(
+        value,
+        x + 5,
+        y + 18
+      );
+    };
+
+    // =================================================
+    // HORAS DO PERÍODO
+    // =================================================
+
+    drawMetric(
+      14,
+      68,
+      57,
+      'HORAS ANALISADAS',
+      `${analysisHours}h`
+    );
+
+    drawMetric(
+      76,
+      68,
+      57,
+      'HORAS CONCLUÍDAS',
+      `${finishedHours}h`
+    );
+
+    drawMetric(
+      138,
+      68,
+      58,
+      'TOTAL DO MÊS',
+      `${totalMonthHours}h`
+    );
+
+    // =================================================
+    // INDICADORES GERAIS
+    // =================================================
+
+    doc.setTextColor(22, 35, 59);
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
 
     doc.text(
-      'RESUMO DO PERÍODO',
+      'INDICADORES GERAIS',
       14,
-      summaryY
+      106
     );
 
-    doc.setFont('helvetica', 'normal');
-
-    doc.text(
-      `Demandas finalizadas: ${reportDemands.length}`,
+    drawMetric(
       14,
-      summaryY + 9
+      112,
+      44,
+      'DEMANDAS',
+      String(totalDemands)
     );
 
-    doc.text(
-      `Horas de análise: ${analysisHours}h`,
-      14,
-      summaryY + 16
+    drawMetric(
+      62,
+      112,
+      44,
+      'APROVADAS',
+      String(approvedDemands)
     );
 
-    doc.text(
-      `Horas necessárias: ${requiredHours}h`,
-      14,
-      summaryY + 23
+    drawMetric(
+      110,
+      112,
+      44,
+      'REPROVADAS',
+      String(rejectedDemands)
     );
 
-    doc.text(
-      `Horas totais: ${totalHours}h`,
-      14,
-      summaryY + 30
-    );
 
     // =================================================
-    // TABELA
+    // DEMANDAS ANALISADAS
     // =================================================
 
-    const tableData = reportDemands.map((d) => [
-      String(d.numero),
-      d.problema || '-',
-      d.tratamento || '-',
-      `${Number(d.horasAnalise || 0)}h`,
-      `${Number(d.horasNecessarias || 0)}h`,
-      `${Number(d.horasAnalise || 0) + Number(d.horasNecessarias || 0)}h`,
-      d.responsavel || '-'
-    ]);
+    let analyzedStartY = 149;
+
+    doc.setTextColor(22, 35, 59);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+
+    doc.text(
+      `DEMANDAS ANALISADAS NO PERÍODO  •  ${analyzedDemands.length}`,
+      14,
+      analyzedStartY
+    );
+
+    const analyzedTable =
+      analyzedDemands.map(d => [
+        String(d.numero).padStart(3, '0'),
+        d.problema || '-',
+        `${Number(d.horasAnalise || 0)}h`,
+        d.responsavel || '-'
+      ]);
 
     autoTable(doc, {
-      startY: 91,
+      startY: analyzedStartY + 6,
+
       head: [[
         'Nº',
-        'Problema',
-        'Tratamento',
-        'Análise',
-        'Necessárias',
-        'Total',
+        'Demanda',
+        'Horas',
         'Responsável'
       ]],
-      body: tableData,
+
+      body:
+        analyzedTable.length
+          ? analyzedTable
+          : [[
+              '-',
+              'Nenhuma demanda analisada no período.',
+              '-',
+              '-'
+            ]],
+
       theme: 'grid',
+
       styles: {
         font: 'helvetica',
-        fontSize: 8,
+        fontSize: 7.2,
         cellPadding: 3,
-        overflow: 'linebreak'
+        overflow: 'linebreak',
+        textColor: [45, 55, 72],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.25
       },
+
       headStyles: {
+        fillColor: [15, 23, 42],
+        textColor: [255, 255, 255],
         fontStyle: 'bold'
       },
+
       columnStyles: {
-        0: { cellWidth: 12 },
-        1: { cellWidth: 45 },
-        2: { cellWidth: 45 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 24 },
-        5: { cellWidth: 18 },
-        6: { cellWidth: 25 }
+        0: { cellWidth: 14 },
+        1: { cellWidth: 105 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 41 }
       },
+
       margin: {
-        left: 10,
-        right: 10
+        left: 14,
+        right: 14
+      }
+    });
+
+    // =================================================
+    // DEMANDAS CONCLUÍDAS
+    // =================================================
+
+    let completedStartY =
+      ((doc as any).lastAutoTable?.finalY || 155) + 14;
+
+    if (completedStartY > 250) {
+      doc.addPage();
+      completedStartY = 22;
+    }
+
+    doc.setTextColor(22, 35, 59);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+
+    doc.text(
+      `DEMANDAS CONCLUÍDAS NO PERÍODO  •  ${completedDemands.length}`,
+      14,
+      completedStartY
+    );
+
+    const completedTable =
+      completedDemands.map(d => [
+        String(d.numero).padStart(3, '0'),
+        d.problema || '-',
+        `${(
+          Number(d.horasAnalise || 0) +
+          Number(d.horasNecessarias || 0)
+        )}h`,
+        d.responsavel || '-'
+      ]);
+
+    autoTable(doc, {
+      startY: completedStartY + 6,
+
+      head: [[
+        'Nº',
+        'Demanda',
+        'Horas',
+        'Responsável'
+      ]],
+
+      body:
+        completedTable.length
+          ? completedTable
+          : [[
+              '-',
+              'Nenhuma demanda concluída no período.',
+              '-',
+              '-'
+            ]],
+
+      theme: 'grid',
+
+      styles: {
+        font: 'helvetica',
+        fontSize: 7.2,
+        cellPadding: 3,
+        overflow: 'linebreak',
+        textColor: [45, 55, 72],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.25
+      },
+
+      headStyles: {
+        fillColor: [37, 99, 235],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+
+      columnStyles: {
+        0: { cellWidth: 14 },
+        1: { cellWidth: 105 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 41 }
+      },
+
+      margin: {
+        left: 14,
+        right: 14
       }
     });
 
@@ -418,23 +682,37 @@ const formatPeriod = (period:string) => {
     const pageCount =
       (doc as any).internal.getNumberOfPages();
 
-    for (let page = 1; page <= pageCount; page++) {
+    for (
+      let page = 1;
+      page <= pageCount;
+      page++
+    ) {
       doc.setPage(page);
 
       const pageHeight =
         doc.internal.pageSize.getHeight();
 
-      doc.setFontSize(8);
+      doc.setDrawColor(226, 232, 240);
+
+      doc.line(
+        14,
+        pageHeight - 17,
+        196,
+        pageHeight - 17
+      );
+
+      doc.setTextColor(120, 132, 148);
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
 
       doc.text(
-        `Página ${page} de ${pageCount}`,
+        'Saphire Sheet • Status Report Executivo',
         14,
         pageHeight - 10
       );
 
       doc.text(
-        'Status Report',
+        `Página ${page} de ${pageCount}`,
         196,
         pageHeight - 10,
         { align: 'right' }
@@ -451,14 +729,12 @@ const formatPeriod = (period:string) => {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-zA-Z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+        .replace(/^-+|-+$/g, '');
 
     doc.save(
-      `status-report-${safeClient || 'cliente'}-${filePeriod}.pdf`
+      `status-report-${filePeriod}-${safeClient || 'todos-clientes'}.pdf`
     );
   };
-
-
   const request=async(path:string,options:RequestInit={})=>{
     const headers=new Headers(options.headers||{});
     headers.set('Content-Type','application/json');
@@ -3176,6 +3452,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
