@@ -816,7 +816,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     </option>
   ))}
 </select>
-            <span className="hf-filter-count"><Filter size={15}/> {dashboard.totalDemands} demandas</span>
+            <span className="hf-filter-count">{dashboard.totalDemands} demandas</span>
           </section>
         ) : (
           <section className="hf-filters hf-filters-clean">
@@ -1000,7 +1000,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         {tab==='dashboard'?<>
           <section className="hf-dashboard-header">
             <div>
-              <span className="hf-dashboard-eyebrow">VISÃO GERAL</span>
+              
               <h1>Dashboard</h1>
               <p>Acompanhe demandas, horas e andamento das atividades.</p>
             </div>
@@ -1013,7 +1013,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             </div>
           </section>
 
-          <section className="hf-dashboard-kpis" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%"}}>
+          <section className="hf-dashboard-kpis" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"12px"}}>
             <Card
               title="Demandas"
               value={dashboardLoading?'…':dashboard.totalDemands}
@@ -3071,6 +3071,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
