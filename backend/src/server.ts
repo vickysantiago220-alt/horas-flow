@@ -1495,6 +1495,7 @@ app.put(
         problem,
         treatment,
         analysisHours = 0,
+        analysisMonth = null,
         requiredHours = 0,
         priority = 'Média',
         status = 'Aguardando análise',
@@ -2825,3 +2826,5 @@ async function startServer() {
 }
 
 startServer();
+
+
