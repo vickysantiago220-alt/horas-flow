@@ -511,7 +511,7 @@ const formatPeriod = (period:string) => {
         rejectedDemands:Number(d.rejectedDemands||0),
         pendingApprovalDemands:Number(d.pendingApprovalDemands ?? 0),
         pendingApprovalHoursTotal:Number(d.pendingApprovalHoursTotal ?? 0),
-        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.executionMonth)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
+        finishedHours:Number(d.finishedHours ?? 0),
         finishedDemands:Number(d.finishedDemands ?? d.finalizedDemands ?? 0),
         byStatus:d.byStatus||{},
         byClient:d.byClient||[]
@@ -1013,7 +1013,16 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             </div>
           </section>
 
-          <section className="hf-dashboard-kpis" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%"}}>
+          <section
+            className="hf-dashboard-kpis"
+            style={{
+              display:"grid",
+              gridTemplateColumns:"repeat(6,minmax(0,1fr))",
+              gap:"16px",
+              width:"100%"
+            }}
+          >
+
             <Card
               title="Demandas"
               value={dashboardLoading?'…':dashboard.totalDemands}
@@ -1043,9 +1052,16 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
               value={dashboardLoading?'…':`${dashboard.totalHours}h`}
               icon={<CheckCircle2/>}
             />
+
+            <Card
+              title="Horas concluídas"
+              value={dashboardLoading?'…':`${dashboard.finishedHours}h`}
+              icon={<CalendarDays/>}
+            />
+
           </section>
 
-          <section className="hf-dashboard-secondary" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"0",marginBottom:"18px"}}>
+          <section className="hf-dashboard-secondary hf-dashboard-secondary-final" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%",margin:"0 0 28px 0",padding:"0",alignItems:"stretch",boxSizing:"border-box"}}>
             <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
               <span className="hf-dashboard-mini-label">Aprovadas</span>
               <strong>{dashboardLoading?'…':dashboard.approvedDemands}</strong>
@@ -3064,7 +3080,600 @@ const styles = `
     padding-bottom:13px !important;
   }
 }
+
+/* =====================================================
+   ALINHAMENTO E RESPIRO DOS CARDS DO DASHBOARD
+   ===================================================== */
+
+.hf-dashboard-kpis{
+  display:grid !important;
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  align-items:stretch !important;
+  margin-bottom:16px !important;
+}
+
+.hf-dashboard-kpis > *{
+  min-width:0 !important;
+  min-height:136px !important;
+  height:136px !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  align-items:stretch !important;
+  margin-top:0 !important;
+  margin-bottom:28px !important;
+}
+
+.hf-dashboard-secondary > *{
+  min-width:0 !important;
+  min-height:76px !important;
+  height:76px !important;
+  box-sizing:border-box !important;
+}
+
+@media(max-width:1200px){
+  .hf-dashboard-kpis{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
+
+@media(max-width:700px){
+  .hf-dashboard-kpis,
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:12px !important;
+  }
+
+  .hf-dashboard-kpis > *{
+    height:120px !important;
+    min-height:120px !important;
+  }
+}
+
+/* =====================================================
+   CARDS DASHBOARD - LAYOUT FINAL
+   ===================================================== */
+
+.hf-dashboard-kpis{
+  display:grid !important;
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin:0 0 18px 0 !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-kpis > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:136px !important;
+  min-height:136px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  border-radius:14px !important;
+  overflow:hidden !important;
+}
+
+.hf-dashboard-kpis > * > div{
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin:0 0 28px 0 !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-secondary > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:76px !important;
+  min-height:76px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  border-radius:14px !important;
+}
+
+/* respiro interno dos cards principais */
+.hf-dashboard-kpis .hf-card,
+.hf-dashboard-kpis [class*="card"]{
+  padding:18px !important;
+  box-sizing:border-box !important;
+}
+
+/* textos dos cards */
+.hf-dashboard-kpis strong{
+  display:block !important;
+  margin-top:8px !important;
+  line-height:1.1 !important;
+}
+
+.hf-dashboard-kpis span{
+  line-height:1.25 !important;
+}
+
+/* cards secundários */
+.hf-dashboard-secondary{
+  padding:0 !important;
+}
+
+.hf-dashboard-secondary .hf-dashboard-mini{
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  padding:14px 18px !important;
+  box-sizing:border-box !important;
+}
+
+/* evita qualquer largura herdada */
+.hf-dashboard-kpis > *,
+.hf-dashboard-secondary > *{
+  flex:none !important;
+}
+
+/* =====================================================
+   RESPONSIVO
+   ===================================================== */
+
+@media(max-width:1250px){
+  .hf-dashboard-kpis{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
+
+@media(max-width:750px){
+  .hf-dashboard-kpis,
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:12px !important;
+  }
+
+  .hf-dashboard-kpis > *{
+    height:125px !important;
+    min-height:125px !important;
+  }
+
+  .hf-dashboard-secondary > *{
+    height:72px !important;
+    min-height:72px !important;
+  }
+}
+
+/* ---------- AJUSTE FINAL - ESPACAMENTO DASHBOARD ---------- */
+
+.hf-dashboard-kpis{
+  margin-top:18px !important;
+  margin-bottom:14px !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-kpis > *{
+  min-height:132px !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary{
+  margin-top:0 !important;
+  margin-bottom:24px !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-secondary > *{
+  min-height:76px !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-main-grid{
+  margin-top:0 !important;
+  gap:20px !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-main-grid > *{
+  box-sizing:border-box !important;
+}
+
+.hf-chart-panel{
+  margin-top:0 !important;
+}
+
+.hf-chart-panel > .hf-panel-title{
+  padding:20px 20px 8px !important;
+  margin-bottom:0 !important;
+}
+
+.hf-chart-panel .hf-status-chart{
+  margin-top:4px !important;
+}
+
+.hf-ultimas-demandas{
+  margin-top:24px !important;
+}
+
+.hf-ultimas-demandas > .hf-panel-title{
+  padding:20px 20px 17px !important;
+  margin:0 !important;
+}
+
+@media(max-width:1100px){
+  .hf-dashboard-kpis{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
+
+@media(max-width:700px){
+  .hf-dashboard-kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+}
+
+/* ---------- FIM AJUSTE ---------- */
+
+/* =========================================================
+   ESPACAMENTO DEFINITIVO DOS CARDS DO DASHBOARD
+   ========================================================= */
+
+.hf-dashboard-kpis{
+  display:grid !important;
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin-top:22px !important;
+  margin-bottom:18px !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-kpis > *{
+  width:100% !important;
+  min-width:0 !important;
+  min-height:132px !important;
+  height:132px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin-top:0 !important;
+  margin-bottom:28px !important;
+  align-items:stretch !important;
+}
+
+.hf-dashboard-secondary > *{
+  width:100% !important;
+  min-width:0 !important;
+  min-height:76px !important;
+  height:76px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* Titulo do dashboard */
+.hf-dashboard-main-grid{
+  margin-top:0 !important;
+  gap:20px !important;
+}
+
+/* Mantem o grafico de pizza intacto */
+.hf-chart-panel{
+  margin-top:0 !important;
+}
+
+.hf-chart-panel .hf-status-chart{
+  margin-top:0 !important;
+}
+
+/* Respiro antes das ultimas demandas */
+.hf-ultimas-demandas{
+  margin-top:28px !important;
+}
+
+/* Responsivo */
+@media(max-width:1200px){
+  .hf-dashboard-kpis{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+}
+
+@media(max-width:700px){
+  .hf-dashboard-kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+}
+
+/* =========================================================
+   FIM
+   ========================================================= */
+
+/* =========================================================
+   LAYOUT DEFINITIVO DOS CARDS - DASHBOARD
+   ========================================================= */
+
+.hf-dashboard-kpis-final{
+  display:grid !important;
+  grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin:20px 0 16px 0 !important;
+  padding:0 !important;
+  align-items:stretch !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-kpis-final > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:132px !important;
+  min-height:132px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* Segunda linha */
+.hf-dashboard-secondary-final{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin:0 0 28px 0 !important;
+  padding:0 !important;
+  align-items:stretch !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary-final > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:76px !important;
+  min-height:76px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* Painel da pizza */
+.hf-dashboard-main-grid{
+  margin-top:0 !important;
+  gap:20px !important;
+  align-items:stretch !important;
+}
+
+/* Titulo do painel da pizza */
+.hf-dashboard-main-grid .hf-chart-panel > .hf-panel-title{
+  padding:20px 20px 10px 20px !important;
+  margin:0 !important;
+}
+
+/* Pizza continua com o tamanho atual */
+.hf-dashboard-main-grid .hf-status-chart{
+  margin-top:0 !important;
+}
+
+/* Ultimas demandas */
+.hf-ultimas-demandas{
+  margin-top:28px !important;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media(max-width:1200px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+}
+
+@media(max-width:700px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+}
+
+/* =========================================================
+   CORRECAO DEFINITIVA - CARDS DASHBOARD
+   ========================================================= */
+
+.hf-dashboard-kpis-final > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:132px !important;
+  min-height:132px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary-final > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:76px !important;
+  min-height:76px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* desktop: SEMPRE 5 na segunda linha */
+@media(min-width:1201px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  }
+
+}
+
+/* telas menores */
+@media(max-width:1200px) and (min-width:701px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+}
+
+@media(max-width:700px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+}
+
+/* espaço entre os blocos */
+.hf-dashboard-secondary-final{
+  margin-bottom:28px !important;
+}
+
+/* pizza não recebe alteração de tamanho */
+.hf-dashboard-main-grid{
+  margin-top:0 !important;
+}
+
+/* =========================================================
+   FIM
+   ========================================================= */
+
+/* =========================================================
+   CORRECAO DEFINITIVA - CARDS DASHBOARD
+   ========================================================= */
+
+.hf-dashboard-kpis-final > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:132px !important;
+  min-height:132px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+.hf-dashboard-secondary-final > *{
+  width:100% !important;
+  min-width:0 !important;
+  height:76px !important;
+  min-height:76px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* desktop: SEMPRE 5 na segunda linha */
+@media(min-width:1201px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(6,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  }
+
+}
+
+/* telas menores */
+@media(max-width:1200px) and (min-width:701px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+}
+
+@media(max-width:700px){
+
+  .hf-dashboard-kpis-final{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .hf-dashboard-secondary-final{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+}
+
+/* espaço entre os blocos */
+.hf-dashboard-secondary-final{
+  margin-bottom:28px !important;
+}
+
+/* pizza não recebe alteração de tamanho */
+.hf-dashboard-main-grid{
+  margin-top:0 !important;
+}
+
+/* =========================================================
+   FIM
+   ========================================================= */
 `
+
+
+
+
+
+
+
+
 
 
 
