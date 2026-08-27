@@ -1014,19 +1014,17 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             </div>
           </section>
 
-          <section className="hf-dashboard-kpis" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"12px"}}>
-            <Card
-              title="Demandas"
-              value={dashboardLoading?'…':dashboard.totalDemands}
-              icon={<BarChart3/>}
-            />
-
-            <Card
-              title="Horas de análise"
-              value={dashboardLoading?'…':`${dashboard.analysisHours}h`}
-              icon={<Clock3/>}
-            />
-
+                    
+          <section
+            className="hf-dashboard-kpis"
+            style={{
+              display:"grid",
+              gridTemplateColumns:"repeat(3,minmax(0,1fr))",
+              gap:"16px",
+              width:"100%",
+              marginTop:"12px"
+            }}
+          >
             <Card
               title="Horas analisadas"
               value={dashboardLoading?'…':`${dashboard.analyzedHours}h`}
@@ -1034,51 +1032,157 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             />
 
             <Card
-              title="Horas necessárias"
-              value={dashboardLoading?'…':`${dashboard.requiredHours}h`}
-              icon={<Clock3/>}
+              title="Horas concluídas"
+              value={dashboardLoading?'…':`${dashboard.finishedHours}h`}
+              icon={<CheckCircle2/>}
             />
 
             <Card
-              title="Horas totais"
-              value={dashboardLoading?'…':`${dashboard.totalHours}h`}
-              icon={<CheckCircle2/>}
+              title="Total do mês"
+              value={dashboardLoading
+                ? '…'
+                : `${(
+                    Number(dashboard.analyzedHours || 0) +
+                    Number(dashboard.finishedHours || 0)
+                  ).toFixed(1)}h`}
+              icon={<Clock3/>}
             />
           </section>
 
-          <section className="hf-dashboard-secondary" style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"10px",marginBottom:"18px"}}>
-            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
-              <span className="hf-dashboard-mini-label">Aprovadas</span>
-              <strong>{dashboardLoading?'…':dashboard.approvedDemands}</strong>
+          <section
+            className="hf-dashboard-secondary"
+            style={{
+              display:"grid",
+              gridTemplateColumns:"repeat(4,minmax(0,1fr))",
+              gap:"16px",
+              width:"100%",
+              marginTop:"12px",
+              marginBottom:"20px"
+            }}
+          >
+            <div
+              style={{
+                background:"#fff",
+                border:"1px solid #e5eaf2",
+                borderRadius:"14px",
+                padding:"18px 20px",
+                minHeight:"82px",
+                display:"flex",
+                flexDirection:"column",
+                justifyContent:"center",
+                boxSizing:"border-box",
+                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
+              }}
+            >
+              <span className="hf-dashboard-mini-label">
+                Total de demandas
+              </span>
+              <strong
+                style={{
+                  display:"block",
+                  fontSize:"24px",
+                  lineHeight:"1.1",
+                  color:"#16233b",
+                  fontWeight:700
+                }}
+              >
+                {dashboardLoading?'…':dashboard.totalDemands}
+              </strong>
             </div>
 
-            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
-              <span className="hf-dashboard-mini-label">Reprovadas</span>
-              <strong>{dashboardLoading?'…':dashboard.rejectedDemands}</strong>
+            <div
+              style={{
+                background:"#fff",
+                border:"1px solid #e5eaf2",
+                borderRadius:"14px",
+                padding:"18px 20px",
+                minHeight:"82px",
+                display:"flex",
+                flexDirection:"column",
+                justifyContent:"center",
+                boxSizing:"border-box",
+                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
+              }}
+            >
+              <span className="hf-dashboard-mini-label">
+                Aprovadas
+              </span>
+              <strong
+                style={{
+                  display:"block",
+                  fontSize:"24px",
+                  lineHeight:"1.1",
+                  color:"#16233b",
+                  fontWeight:700
+                }}
+              >
+                {dashboardLoading?'…':dashboard.approvedDemands}
+              </strong>
             </div>
 
-            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
-              <span className="hf-dashboard-mini-label">Pendentes de aprovação</span>
-              <strong>{dashboardLoading?'…':`${dashboard.pendingApprovalHoursTotal}h`}</strong>
+            <div
+              style={{
+                background:"#fff",
+                border:"1px solid #e5eaf2",
+                borderRadius:"14px",
+                padding:"18px 20px",
+                minHeight:"82px",
+                display:"flex",
+                flexDirection:"column",
+                justifyContent:"center",
+                boxSizing:"border-box",
+                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
+              }}
+            >
+              <span className="hf-dashboard-mini-label">
+                Reprovadas
+              </span>
+              <strong
+                style={{
+                  display:"block",
+                  fontSize:"24px",
+                  lineHeight:"1.1",
+                  color:"#16233b",
+                  fontWeight:700
+                }}
+              >
+                {dashboardLoading?'…':dashboard.rejectedDemands}
+              </strong>
             </div>
 
-            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
-              <span className="hf-dashboard-mini-label">Em desenvolvimento</span>
-              <strong>{dashboardLoading?'…':(dashboard.byStatus['Em desenvolvimento']||0)}</strong>
-            </div>
-
-            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
-              <span className="hf-dashboard-mini-label">Finalizadas</span>
-              <strong>{dashboardLoading?'…':dashboard.finishedDemands}</strong>
-            </div>
-
-            <div className="hf-dashboard-mini hf-hours-completed-card" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
-              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"4px",width:"100%"}}>
-                <span className="hf-dashboard-mini-label">Horas concluídas</span>
-                <strong>{dashboardLoading?'…':`${dashboard.finishedHours}h`}</strong>
-              </div>
+            <div
+              style={{
+                background:"#fff",
+                border:"1px solid #e5eaf2",
+                borderRadius:"14px",
+                padding:"18px 20px",
+                minHeight:"82px",
+                display:"flex",
+                flexDirection:"column",
+                justifyContent:"center",
+                boxSizing:"border-box",
+                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
+              }}
+            >
+              <span className="hf-dashboard-mini-label">
+                Pendentes de aprovação
+              </span>
+              <strong
+                style={{
+                  display:"block",
+                  fontSize:"24px",
+                  lineHeight:"1.1",
+                  color:"#16233b",
+                  fontWeight:700
+                }}
+              >
+                {dashboardLoading
+                  ? '…'
+                  : `${dashboard.pendingApprovalHoursTotal}h`}
+              </strong>
             </div>
           </section>
+
           <section className="hf-grid2 hf-dashboard-main-grid">
 
             <div className="hf-panel hf-chart-panel">
@@ -3072,6 +3176,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
