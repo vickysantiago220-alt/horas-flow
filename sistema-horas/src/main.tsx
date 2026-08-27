@@ -30,7 +30,7 @@ type HistoryItem = { id:string; date:string; user:string; field:string; oldValue
 type Demand = {
   id:string; numero:number; problema:string; tratamento:string; horasAnalise:number; horasNecessarias:number;
   prioridade:Priority; status:Status; aprovacao:'Pendente'|'Aprovada'|'Reprovada'; aprovadoPor:string;
-  aprovadoEm:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
+  aprovadoEm:string; analysisMonth?:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
 };
 
 const API = 'https://horas-flow.onrender.com/api';
@@ -77,6 +77,7 @@ function normalizeApproval(value:any):'Pendente'|'Aprovada'|'Reprovada' {
 }
 
 function normalizeDemand(raw:any):Demand {
+  const analysisMonth = raw.analysisMonth ?? raw.analysis_month ?? '';
   const executionMonth = raw.executionMonth ?? raw.execution_month ?? raw.executionDate ?? raw.execution_date ?? raw.execution_month_date ?? raw.executionMonthDate ?? '';
   const created = raw.createdAt ?? raw.created_at ?? new Date().toISOString();
   return {
@@ -84,7 +85,7 @@ function normalizeDemand(raw:any):Demand {
     tratamento:raw.treatment ?? raw.tratamento ?? '', horasAnalise:Number(raw.analysisHours ?? raw.analysis_hours ?? raw.horasAnalise ?? 0),
     horasNecessarias:Number(raw.requiredHours ?? raw.required_hours ?? raw.horasNecessarias ?? 0), prioridade:normalizePriority(raw.priority ?? raw.prioridade),
     status:raw.status ?? 'Pendente', aprovacao:normalizeApproval(raw.approval ?? raw.aprovacao), aprovadoPor:raw.approvedBy ?? raw.approved_by ?? '',
-    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', executionMonth,
+    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, executionMonth,
     rejectionReason:raw.rejectionReason ?? raw.rejection_reason ?? raw.rejection ?? '',
     pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '',
     criadoEm:String(created).slice(0,10), history:raw.history ?? []
@@ -3071,6 +3072,12 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
 
 
 
