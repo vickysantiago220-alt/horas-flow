@@ -2774,46 +2774,54 @@ app.use(
 // SERVIDOR
 // =====================================================
 
-app.listen(
-  PORT,
-  () => {
-    console.log(
-      `Backend rodando em http://localhost:${PORT}`
+async function startServer() {
+  try {
+    const [columns] = await pool.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'demands'
+        AND COLUMN_NAME = 'analysis_month'
+      `
     );
+
+    const hasAnalysisMonth =
+      Number((columns as any[])[0]?.total || 0) > 0;
+
+    if (!hasAnalysisMonth) {
+      await pool.query(
+        `
+        ALTER TABLE demands
+        ADD COLUMN analysis_month DATE NULL
+        `
+      );
+
+      console.log(
+        'Coluna analysis_month criada com sucesso.'
+      );
+    } else {
+      console.log(
+        'Coluna analysis_month já existe.'
+      );
+    }
+
+    app.listen(
+      PORT,
+      () => {
+        console.log(
+          `Backend rodando em http://localhost:${PORT}`
+        );
+      }
+    );
+  } catch (error) {
+    console.error(
+      'ERRO AO INICIALIZAR BANCO:',
+      error
+    );
+
+    process.exit(1);
   }
-);
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+startServer();
