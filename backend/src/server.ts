@@ -111,7 +111,6 @@ const DEMAND_SELECT = `
     approved_by_user_id AS approvedByUserId,
     approved_at AS approvedAt,
     rejection_reason AS rejectionReason,
-    execution_month AS executionMonth,
     responsible,
     client_id AS clientId,
     paid,
@@ -1385,7 +1384,6 @@ app.post(
             approved_by_user_id,
             approved_at,
             rejection_reason,
-            execution_month,
             request_date,
             delivery_date,
             responsible,
@@ -1893,9 +1891,7 @@ app.get(
             status,
             rejection_reason AS rejectionReason,
             request_date AS requestDate,
-            delivery_date AS deliveryDate,
-            execution_month AS executionMonth
-          FROM demands
+            delivery_date AS deliveryDate,          FROM demands
           WHERE id = ?
           LIMIT 1
         `,
@@ -2207,7 +2203,6 @@ app.post(
           approved_by_user_id = ?,
           approved_at = NOW(),
           rejection_reason = ?,
-          execution_month = NULL,
           updated_at = NOW()
         WHERE id = ?
         `,
@@ -2239,13 +2234,6 @@ app.post(
         'Motivo da reprovação',
         demand.rejectionReason,
         reason.trim()
-      );
-      await recordDemandHistory(
-        id,
-        req,
-        'Mês de execução',
-        demand.executionMonth,
-        null
       );
 
       return res.json({
@@ -2436,8 +2424,7 @@ app.get(
                   WHEN approval = 'Aprovada'
                     AND (
                       ? IS NULL
-                      OR DATE_FORMAT(
-                        execution_month,
+                      OR DATE_FORMAT(delivery_date,
                         '%Y-%m'
                       ) = ?
                     )
@@ -2454,8 +2441,7 @@ app.get(
                   WHEN status = 'Concluída'
                     AND (
                       ? IS NULL
-                      OR DATE_FORMAT(
-                        execution_month,
+                      OR DATE_FORMAT(delivery_date,
                         '%Y-%m'
                       ) = ?
                     )
@@ -2474,8 +2460,7 @@ app.get(
                   WHEN status = 'Concluída'
                     AND (
                       ? IS NULL
-                      OR DATE_FORMAT(
-                        execution_month,
+                      OR DATE_FORMAT(delivery_date,
                         '%Y-%m'
                       ) = ?
                     )
@@ -2492,8 +2477,7 @@ app.get(
                   WHEN approval = 'Pendente'
                     AND (
                       ? IS NULL
-                      OR DATE_FORMAT(
-                        execution_month,
+                      OR DATE_FORMAT(delivery_date,
                         '%Y-%m'
                       ) = ?
                     )
@@ -2511,8 +2495,7 @@ app.get(
                 WHEN approval = 'Pendente'
                   AND (
                     ? IS NULL
-                    OR DATE_FORMAT(
-                      execution_month,
+                    OR DATE_FORMAT(delivery_date,
                       '%Y-%m'
                     ) = ?
                   )
@@ -2834,6 +2817,8 @@ async function startServer() {
 }
 
 startServer();
+
+
 
 
 
