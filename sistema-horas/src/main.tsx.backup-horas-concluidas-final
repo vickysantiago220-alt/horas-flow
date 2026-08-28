@@ -30,7 +30,7 @@ type HistoryItem = { id:string; date:string; user:string; field:string; oldValue
 type Demand = {
   id:string; numero:number; problema:string; tratamento:string; horasAnalise:number; horasNecessarias:number;
   prioridade:Priority; status:Status; aprovacao:'Pendente'|'Aprovada'|'Reprovada'; aprovadoPor:string;
-  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
+  aprovadoEm:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
 };
 
 const API = 'https://horas-flow.onrender.com/api';
@@ -77,9 +77,6 @@ function normalizeApproval(value:any):'Pendente'|'Aprovada'|'Reprovada' {
 }
 
 function normalizeDemand(raw:any):Demand {
-  const analysisMonth = raw.analysisMonth ?? raw.analysis_month ?? '';
-  const requestDate = raw.requestDate ?? raw.request_date ?? '';
-  const deliveryDate = raw.deliveryDate ?? raw.delivery_date ?? '';
   const executionMonth = raw.executionMonth ?? raw.execution_month ?? raw.executionDate ?? raw.execution_date ?? raw.execution_month_date ?? raw.executionMonthDate ?? '';
   const created = raw.createdAt ?? raw.created_at ?? new Date().toISOString();
   return {
@@ -87,7 +84,7 @@ function normalizeDemand(raw:any):Demand {
     tratamento:raw.treatment ?? raw.tratamento ?? '', horasAnalise:Number(raw.analysisHours ?? raw.analysis_hours ?? raw.horasAnalise ?? 0),
     horasNecessarias:Number(raw.requiredHours ?? raw.required_hours ?? raw.horasNecessarias ?? 0), prioridade:normalizePriority(raw.priority ?? raw.prioridade),
     status:raw.status ?? 'Pendente', aprovacao:normalizeApproval(raw.approval ?? raw.aprovacao), aprovadoPor:raw.approvedBy ?? raw.approved_by ?? '',
-    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, requestDate, deliveryDate, executionMonth,
+    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', executionMonth,
     rejectionReason:raw.rejectionReason ?? raw.rejection_reason ?? raw.rejection ?? '',
     pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '',
     criadoEm:String(created).slice(0,10), history:raw.history ?? []
@@ -120,7 +117,7 @@ const availablePeriods = useMemo(() => {
 
   demands.forEach(d => {
     const created = String(d.criadoEm || '').slice(0,7);
-    const execution = String(d.deliveryDate || (d as any).delivery_date || '').slice(0,7);
+    const execution = String(d.executionMonth || '').slice(0,7);
 
     if (created) periods.add(created);
     if (execution) periods.add(execution);
@@ -185,7 +182,7 @@ const formatPeriod = (period:string) => {
   const [editingDemand,setEditingDemand]=useState<Demand|null>(null);
   const [demandForm,setDemandForm]=useState<any>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
-    status:'Aguardando análise',clientId:'',responsavel:'',analysisMonth:'',requestDate:'',deliveryDate:''
+    status:'Aguardando análise',clientId:'',responsavel:'',analysisMonth:'',executionMonth:''
   });
 
   const isAdmin=user?.role==='ADMIN';
@@ -196,22 +193,37 @@ const formatPeriod = (period:string) => {
     const doc = new jsPDF();
 
     const formatReportPeriod = (period: string) => {
-      if (period === 'Todos') return 'Todos os períodos';
+    if (period === 'Todos') {
+      return 'Todos os períodos';
+    }
 
-      const [year, month] = period.split('-');
+    const [year, month] = period.split('-');
 
-      const months = [
-        'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
-      ];
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro'
+    ];
 
-      return months[Number(month) - 1]
-        ? `${months[Number(month) - 1]}/${year}`
-        : period;
-    };
+    const monthName =
+      months[Number(month) - 1];
 
-    const periodLabel =
-      formatReportPeriod(dashboardPeriod);
+    return monthName
+      ? monthName + '/' + year
+      : period;
+  };
+
+  const periodLabel =
+    formatReportPeriod(dashboardPeriod);
 
     const selectedClient =
       dashboardClientFilter !== 'Todos'
@@ -224,110 +236,49 @@ const formatPeriod = (period:string) => {
       selectedClient?.name ||
       (isClient ? user?.name : 'Todos os clientes');
 
-    const clientMatches = (d: Demand) => {
-      if (dashboardClientFilter === 'Todos') return true;
+    const reportDemands = demands.filter((d) => {
+      const normalizedStatus = normalizeStatus(d.status);
 
-      const demandClientId =
-        (d as any).clientId ??
-        (d as any).client_id ??
-        '';
-
-      return String(demandClientId) ===
-        String(dashboardClientFilter);
-    };
-
-    const periodMatches = (
-      value: string | undefined
-    ) => {
-      if (dashboardPeriod === 'Todos') return true;
-
-      return String(value || '').slice(0, 7) ===
-        dashboardPeriod;
-    };
-
-    // =================================================
-    // DEMANDAS ANALISADAS
-    // =================================================
-
-    const analyzedDemands = demands.filter(d => {
-      if (!clientMatches(d)) return false;
-
-      if (normalizeStatus(d.status) !== 'Analisada') {
+      if (normalizedStatus !== 'Concluída') {
         return false;
       }
 
-      return periodMatches(d.analysisMonth);
-    });
-
-    // =================================================
-    // DEMANDAS CONCLUÍDAS
-    // =================================================
-
-    const completedDemands = demands.filter(d => {
-      if (!clientMatches(d)) return false;
-
-      if (normalizeStatus(d.status) !== 'Concluída') {
+      if (
+        dashboardPeriod !== 'Todos' &&
+        !String(d.executionMonth || '').startsWith(dashboardPeriod)
+      ) {
         return false;
       }
 
-      return periodMatches(d.deliveryDate || (d as any).delivery_date);
+      if (dashboardClientFilter !== 'Todos') {
+        const demandClientId =
+          (d as any).clientId ??
+          (d as any).client_id ??
+          '';
+
+        if (
+          String(demandClientId) !==
+          String(dashboardClientFilter)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
     });
 
-    const analysisHours =
-      analyzedDemands.reduce(
-        (sum, d) =>
-          sum + Number(d.horasAnalise || 0),
-        0
-      );
+    const analysisHours = reportDemands.reduce(
+      (sum, d) => sum + Number(d.horasAnalise || 0),
+      0
+    );
 
-    const finishedHours =
-      completedDemands.reduce(
-        (sum, d) =>
-          sum +
-          Number(d.horasAnalise || 0) +
-          Number(d.horasNecessarias || 0),
-        0
-      );
+    const requiredHours = reportDemands.reduce(
+      (sum, d) => sum + Number(d.horasNecessarias || 0),
+      0
+    );
 
-    const totalMonthHours =
-      analysisHours + finishedHours;
-
-    // =================================================
-    // INDICADORES GERAIS
-    // =================================================
-
-    const generalDemands =
-      demands.filter(d => clientMatches(d));
-
-    const totalDemands =
-      generalDemands.length;
-
-    const approvedDemands =
-      generalDemands.filter(
-        d =>
-          normalizeApproval(d.aprovacao) ===
-          'Aprovada'
-      ).length;
-
-    const rejectedDemands =
-      generalDemands.filter(
-        d =>
-          normalizeApproval(d.aprovacao) ===
-          'Reprovada'
-      ).length;
-
-    const pendingApprovalHours =
-      generalDemands
-        .filter(
-          d =>
-            normalizeApproval(d.aprovacao) ===
-            'Pendente'
-        )
-        .reduce(
-          (sum, d) =>
-            sum + Number(d.horasNecessarias || 0),
-          0
-        );
+    const totalHours =
+      analysisHours + requiredHours;
 
     const today = new Date();
 
@@ -340,340 +291,122 @@ const formatPeriod = (period:string) => {
       });
 
     // =================================================
-    // CABEÇALHO EXECUTIVO
-    // =================================================
-
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 30, 'F');
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text(
-      'SAPHIRE SHEET',
-      14,
-      13
-    );
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text(
-      'STATUS REPORT EXECUTIVO',
-      14,
-      20
-    );
-
-    doc.setFontSize(7.5);
-    doc.text(
-      `${periodLabel}  •  ${clientName}`,
-      14,
-      26
-    );
-
-    doc.setTextColor(22, 35, 59);
-
-    // =================================================
-    // CONTEXTO
+    // CABEÇALHO
     // =================================================
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-
-    doc.text(
-      'VISÃO EXECUTIVA',
-      14,
-      41
-    );
+    doc.setFontSize(22);
+    doc.text('STATUS REPORT', 14, 20);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-
+    doc.setFontSize(10);
     doc.text(
       `Período: ${periodLabel}`,
       14,
-      48
+      29
     );
 
     doc.text(
       `Cliente: ${clientName}`,
       14,
-      54
+      35
     );
 
     doc.text(
       `Gerado em: ${generatedAt}`,
       14,
-      60
+      41
     );
 
     // =================================================
-    // FUNÇÃO DE CARD
+    // RESUMO
     // =================================================
 
-    const drawMetric = (
-      x: number,
-      y: number,
-      width: number,
-      title: string,
-      value: string
-    ) => {
-      doc.setDrawColor(225, 231, 239);
-      doc.setFillColor(248, 250, 252);
+    const summaryY = 52;
 
-      doc.roundedRect(
-        x,
-        y,
-        width,
-        24,
-        3,
-        3,
-        'FD'
-      );
-
-      doc.setTextColor(108, 122, 142);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-
-      doc.text(
-        title,
-        x + 5,
-        y + 8
-      );
-
-      doc.setTextColor(22, 35, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-
-      doc.text(
-        value,
-        x + 5,
-        y + 18
-      );
-    };
-
-    // =================================================
-    // HORAS DO PERÍODO
-    // =================================================
-
-    drawMetric(
-      14,
-      68,
-      57,
-      'HORAS ANALISADAS',
-      `${analysisHours}h`
-    );
-
-    drawMetric(
-      76,
-      68,
-      57,
-      'HORAS CONCLUÍDAS',
-      `${finishedHours}h`
-    );
-
-    drawMetric(
-      138,
-      68,
-      58,
-      'TOTAL DO MÊS',
-      `${totalMonthHours}h`
-    );
-
-    // =================================================
-    // INDICADORES GERAIS
-    // =================================================
-
-    doc.setTextColor(22, 35, 59);
-    doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-
-    doc.text(
-      'INDICADORES GERAIS',
-      14,
-      106
-    );
-
-    drawMetric(
-      14,
-      112,
-      44,
-      'DEMANDAS',
-      String(totalDemands)
-    );
-
-    drawMetric(
-      62,
-      112,
-      44,
-      'APROVADAS',
-      String(approvedDemands)
-    );
-
-    drawMetric(
-      110,
-      112,
-      44,
-      'REPROVADAS',
-      String(rejectedDemands)
-    );
-
-
-    // =================================================
-    // DEMANDAS ANALISADAS
-    // =================================================
-
-    let analyzedStartY = 149;
-
-    doc.setTextColor(22, 35, 59);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
 
     doc.text(
-      `DEMANDAS ANALISADAS NO PERÍODO  •  ${analyzedDemands.length}`,
+      'RESUMO DO PERÍODO',
       14,
-      analyzedStartY
+      summaryY
     );
 
-    const analyzedTable =
-      analyzedDemands.map(d => [
-        String(d.numero).padStart(3, '0'),
-        d.problema || '-',
-        `${Number(d.horasAnalise || 0)}h`,
-        d.responsavel || '-'
-      ]);
+    doc.setFont('helvetica', 'normal');
+
+    doc.text(
+      `Demandas finalizadas: ${reportDemands.length}`,
+      14,
+      summaryY + 9
+    );
+
+    doc.text(
+      `Horas de análise: ${analysisHours}h`,
+      14,
+      summaryY + 16
+    );
+
+    doc.text(
+      `Horas necessárias: ${requiredHours}h`,
+      14,
+      summaryY + 23
+    );
+
+    doc.text(
+      `Horas totais: ${totalHours}h`,
+      14,
+      summaryY + 30
+    );
+
+    // =================================================
+    // TABELA
+    // =================================================
+
+    const tableData = reportDemands.map((d) => [
+      String(d.numero),
+      d.problema || '-',
+      d.tratamento || '-',
+      `${Number(d.horasAnalise || 0)}h`,
+      `${Number(d.horasNecessarias || 0)}h`,
+      `${Number(d.horasAnalise || 0) + Number(d.horasNecessarias || 0)}h`,
+      d.responsavel || '-'
+    ]);
 
     autoTable(doc, {
-      startY: analyzedStartY + 6,
-
+      startY: 91,
       head: [[
         'Nº',
-        'Demanda',
-        'Horas',
+        'Problema',
+        'Tratamento',
+        'Análise',
+        'Necessárias',
+        'Total',
         'Responsável'
       ]],
-
-      body:
-        analyzedTable.length
-          ? analyzedTable
-          : [[
-              '-',
-              'Nenhuma demanda analisada no período.',
-              '-',
-              '-'
-            ]],
-
+      body: tableData,
       theme: 'grid',
-
       styles: {
         font: 'helvetica',
-        fontSize: 7.2,
+        fontSize: 8,
         cellPadding: 3,
-        overflow: 'linebreak',
-        textColor: [45, 55, 72],
-        lineColor: [226, 232, 240],
-        lineWidth: 0.25
+        overflow: 'linebreak'
       },
-
       headStyles: {
-        fillColor: [15, 23, 42],
-        textColor: [255, 255, 255],
         fontStyle: 'bold'
       },
-
       columnStyles: {
-        0: { cellWidth: 14 },
-        1: { cellWidth: 105 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 41 }
+        0: { cellWidth: 12 },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 25 }
       },
-
       margin: {
-        left: 14,
-        right: 14
-      }
-    });
-
-    // =================================================
-    // DEMANDAS CONCLUÍDAS
-    // =================================================
-
-    let completedStartY =
-      ((doc as any).lastAutoTable?.finalY || 155) + 14;
-
-    if (completedStartY > 250) {
-      doc.addPage();
-      completedStartY = 22;
-    }
-
-    doc.setTextColor(22, 35, 59);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-
-    doc.text(
-      `DEMANDAS CONCLUÍDAS NO PERÍODO  •  ${completedDemands.length}`,
-      14,
-      completedStartY
-    );
-
-    const completedTable =
-      completedDemands.map(d => [
-        String(d.numero).padStart(3, '0'),
-        d.problema || '-',
-        `${(
-          Number(d.horasAnalise || 0) +
-          Number(d.horasNecessarias || 0)
-        )}h`,
-        d.responsavel || '-'
-      ]);
-
-    autoTable(doc, {
-      startY: completedStartY + 6,
-
-      head: [[
-        'Nº',
-        'Demanda',
-        'Horas',
-        'Responsável'
-      ]],
-
-      body:
-        completedTable.length
-          ? completedTable
-          : [[
-              '-',
-              'Nenhuma demanda concluída no período.',
-              '-',
-              '-'
-            ]],
-
-      theme: 'grid',
-
-      styles: {
-        font: 'helvetica',
-        fontSize: 7.2,
-        cellPadding: 3,
-        overflow: 'linebreak',
-        textColor: [45, 55, 72],
-        lineColor: [226, 232, 240],
-        lineWidth: 0.25
-      },
-
-      headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-
-      columnStyles: {
-        0: { cellWidth: 14 },
-        1: { cellWidth: 105 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 41 }
-      },
-
-      margin: {
-        left: 14,
-        right: 14
+        left: 10,
+        right: 10
       }
     });
 
@@ -684,37 +417,23 @@ const formatPeriod = (period:string) => {
     const pageCount =
       (doc as any).internal.getNumberOfPages();
 
-    for (
-      let page = 1;
-      page <= pageCount;
-      page++
-    ) {
+    for (let page = 1; page <= pageCount; page++) {
       doc.setPage(page);
 
       const pageHeight =
         doc.internal.pageSize.getHeight();
 
-      doc.setDrawColor(226, 232, 240);
-
-      doc.line(
-        14,
-        pageHeight - 17,
-        196,
-        pageHeight - 17
-      );
-
-      doc.setTextColor(120, 132, 148);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
 
       doc.text(
-        'Saphire Sheet • Status Report Executivo',
+        `Página ${page} de ${pageCount}`,
         14,
         pageHeight - 10
       );
 
       doc.text(
-        `Página ${page} de ${pageCount}`,
+        'Status Report',
         196,
         pageHeight - 10,
         { align: 'right' }
@@ -731,12 +450,14 @@ const formatPeriod = (period:string) => {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-zA-Z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
+        .replace(/^-|-$/g, '');
 
     doc.save(
-      `status-report-${filePeriod}-${safeClient || 'todos-clientes'}.pdf`
+      `status-report-${safeClient || 'cliente'}-${filePeriod}.pdf`
     );
   };
+
+
   const request=async(path:string,options:RequestInit={})=>{
     const headers=new Headers(options.headers||{});
     headers.set('Content-Type','application/json');
@@ -790,7 +511,7 @@ const formatPeriod = (period:string) => {
         rejectedDemands:Number(d.rejectedDemands||0),
         pendingApprovalDemands:Number(d.pendingApprovalDemands ?? 0),
         pendingApprovalHoursTotal:Number(d.pendingApprovalHoursTotal ?? 0),
-        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.deliveryDate || (x as any).delivery_date)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
+        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.executionMonth)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
         finishedDemands:Number(d.finishedDemands ?? d.finalizedDemands ?? 0),
         byStatus:d.byStatus||{},
         byClient:d.byClient||[]
@@ -864,7 +585,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   const emptyDemand=()=>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
     status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',
-    analysisMonth:'',requestDate:'',deliveryDate:''
+    analysisMonth:'',executionMonth:''
   });
   const openNewDemand=()=>{
     if(!isInternal)return;
@@ -877,7 +598,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     setDemandForm({
       problema:d.problema,tratamento:d.tratamento,horasAnalise:d.horasAnalise,
       horasNecessarias:d.horasNecessarias,prioridade:d.prioridade,status:d.status,
-      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,7),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
+      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,7),executionMonth:String((d as any).executionMonth||'').slice(0,7)
     });
     setDemandModal(true);
   };
@@ -917,7 +638,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         problem:demandForm.problema.trim(),treatment:demandForm.tratamento.trim(),
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
-        analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
+        analysisMonth:demandForm.analysisMonth||null,executionMonth:demandForm.executionMonth||null,
         clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||''
       };
       if(editingDemand)await request(`/demands/${editingDemand.id}`,{method:'PUT',body:JSON.stringify(payload)});
@@ -938,7 +659,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     if(!isAdmin&&!isClient)return;
     setApprovalDemand(d);
     setApprovalReason('');
-    setApprovalMonth('');
+    setApprovalMonth(d.executionMonth || new Date().toISOString().slice(0,7));
     setApprovalType(approved ? 'approve' : 'reject');
   };
 
@@ -952,11 +673,11 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   const confirmApproval=async()=>{
     if(!approvalDemand)return;
     const type=approvalType;
-
+    if(type==='approve' && !/^\d{4}-\d{2}$/.test(approvalMonth)){setApiError('Selecione o mês de execução.');return;}
     if(type==='reject' && !approvalReason.trim()){setApiError('Informe o motivo da reprovação.');return;}
     try{
       setApprovalSaving(true);
-      if(type==='approve'){await request(`/demands/${approvalDemand.id}/approve`,{method:'POST',body:JSON.stringify({})});}
+      if(type==='approve'){await request(`/demands/${approvalDemand.id}/approve`,{method:'POST',body:JSON.stringify({executionMonth:approvalMonth,execution_month:approvalMonth})});}
       else{await request(`/demands/${approvalDemand.id}/reject`,{method:'POST',body:JSON.stringify({reason:approvalReason.trim()})});}
       closeApproval();
       await loadDemands();
@@ -979,7 +700,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
         (demandPeriod==='Todos'||d.criadoEm.startsWith(demandPeriod)) &&
-        (!demandExecutionMonthFilter||getExecutionMonthKey(d.deliveryDate || (d as any).delivery_date)==demandExecutionMonthFilter);
+        (!demandExecutionMonthFilter||getExecutionMonthKey(d.executionMonth)==demandExecutionMonthFilter);
     });
 
     // Mais recente primeiro: número maior = demanda mais nova.
@@ -997,7 +718,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const dashboardDemands=useMemo(()=>demands.filter(d=>{
     const matchesClient = dashboardClientFilter==='Todos' || String((d as any).clientId||'')===String(dashboardClientFilter);
-    const matchesPeriod = dashboardPeriod==='Todos' || getExecutionMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
+    const matchesPeriod = dashboardPeriod==='Todos' || getExecutionMonthKey(d.executionMonth)===dashboardPeriod;
     return matchesClient && matchesPeriod;
   }).slice(0,5),[demands,dashboardClientFilter,dashboardPeriod]);
 
@@ -1048,7 +769,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const copyTable=async()=>{
     const header=['Nº','Cliente','Problema','Tratamento','Análise','Horas necessárias','Prioridade','Status','Aprovação','Aprovado em','Execução','Aprovado por','Responsável','Pago'];
-    const rows=filtered.map(d=>[d.numero,(d as any).clientName||'',d.problema,d.tratamento,d.horasAnalise,d.horasNecessarias,d.prioridade,d.status,d.aprovacao,d.aprovadoEm?new Date(d.aprovadoEm).toLocaleString('pt-BR'):'',formatDate(d.deliveryDate || (d as any).delivery_date),d.aprovadoPor,d.responsavel,d.pago?'Sim':'Não']);
+    const rows=filtered.map(d=>[d.numero,(d as any).clientName||'',d.problema,d.tratamento,d.horasAnalise,d.horasNecessarias,d.prioridade,d.status,d.aprovacao,d.aprovadoEm?new Date(d.aprovadoEm).toLocaleString('pt-BR'):'',formatExecutionMonth(d.executionMonth),d.aprovadoPor,d.responsavel,d.pago?'Sim':'Não']);
     await navigator.clipboard.writeText([header,...rows].map(r=>r.join('\t')).join('\n'));setCopied(true);setTimeout(()=>setCopied(false),1600);
   };
 
@@ -1095,7 +816,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     </option>
   ))}
 </select>
-            <span className="hf-filter-count">{dashboard.totalDemands} demandas</span>
+            <span className="hf-filter-count"><Filter size={15}/> {dashboard.totalDemands} demandas</span>
           </section>
         ) : (
           <section className="hf-filters hf-filters-clean">
@@ -1279,7 +1000,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         {tab==='dashboard'?<>
           <section className="hf-dashboard-header">
             <div>
-              
+              <span className="hf-dashboard-eyebrow">VISÃO GERAL</span>
               <h1>Dashboard</h1>
               <p>Acompanhe demandas, horas e andamento das atividades.</p>
             </div>
@@ -1292,17 +1013,19 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             </div>
           </section>
 
-                    
-          <section
-            className="hf-dashboard-kpis"
-            style={{
-              display:"grid",
-              gridTemplateColumns:"repeat(3,minmax(0,1fr))",
-              gap:"16px",
-              width:"100%",
-              marginTop:"12px"
-            }}
-          >
+          <section className="hf-dashboard-kpis" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%"}}>
+            <Card
+              title="Demandas"
+              value={dashboardLoading?'…':dashboard.totalDemands}
+              icon={<BarChart3/>}
+            />
+
+            <Card
+              title="Horas de análise"
+              value={dashboardLoading?'…':`${dashboard.analysisHours}h`}
+              icon={<Clock3/>}
+            />
+
             <Card
               title="Horas analisadas"
               value={dashboardLoading?'…':`${dashboard.analyzedHours}h`}
@@ -1310,154 +1033,42 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
             />
 
             <Card
-              title="Horas concluídas"
-              value={dashboardLoading?'…':`${dashboard.finishedHours}h`}
-              icon={<CheckCircle2/>}
+              title="Horas necessárias"
+              value={dashboardLoading?'…':`${dashboard.requiredHours}h`}
+              icon={<Clock3/>}
             />
 
             <Card
-              title="Total do mês"
-              value={dashboardLoading
-                ? '…'
-                : `${(
-                    Number(dashboard.analyzedHours || 0) +
-                    Number(dashboard.finishedHours || 0)
-                  ).toFixed(1)}h`}
-              icon={<Clock3/>}
+              title="Horas totais"
+              value={dashboardLoading?'…':`${dashboard.totalHours}h`}
+              icon={<CheckCircle2/>}
             />
           </section>
 
-          <section
-            className="hf-dashboard-secondary"
-            style={{
-              display:"grid",
-              gridTemplateColumns:"repeat(4,minmax(0,1fr))",
-              gap:"16px",
-              width:"100%",
-              marginTop:"12px",
-              marginBottom:"20px"
-            }}
-          >
-            <div
-              style={{
-                background:"#fff",
-                border:"1px solid #e5eaf2",
-                borderRadius:"14px",
-                padding:"18px 20px",
-                minHeight:"82px",
-                display:"flex",
-                flexDirection:"column",
-                justifyContent:"center",
-                boxSizing:"border-box",
-                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
-              }}
-            >
-              <span className="hf-dashboard-mini-label">
-                Total de demandas
-              </span>
-              <strong
-                style={{
-                  display:"block",
-                  fontSize:"24px",
-                  lineHeight:"1.1",
-                  color:"#16233b",
-                  fontWeight:700
-                }}
-              >
-                {dashboardLoading?'…':dashboard.totalDemands}
-              </strong>
+          <section className="hf-dashboard-secondary" style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr))",gap:"16px",width:"100%",marginTop:"0",marginBottom:"18px"}}>
+            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
+              <span className="hf-dashboard-mini-label">Aprovadas</span>
+              <strong>{dashboardLoading?'…':dashboard.approvedDemands}</strong>
             </div>
 
-            <div
-              style={{
-                background:"#fff",
-                border:"1px solid #e5eaf2",
-                borderRadius:"14px",
-                padding:"18px 20px",
-                minHeight:"82px",
-                display:"flex",
-                flexDirection:"column",
-                justifyContent:"center",
-                boxSizing:"border-box",
-                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
-              }}
-            >
-              <span className="hf-dashboard-mini-label">
-                Aprovadas
-              </span>
-              <strong
-                style={{
-                  display:"block",
-                  fontSize:"24px",
-                  lineHeight:"1.1",
-                  color:"#16233b",
-                  fontWeight:700
-                }}
-              >
-                {dashboardLoading?'…':dashboard.approvedDemands}
-              </strong>
+            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
+              <span className="hf-dashboard-mini-label">Reprovadas</span>
+              <strong>{dashboardLoading?'…':dashboard.rejectedDemands}</strong>
             </div>
 
-            <div
-              style={{
-                background:"#fff",
-                border:"1px solid #e5eaf2",
-                borderRadius:"14px",
-                padding:"18px 20px",
-                minHeight:"82px",
-                display:"flex",
-                flexDirection:"column",
-                justifyContent:"center",
-                boxSizing:"border-box",
-                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
-              }}
-            >
-              <span className="hf-dashboard-mini-label">
-                Reprovadas
-              </span>
-              <strong
-                style={{
-                  display:"block",
-                  fontSize:"24px",
-                  lineHeight:"1.1",
-                  color:"#16233b",
-                  fontWeight:700
-                }}
-              >
-                {dashboardLoading?'…':dashboard.rejectedDemands}
-              </strong>
+            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
+              <span className="hf-dashboard-mini-label">Pendentes de aprovação</span>
+              <strong>{dashboardLoading?'…':`${dashboard.pendingApprovalHoursTotal}h`}</strong>
             </div>
 
-            <div
-              style={{
-                background:"#fff",
-                border:"1px solid #e5eaf2",
-                borderRadius:"14px",
-                padding:"18px 20px",
-                minHeight:"82px",
-                display:"flex",
-                flexDirection:"column",
-                justifyContent:"center",
-                boxSizing:"border-box",
-                boxShadow:"0 3px 12px rgba(15,23,42,.035)"
-              }}
-            >
-              <span className="hf-dashboard-mini-label">
-                Pendentes de aprovação
-              </span>
-              <strong
-                style={{
-                  display:"block",
-                  fontSize:"24px",
-                  lineHeight:"1.1",
-                  color:"#16233b",
-                  fontWeight:700
-                }}
-              >
-                {dashboardLoading
-                  ? '…'
-                  : `${dashboard.pendingApprovalHoursTotal}h`}
-              </strong>
+            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
+              <span className="hf-dashboard-mini-label">Em desenvolvimento</span>
+              <strong>{dashboardLoading?'…':(dashboard.byStatus['Em desenvolvimento']||0)}</strong>
+            </div>
+
+            <div className="hf-dashboard-mini" style={{background:"#fff",border:"1px solid #e5eaf2",borderRadius:"14px",padding:"16px 18px",minHeight:"76px",display:"flex",flexDirection:"column",justifyContent:"center",boxSizing:"border-box"}}>
+              <span className="hf-dashboard-mini-label">Finalizadas</span>
+              <strong>{dashboardLoading?'…':dashboard.finishedDemands}</strong>
             </div>
           </section>
 
@@ -1745,15 +1356,6 @@ function PanelTitle({title,icon}:{title:string;icon?:React.ReactNode}){return <d
 function Card({title,value,icon}:{title:string;value:string|number;icon:React.ReactNode}){return <div className="hf-card"><div className="hf-card-icon">{icon}</div><span>{title}</span><strong>{value}</strong></div>}
 function slug(s:string){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replaceAll(' ','-')}
 function formatApprovalDate(value:any){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('pt-BR')}
-function formatDate(value:any){
-  if(!value)return '—';
-  const raw=String(value);
-  const match=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(match)return `${match[3]}/${match[2]}/${match[1]}`;
-  const br=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if(br)return raw;
-  return raw;
-}
 function formatExecutionMonth(value:any){if(!value)return '—';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[2]}/${match[1]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[2]}/${br[3]}`;return raw}
 function getExecutionMonthKey(value:any){if(!value)return '';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[1]}-${match[2]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[3]}-${br[2]}`;return ''}
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
@@ -1818,7 +1420,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     <td><span className={`hf-status-pill status-${slug(normalizeStatus(d.status))}`}>{normalizeStatus(d.status)}</span></td>
     <td>{d.aprovacao==='Aprovada'?<span className="hf-pill approved">Aprovada</span>:d.aprovacao==='Reprovada'?<span className="hf-pill rejected">Reprovada</span>:canApprove?<div className="hf-approval-actions"><button className="hf-approve" onClick={()=>approve(d,true)}>Aprovar</button><button className="hf-reject" onClick={()=>approve(d,false)}>Reprovar</button></div>:<span className="hf-pill pending">Pendente</span>}</td>
     <td>{d.aprovacao==='Reprovada'?<span className="hf-rejection-reason" title={d.rejectionReason||'Sem motivo informado'}>{d.rejectionReason||'Sem motivo informado'}</span>:<span className="hf-muted">—</span>}</td>
-    <td><span className={d.deliveryDate?'hf-execution':'hf-muted'}>{formatDate(d.deliveryDate || (d as any).delivery_date)}</span></td>
+    <td><span className={d.executionMonth?'hf-execution':'hf-muted'}>{formatExecutionMonth(d.executionMonth || (d as any).execution_month || (d as any).executionDate || (d as any).execution_date || (d as any).executionMonthDate)}</span></td>
     <td>{d.responsavel||'—'}</td>
     <td><span className={`hf-paid-dot ${d.pago?'on':''}`}><i/>{d.pago?'Sim':'Não'}</span></td>
     <td><div className="hf-row-actions">
@@ -1886,12 +1488,9 @@ function DemandModal({value,setValue,clients,editing,isClient,error,saving,close
             <label><span>Horas de análise</span><div className="hf-input-suffix"><input type="number" min="0" step="0.5" value={value.horasAnalise} readOnly={readonly} onChange={e=>setValue({...value,horasAnalise:e.target.value})} placeholder="0"/><small>horas</small></div></label>
             <label><span>Horas necessárias</span><div className="hf-input-suffix"><input type="number" min="0" step="0.5" value={value.horasNecessarias} readOnly={readonly} onChange={e=>setValue({...value,horasNecessarias:e.target.value})} placeholder="0"/><small>horas</small></div></label>
           </div>
-                    <div className="hf-form-grid">
-            <label><span>Mês de análise</span><input type="month" value={value.analysisMonth||''} readOnly={readonly} onChange={e=>setValue({...value,analysisMonth:e.target.value})}/></label>
-            <label><span>Data de solicitação</span><input type="date" value={value.requestDate||''} readOnly={readonly} onChange={e=>setValue({...value,requestDate:e.target.value})}/></label>
-          </div>
           <div className="hf-form-grid">
-            <label><span>Data de entrega</span><input type="date" value={value.deliveryDate||''} readOnly={readonly} onChange={e=>setValue({...value,deliveryDate:e.target.value})}/></label>
+            <label><span>Mês de análise</span><input type="month" value={value.analysisMonth||''} readOnly={readonly} onChange={e=>setValue({...value,analysisMonth:e.target.value})}/></label>
+            <label><span>Mês de execução</span><input type="month" value={value.executionMonth||''} readOnly={readonly} onChange={e=>setValue({...value,executionMonth:e.target.value})}/></label>
           </div>
           <div className="hf-form-grid">
             <label><span>Prioridade {readonly&&<small className="hf-muted"> · editável</small>}</span><select value={value.prioridade} onChange={e=>setValue({...value,prioridade:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
@@ -1904,7 +1503,7 @@ function DemandModal({value,setValue,clients,editing,isClient,error,saving,close
           <div className="hf-section-title"><span>03</span><div><strong>Resultado da aprovação</strong><small>Informações atuais da análise da demanda.</small></div></div>
           <div className="hf-form-grid">
             <label><span>Aprovação</span><input value={editing.aprovacao||'Pendente'} readOnly/></label>
-            <label><span>Data de entrega</span><input value={formatDate(editing.deliveryDate||'')} readOnly/></label>
+            <label><span>Mês de execução</span><input value={formatExecutionMonth(editing.executionMonth||'')} readOnly/></label>
           </div>
           <label><span>Motivo da reprovação</span><textarea value={editing.rejectionReason||'—'} readOnly rows={2}/></label>
         </div>}
@@ -1935,10 +1534,9 @@ function ApprovalModal({demand,month,setMonth,reason,setReason,saving,close,conf
       <div className="hf-decision-demand"><span>Demanda selecionada</span><strong>{demand.problema}</strong><div><span>{demand.horasAnalise+demand.horasNecessarias}h estimadas</span><span>{demand.prioridade}</span><span>{demand.status}</span></div></div>
       <div className="hf-form">
         {approving?<div className="hf-decision-content">
-          <div className="hf-decision-icon approved"><CheckCircle2 size={24}/></div>          <div>
-            <h3>Confirmar aprovação</h3>
-            <p>A demanda será aprovada e seguirá conforme a data de entrega cadastrada.</p>
-          </div>
+          <div className="hf-decision-icon approved"><CheckCircle2 size={24}/></div>
+          <div><h3>Defina o mês de execução</h3><p>A aprovação será registrada hoje, mas a execução pode ser programada para um mês futuro.</p></div>
+          <label><span>Mês de execução</span><input className="hf-month-input" type="month" value={month} onChange={e=>setMonth(e.target.value)} required/><small className="hf-muted">Você pode aprovar agora e programar a execução para outro mês.</small></label>
         </div>:<div className="hf-decision-content">
           <div className="hf-decision-icon rejected"><X size={24}/></div>
           <div><h3>Por que esta demanda foi reprovada?</h3><p>Informe o motivo para que a equipe tenha clareza sobre o que precisa ser ajustado.</p></div>
@@ -3467,49 +3065,6 @@ const styles = `
   }
 }
 `
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

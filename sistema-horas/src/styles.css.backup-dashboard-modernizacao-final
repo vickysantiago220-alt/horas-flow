@@ -1,0 +1,1422 @@
+/* =========================================================
+   RESET
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   ESTRUTURA PRINCIPAL
+   ========================================================= */
+
+.hf-app {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.hf-main {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hf-content {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   FILTROS - DESKTOP
+   Buscar | Status | Aprovações | Clientes | Períodos | Execução
+   ========================================================= */
+
+.hf-filters {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    1.15fr
+    1fr
+    1fr
+    1.55fr
+    1fr
+    1.35fr;
+
+  gap: 8px;
+
+  align-items: center;
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+}
+
+/* Todos os campos */
+.hf-filters > *,
+.hf-filters .hf-search,
+.hf-filters .hf-filter-month {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Busca */
+.hf-filters .hf-search {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hf-filters .hf-search input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Selects */
+.hf-filters > select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Filtro Execução */
+.hf-filters .hf-filter-month {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.hf-filters .hf-filter-month > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hf-filters .hf-filter-month input {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+
+/* Não mostrar contador dentro da barra */
+.hf-filters .hf-filter-count {
+  display: none;
+}
+
+
+/* =========================================================
+   NOTEBOOK / TELAS MENORES
+   ========================================================= */
+
+@media (min-width: 901px) and (max-width: 1200px) {
+
+  .hf-filters {
+    grid-template-columns:
+      1.05fr
+      .9fr
+      .95fr
+      1.3fr
+      .9fr
+      1.15fr;
+
+    gap: 6px;
+  }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (min-width: 601px) and (max-width: 900px) {
+
+  .hf-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+}
+
+
+/* =========================================================
+   CELULAR
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .hf-filters {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .hf-filters > *,
+  .hf-filters .hf-search,
+  .hf-filters .hf-filter-month {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+}
+/* =========================================================
+   ELEMENTOS DOS FILTROS
+   ========================================================= */
+
+.hf-filters > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   BUSCA
+   ========================================================= */
+
+.hf-filters .hf-search {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  box-sizing: border-box;
+}
+
+.hf-filters .hf-search input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   SELECTS
+   ========================================================= */
+
+.hf-filters > select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   EXECUÇÃO
+   ========================================================= */
+
+.hf-filters .hf-filter-month {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+}
+
+.hf-filters .hf-filter-month span,
+.hf-filters .hf-filter-month label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.hf-filters .hf-filter-month input,
+.hf-filters .hf-filter-month input[type="month"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  flex: 1 1 auto;
+
+  box-sizing: border-box;
+}
+
+
+/* =========================================================
+   CONTADOR
+   ========================================================= */
+
+.hf-filters .hf-filter-count {
+  display: none;
+}
+
+
+/* =========================================================
+   TABELA
+   ========================================================= */
+
+.hf-table-wrap {
+  width: 100%;
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: visible;
+
+  box-sizing: border-box;
+}
+
+.hf-table-wrap table {
+  width: 100%;
+  min-width: 1100px;
+
+  border-collapse: collapse;
+}
+
+
+/* =========================================================
+   RESPONSIVIDADE — NOTEBOOK
+   901px até 1200px
+   ========================================================= */
+
+@media (min-width: 901px) and (max-width: 1200px) {
+
+  .hf-filters {
+    grid-template-columns:
+      minmax(125px, 1.1fr)
+      minmax(105px, 1fr)
+      minmax(115px, 1fr)
+      minmax(135px, 1.2fr)
+      minmax(105px, 1fr)
+      minmax(165px, 1.25fr);
+
+    gap: 6px;
+  }
+}
+
+
+/* =========================================================
+   TABLET
+   601px até 900px
+   ========================================================= */
+
+@media (min-width: 601px) and (max-width: 900px) {
+
+  .hf-filters {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 8px;
+  }
+
+  .hf-filters > * {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+
+/* =========================================================
+   CELULAR
+   até 600px
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+  .hf-main,
+  .hf-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .hf-filters {
+    grid-template-columns: 1fr;
+
+    width: 100%;
+
+    gap: 8px;
+  }
+
+  .hf-filters > *,
+  .hf-filters .hf-search,
+  .hf-filters .hf-filter-month {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .hf-table-wrap {
+    width: 100%;
+    max-width: 100%;
+
+    overflow-x: auto;
+  }
+}/* =========================================================
+   FILTROS — VISUAL CLEAN / SAPPHIRE SHEET
+   ========================================================= */
+
+.hf-filters-clean {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px !important;
+}
+
+.hf-filters-clean .hf-search {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.hf-filter-trigger {
+  height: 42px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+
+  padding: 0 16px !important;
+
+  border: 1px solid #dce3ee !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+  color: #344054 !important;
+
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  cursor: pointer !important;
+  transition: all .18s ease !important;
+}
+
+.hf-filter-trigger:hover {
+  border-color: #b8c7e6 !important;
+  background: #f8faff !important;
+  color: #2f5bea !important;
+}
+
+.hf-filter-trigger svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+/* =========================================================
+   BACKDROP
+   ========================================================= */
+
+.hf-filter-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 24px !important;
+  box-sizing: border-box !important;
+
+  background: rgba(15, 23, 42, .42) !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.hf-filter-modal {
+  width: min(680px, calc(100vw - 48px)) !important;
+  max-width: 680px !important;
+
+  max-height: calc(100vh - 48px) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #e4e9f2 !important;
+  border-radius: 18px !important;
+
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, .18),
+    0 4px 14px rgba(15, 23, 42, .08) !important;
+
+  animation: hfFilterModalIn .18s ease-out !important;
+}
+
+@keyframes hfFilterModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.hf-filter-modal-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+
+  padding: 22px 24px 18px !important;
+
+  border-bottom: 1px solid #edf0f5 !important;
+}
+
+.hf-filter-modal-header h3 {
+  margin: 0 !important;
+
+  color: #172033 !important;
+
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.2px !important;
+}
+
+.hf-filter-modal-header p {
+  margin: 5px 0 0 !important;
+
+  color: #98a2b3 !important;
+
+  font-size: 13px !important;
+}
+
+.hf-filter-modal-close {
+  width: 34px !important;
+  height: 34px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 9px !important;
+
+  background: transparent !important;
+  color: #667085 !important;
+
+  font-size: 22px !important;
+  line-height: 1 !important;
+
+  cursor: pointer !important;
+  transition: all .15s ease !important;
+}
+
+.hf-filter-modal-close:hover {
+  background: #f2f4f7 !important;
+  color: #344054 !important;
+}
+
+/* =========================================================
+   BODY
+   ========================================================= */
+
+.hf-filter-modal-body {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+
+  gap: 18px !important;
+
+  padding: 22px 24px !important;
+
+  overflow-y: auto !important;
+}
+
+.hf-filter-modal-body > label {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+
+  min-width: 0 !important;
+
+  color: #344054 !important;
+
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.hf-filter-modal-body > label > span {
+  color: #475467 !important;
+}
+
+/* SELECTS */
+
+.hf-filter-modal-body select {
+  width: 100% !important;
+  height: 44px !important;
+
+  box-sizing: border-box !important;
+
+  padding: 0 38px 0 13px !important;
+
+  border: 1px solid #d9e0eb !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+  color: #344054 !important;
+
+  font-size: 14px !important;
+
+  outline: none !important;
+
+  transition:
+    border-color .15s ease,
+    box-shadow .15s ease !important;
+}
+
+.hf-filter-modal-body select:hover {
+  border-color: #b9c7dd !important;
+}
+
+.hf-filter-modal-body select:focus {
+  border-color: #5274e8 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(47, 91, 234, .10) !important;
+}
+
+/* =========================================================
+   EXECUÇÃO
+   ========================================================= */
+
+.hf-execution-filter-modal {
+  width: 100% !important;
+  height: 44px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  box-sizing: border-box !important;
+
+  padding: 0 12px !important;
+
+  border: 1px solid #d9e0eb !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+
+  color: #667085 !important;
+}
+
+.hf-execution-filter-modal:focus-within {
+  border-color: #5274e8 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(47, 91, 234, .10) !important;
+}
+
+.hf-execution-filter-modal input {
+  flex: 1 !important;
+
+  width: 0 !important;
+  min-width: 0 !important;
+
+  margin-left: 8px !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+
+  background: transparent !important;
+
+  color: #344054 !important;
+
+  font-size: 14px !important;
+}
+
+.hf-execution-filter-modal button {
+  width: 26px !important;
+  height: 26px !important;
+
+  border: 0 !important;
+  border-radius: 7px !important;
+
+  background: #f2f4f7 !important;
+  color: #667085 !important;
+
+  cursor: pointer !important;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.hf-filter-modal-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 12px !important;
+
+  padding: 16px 24px !important;
+
+  border-top: 1px solid #edf0f5 !important;
+  background: #fcfdff !important;
+}
+
+.hf-filter-clear,
+.hf-filter-apply {
+  height: 42px !important;
+
+  padding: 0 18px !important;
+
+  border-radius: 9px !important;
+
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  cursor: pointer !important;
+
+  transition: all .15s ease !important;
+}
+
+.hf-filter-clear {
+  border: 1px solid #d9e0eb !important;
+
+  background: #ffffff !important;
+  color: #667085 !important;
+}
+
+.hf-filter-clear:hover {
+  background: #f8fafc !important;
+  color: #344054 !important;
+}
+
+.hf-filter-apply {
+  border: 0 !important;
+
+  background: #2f5bea !important;
+  color: #ffffff !important;
+
+  box-shadow: 0 5px 14px rgba(47, 91, 234, .20) !important;
+}
+
+.hf-filter-apply:hover {
+  background: #244bd0 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* =========================================================
+   CONTADOR
+   ========================================================= */
+
+.hf-filter-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+
+  color: #98a2b3 !important;
+
+  font-size: 13px !important;
+  white-space: nowrap !important;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+  .hf-filters-clean {
+    gap: 8px !important;
+  }
+
+  .hf-filter-trigger {
+    padding: 0 13px !important;
+  }
+
+  .hf-filter-count {
+    display: none !important;
+  }
+
+  .hf-filter-modal-backdrop {
+    align-items: flex-start !important;
+
+    padding: 10px !important;
+  }
+
+  .hf-filter-modal {
+    width: calc(100vw - 20px) !important;
+    max-width: none !important;
+
+    max-height: calc(100vh - 20px) !important;
+
+    border-radius: 15px !important;
+  }
+
+  .hf-filter-modal-body {
+    grid-template-columns: 1fr !important;
+
+    padding: 18px !important;
+
+    gap: 14px !important;
+  }
+
+  .hf-filter-modal-header {
+    padding: 18px !important;
+  }
+
+  .hf-filter-modal-footer {
+    padding: 14px 18px !important;
+  }
+}
+
+/* =========================================================
+   SAPPHIRE SHEET — FILTROS PREMIUM
+   ========================================================= */
+
+/* Barra superior de busca */
+
+.hf-filters-clean {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px !important;
+  background: #ffffff !important;
+  border: 1px solid #e4eaf3 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, .03) !important;
+}
+
+.hf-filters-clean .hf-search {
+  flex: 1 !important;
+  height: 42px !important;
+  min-width: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  padding: 0 14px !important;
+
+  background: #ffffff !important;
+  border: 1px solid #dfe6f1 !important;
+  border-radius: 10px !important;
+
+  color: #8b98aa !important;
+
+  transition: .18s ease !important;
+}
+
+.hf-filters-clean .hf-search:focus-within {
+  border-color: #4770f5 !important;
+  box-shadow: 0 0 0 3px rgba(47, 91, 234, .08) !important;
+}
+
+.hf-filters-clean .hf-search svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: #8492a6 !important;
+}
+
+.hf-filters-clean .hf-search input {
+  flex: 1 !important;
+  min-width: 0 !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+
+  background: transparent !important;
+
+  color: #344054 !important;
+  font-size: 14px !important;
+}
+
+.hf-filters-clean .hf-search input::placeholder {
+  color: #98a2b3 !important;
+}
+
+
+/* =========================================================
+   BOTÃO FILTROS
+   ========================================================= */
+
+.hf-filter-trigger {
+  height: 42px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+
+  padding: 0 16px !important;
+
+  border: 1px solid #dce4f0 !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+  color: #344054 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  cursor: pointer !important;
+
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    color .18s ease,
+    box-shadow .18s ease !important;
+}
+
+.hf-filter-trigger svg {
+  width: 17px !important;
+  height: 17px !important;
+
+  color: #526071 !important;
+
+  stroke-width: 2 !important;
+}
+
+.hf-filter-trigger:hover {
+  background: #f7f9ff !important;
+  border-color: #b9c8ec !important;
+  color: #2f5bea !important;
+
+  box-shadow: 0 3px 10px rgba(47, 91, 234, .07) !important;
+}
+
+.hf-filter-trigger:hover svg {
+  color: #2f5bea !important;
+}
+
+
+/* =========================================================
+   RESULTADOS
+   ========================================================= */
+
+.hf-filter-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+
+  padding: 0 6px !important;
+
+  color: #8b98aa !important;
+
+  font-size: 13px !important;
+  font-weight: 500 !important;
+
+  white-space: nowrap !important;
+}
+
+.hf-filter-count svg {
+  width: 15px !important;
+  height: 15px !important;
+
+  color: #8b98aa !important;
+}
+
+
+/* =========================================================
+   MODAL / BACKDROP
+   ========================================================= */
+
+.hf-filter-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+
+  z-index: 99999 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 24px !important;
+
+  background: rgba(12, 25, 48, .42) !important;
+
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+
+/* =========================================================
+   MODAL PRINCIPAL
+   ========================================================= */
+
+.hf-filter-modal {
+  width: min(680px, calc(100vw - 48px)) !important;
+  max-width: 680px !important;
+
+  max-height: calc(100vh - 48px) !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+
+  background: #ffffff !important;
+
+  border: 1px solid #e5eaf2 !important;
+
+  border-radius: 18px !important;
+
+  box-shadow:
+    0 25px 70px rgba(15, 23, 42, .18),
+    0 8px 24px rgba(15, 23, 42, .08) !important;
+
+  animation: sapphireFilterIn .18s ease-out !important;
+}
+
+@keyframes sapphireFilterIn {
+
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+}
+
+
+/* =========================================================
+   CABEÇALHO
+   ========================================================= */
+
+.hf-filter-modal-header {
+  min-height: 76px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  padding: 18px 22px !important;
+
+  border-bottom: 1px solid #edf1f6 !important;
+
+  background: #ffffff !important;
+}
+
+.hf-filter-modal-header > div:first-child {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.hf-filter-modal-header h3 {
+  margin: 0 !important;
+
+  color: #172033 !important;
+
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.25px !important;
+}
+
+.hf-filter-modal-header h3::before {
+  content: "⌕" !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 27px !important;
+  height: 27px !important;
+
+  margin-right: 9px !important;
+
+  border-radius: 8px !important;
+
+  background: #eef3ff !important;
+  color: #2f5bea !important;
+
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+.hf-filter-modal-header p {
+  margin: 0 !important;
+
+  color: #98a2b3 !important;
+
+  font-size: 13px !important;
+}
+
+
+/* =========================================================
+   BOTÃO FECHAR
+   ========================================================= */
+
+.hf-filter-modal-close {
+  width: 34px !important;
+  height: 34px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 9px !important;
+
+  background: transparent !important;
+  color: #8491a5 !important;
+
+  font-size: 21px !important;
+  line-height: 1 !important;
+
+  cursor: pointer !important;
+
+  transition: .15s ease !important;
+}
+
+.hf-filter-modal-close:hover {
+  background: #f1f4f8 !important;
+  color: #344054 !important;
+}
+
+
+/* =========================================================
+   CORPO
+   ========================================================= */
+
+.hf-filter-modal-body {
+  display: grid !important;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+
+  gap: 18px !important;
+
+  padding: 22px !important;
+
+  overflow-y: auto !important;
+
+  background: #ffffff !important;
+}
+
+
+/* =========================================================
+   LABEL DOS FILTROS
+   ========================================================= */
+
+.hf-filter-modal-body > label {
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 7px !important;
+
+  min-width: 0 !important;
+
+  margin: 0 !important;
+
+  color: #475467 !important;
+
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.hf-filter-modal-body > label > span {
+  display: block !important;
+
+  color: #667085 !important;
+
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+
+/* =========================================================
+   SELECT
+   ========================================================= */
+
+.hf-filter-modal-body select {
+  width: 100% !important;
+  height: 44px !important;
+
+  box-sizing: border-box !important;
+
+  padding: 0 38px 0 13px !important;
+
+  border: 1px solid #dce3ed !important;
+
+  border-radius: 10px !important;
+
+  background-color: #ffffff !important;
+  color: #344054 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+
+  outline: none !important;
+
+  cursor: pointer !important;
+
+  transition:
+    border-color .15s ease,
+    box-shadow .15s ease,
+    background .15s ease !important;
+}
+
+.hf-filter-modal-body select:hover {
+  border-color: #bcc9df !important;
+  background: #fcfdff !important;
+}
+
+.hf-filter-modal-body select:focus {
+  border-color: #4770f5 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(47, 91, 234, .09) !important;
+}
+
+
+/* =========================================================
+   EXECUÇÃO
+   ========================================================= */
+
+.hf-execution-filter-modal {
+  width: 100% !important;
+  height: 44px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  box-sizing: border-box !important;
+
+  padding: 0 11px !important;
+
+  border: 1px solid #dce3ed !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+
+  color: #7b8798 !important;
+
+  transition: .15s ease !important;
+}
+
+.hf-execution-filter-modal:focus-within {
+  border-color: #4770f5 !important;
+
+  box-shadow:
+    0 0 0 3px rgba(47, 91, 234, .09) !important;
+}
+
+.hf-execution-filter-modal svg {
+  width: 17px !important;
+  height: 17px !important;
+
+  flex-shrink: 0 !important;
+
+  color: #8190a5 !important;
+}
+
+.hf-execution-filter-modal input {
+  flex: 1 !important;
+
+  width: 0 !important;
+  min-width: 0 !important;
+
+  margin-left: 8px !important;
+
+  border: 0 !important;
+  outline: 0 !important;
+
+  background: transparent !important;
+
+  color: #344054 !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+}
+
+.hf-execution-filter-modal button {
+  width: 26px !important;
+  height: 26px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex-shrink: 0 !important;
+
+  border: 0 !important;
+  border-radius: 7px !important;
+
+  background: #f2f4f7 !important;
+  color: #667085 !important;
+
+  cursor: pointer !important;
+}
+
+
+/* =========================================================
+   RODAPÉ
+   ========================================================= */
+
+.hf-filter-modal-footer {
+  min-height: 74px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 12px !important;
+
+  padding: 15px 22px !important;
+
+  border-top: 1px solid #edf1f6 !important;
+
+  background: #fbfcfe !important;
+}
+
+.hf-filter-clear,
+.hf-filter-apply {
+  height: 42px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 0 18px !important;
+
+  border-radius: 9px !important;
+
+  font-family: inherit !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  cursor: pointer !important;
+
+  transition: .15s ease !important;
+}
+
+.hf-filter-clear {
+  border: 1px solid #dce3ed !important;
+
+  background: #ffffff !important;
+  color: #667085 !important;
+}
+
+.hf-filter-clear:hover {
+  background: #f7f9fc !important;
+  color: #344054 !important;
+}
+
+.hf-filter-apply {
+  min-width: 150px !important;
+
+  border: 0 !important;
+
+  background: #2f5bea !important;
+  color: #ffffff !important;
+
+  box-shadow: 0 5px 14px rgba(47, 91, 234, .20) !important;
+}
+
+.hf-filter-apply:hover {
+  background: #244bd0 !important;
+  box-shadow: 0 7px 18px rgba(47, 91, 234, .26) !important;
+  transform: translateY(-1px) !important;
+}
+
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .hf-filter-modal-backdrop {
+    align-items: flex-start !important;
+    padding: 10px !important;
+  }
+
+  .hf-filter-modal {
+    width: calc(100vw - 20px) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 20px) !important;
+
+    border-radius: 15px !important;
+  }
+
+  .hf-filter-modal-body {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding: 18px !important;
+  }
+
+  .hf-filter-modal-header {
+    padding: 17px 18px !important;
+  }
+
+  .hf-filter-modal-footer {
+    padding: 14px 18px !important;
+  }
+
+}
+
+@media (max-width: 520px) {
+
+  .hf-filters-clean {
+    padding: 8px !important;
+  }
+
+  .hf-filter-count {
+    display: none !important;
+  }
+
+  .hf-filter-trigger {
+    padding: 0 13px !important;
+  }
+
+  .hf-filter-modal-footer {
+    flex-direction: column-reverse !important;
+  }
+
+  .hf-filter-clear,
+  .hf-filter-apply {
+    width: 100% !important;
+  }
+
+}
+

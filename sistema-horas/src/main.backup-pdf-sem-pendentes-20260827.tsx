@@ -30,7 +30,7 @@ type HistoryItem = { id:string; date:string; user:string; field:string; oldValue
 type Demand = {
   id:string; numero:number; problema:string; tratamento:string; horasAnalise:number; horasNecessarias:number;
   prioridade:Priority; status:Status; aprovacao:'Pendente'|'Aprovada'|'Reprovada'; aprovadoPor:string;
-  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
+  aprovadoEm:string; analysisMonth?:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
 };
 
 const API = 'https://horas-flow.onrender.com/api';
@@ -78,8 +78,6 @@ function normalizeApproval(value:any):'Pendente'|'Aprovada'|'Reprovada' {
 
 function normalizeDemand(raw:any):Demand {
   const analysisMonth = raw.analysisMonth ?? raw.analysis_month ?? '';
-  const requestDate = raw.requestDate ?? raw.request_date ?? '';
-  const deliveryDate = raw.deliveryDate ?? raw.delivery_date ?? '';
   const executionMonth = raw.executionMonth ?? raw.execution_month ?? raw.executionDate ?? raw.execution_date ?? raw.execution_month_date ?? raw.executionMonthDate ?? '';
   const created = raw.createdAt ?? raw.created_at ?? new Date().toISOString();
   return {
@@ -87,7 +85,7 @@ function normalizeDemand(raw:any):Demand {
     tratamento:raw.treatment ?? raw.tratamento ?? '', horasAnalise:Number(raw.analysisHours ?? raw.analysis_hours ?? raw.horasAnalise ?? 0),
     horasNecessarias:Number(raw.requiredHours ?? raw.required_hours ?? raw.horasNecessarias ?? 0), prioridade:normalizePriority(raw.priority ?? raw.prioridade),
     status:raw.status ?? 'Pendente', aprovacao:normalizeApproval(raw.approval ?? raw.aprovacao), aprovadoPor:raw.approvedBy ?? raw.approved_by ?? '',
-    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, requestDate, deliveryDate, executionMonth,
+    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, executionMonth,
     rejectionReason:raw.rejectionReason ?? raw.rejection_reason ?? raw.rejection ?? '',
     pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '',
     criadoEm:String(created).slice(0,10), history:raw.history ?? []
@@ -120,7 +118,7 @@ const availablePeriods = useMemo(() => {
 
   demands.forEach(d => {
     const created = String(d.criadoEm || '').slice(0,7);
-    const execution = String(d.deliveryDate || (d as any).delivery_date || '').slice(0,7);
+    const execution = String(d.executionMonth || '').slice(0,7);
 
     if (created) periods.add(created);
     if (execution) periods.add(execution);
@@ -185,7 +183,7 @@ const formatPeriod = (period:string) => {
   const [editingDemand,setEditingDemand]=useState<Demand|null>(null);
   const [demandForm,setDemandForm]=useState<any>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
-    status:'Aguardando análise',clientId:'',responsavel:'',analysisMonth:'',requestDate:'',deliveryDate:''
+    status:'Aguardando análise',clientId:'',responsavel:'',analysisMonth:'',executionMonth:''
   });
 
   const isAdmin=user?.role==='ADMIN';
@@ -270,7 +268,7 @@ const formatPeriod = (period:string) => {
         return false;
       }
 
-      return periodMatches(d.deliveryDate || (d as any).delivery_date);
+      return periodMatches(d.executionMonth);
     });
 
     const analysisHours =
@@ -517,6 +515,13 @@ const formatPeriod = (period:string) => {
       String(rejectedDemands)
     );
 
+    drawMetric(
+      158,
+      112,
+      38,
+      'PENDENTES',
+      `${pendingApprovalHours}h`
+    );
 
     // =================================================
     // DEMANDAS ANALISADAS
@@ -790,7 +795,7 @@ const formatPeriod = (period:string) => {
         rejectedDemands:Number(d.rejectedDemands||0),
         pendingApprovalDemands:Number(d.pendingApprovalDemands ?? 0),
         pendingApprovalHoursTotal:Number(d.pendingApprovalHoursTotal ?? 0),
-        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.deliveryDate || (x as any).delivery_date)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
+        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.executionMonth)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
         finishedDemands:Number(d.finishedDemands ?? d.finalizedDemands ?? 0),
         byStatus:d.byStatus||{},
         byClient:d.byClient||[]
@@ -864,7 +869,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   const emptyDemand=()=>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
     status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',
-    analysisMonth:'',requestDate:'',deliveryDate:''
+    analysisMonth:'',executionMonth:''
   });
   const openNewDemand=()=>{
     if(!isInternal)return;
@@ -877,7 +882,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     setDemandForm({
       problema:d.problema,tratamento:d.tratamento,horasAnalise:d.horasAnalise,
       horasNecessarias:d.horasNecessarias,prioridade:d.prioridade,status:d.status,
-      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,7),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
+      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,7),executionMonth:String((d as any).executionMonth||'').slice(0,7)
     });
     setDemandModal(true);
   };
@@ -917,7 +922,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         problem:demandForm.problema.trim(),treatment:demandForm.tratamento.trim(),
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
-        analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
+        analysisMonth:demandForm.analysisMonth||null,executionMonth:demandForm.executionMonth||null,
         clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||''
       };
       if(editingDemand)await request(`/demands/${editingDemand.id}`,{method:'PUT',body:JSON.stringify(payload)});
@@ -938,7 +943,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     if(!isAdmin&&!isClient)return;
     setApprovalDemand(d);
     setApprovalReason('');
-    setApprovalMonth('');
+    setApprovalMonth(d.executionMonth || new Date().toISOString().slice(0,7));
     setApprovalType(approved ? 'approve' : 'reject');
   };
 
@@ -952,11 +957,11 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   const confirmApproval=async()=>{
     if(!approvalDemand)return;
     const type=approvalType;
-
+    if(type==='approve' && !/^\d{4}-\d{2}$/.test(approvalMonth)){setApiError('Selecione o mês de execução.');return;}
     if(type==='reject' && !approvalReason.trim()){setApiError('Informe o motivo da reprovação.');return;}
     try{
       setApprovalSaving(true);
-      if(type==='approve'){await request(`/demands/${approvalDemand.id}/approve`,{method:'POST',body:JSON.stringify({})});}
+      if(type==='approve'){await request(`/demands/${approvalDemand.id}/approve`,{method:'POST',body:JSON.stringify({executionMonth:approvalMonth,execution_month:approvalMonth})});}
       else{await request(`/demands/${approvalDemand.id}/reject`,{method:'POST',body:JSON.stringify({reason:approvalReason.trim()})});}
       closeApproval();
       await loadDemands();
@@ -979,7 +984,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
         (demandPeriod==='Todos'||d.criadoEm.startsWith(demandPeriod)) &&
-        (!demandExecutionMonthFilter||getExecutionMonthKey(d.deliveryDate || (d as any).delivery_date)==demandExecutionMonthFilter);
+        (!demandExecutionMonthFilter||getExecutionMonthKey(d.executionMonth)==demandExecutionMonthFilter);
     });
 
     // Mais recente primeiro: número maior = demanda mais nova.
@@ -997,7 +1002,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const dashboardDemands=useMemo(()=>demands.filter(d=>{
     const matchesClient = dashboardClientFilter==='Todos' || String((d as any).clientId||'')===String(dashboardClientFilter);
-    const matchesPeriod = dashboardPeriod==='Todos' || getExecutionMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
+    const matchesPeriod = dashboardPeriod==='Todos' || getExecutionMonthKey(d.executionMonth)===dashboardPeriod;
     return matchesClient && matchesPeriod;
   }).slice(0,5),[demands,dashboardClientFilter,dashboardPeriod]);
 
@@ -1048,7 +1053,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const copyTable=async()=>{
     const header=['Nº','Cliente','Problema','Tratamento','Análise','Horas necessárias','Prioridade','Status','Aprovação','Aprovado em','Execução','Aprovado por','Responsável','Pago'];
-    const rows=filtered.map(d=>[d.numero,(d as any).clientName||'',d.problema,d.tratamento,d.horasAnalise,d.horasNecessarias,d.prioridade,d.status,d.aprovacao,d.aprovadoEm?new Date(d.aprovadoEm).toLocaleString('pt-BR'):'',formatDate(d.deliveryDate || (d as any).delivery_date),d.aprovadoPor,d.responsavel,d.pago?'Sim':'Não']);
+    const rows=filtered.map(d=>[d.numero,(d as any).clientName||'',d.problema,d.tratamento,d.horasAnalise,d.horasNecessarias,d.prioridade,d.status,d.aprovacao,d.aprovadoEm?new Date(d.aprovadoEm).toLocaleString('pt-BR'):'',formatExecutionMonth(d.executionMonth),d.aprovadoPor,d.responsavel,d.pago?'Sim':'Não']);
     await navigator.clipboard.writeText([header,...rows].map(r=>r.join('\t')).join('\n'));setCopied(true);setTimeout(()=>setCopied(false),1600);
   };
 
@@ -1745,15 +1750,6 @@ function PanelTitle({title,icon}:{title:string;icon?:React.ReactNode}){return <d
 function Card({title,value,icon}:{title:string;value:string|number;icon:React.ReactNode}){return <div className="hf-card"><div className="hf-card-icon">{icon}</div><span>{title}</span><strong>{value}</strong></div>}
 function slug(s:string){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replaceAll(' ','-')}
 function formatApprovalDate(value:any){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('pt-BR')}
-function formatDate(value:any){
-  if(!value)return '—';
-  const raw=String(value);
-  const match=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(match)return `${match[3]}/${match[2]}/${match[1]}`;
-  const br=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if(br)return raw;
-  return raw;
-}
 function formatExecutionMonth(value:any){if(!value)return '—';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[2]}/${match[1]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[2]}/${br[3]}`;return raw}
 function getExecutionMonthKey(value:any){if(!value)return '';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[1]}-${match[2]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[3]}-${br[2]}`;return ''}
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
@@ -1818,7 +1814,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     <td><span className={`hf-status-pill status-${slug(normalizeStatus(d.status))}`}>{normalizeStatus(d.status)}</span></td>
     <td>{d.aprovacao==='Aprovada'?<span className="hf-pill approved">Aprovada</span>:d.aprovacao==='Reprovada'?<span className="hf-pill rejected">Reprovada</span>:canApprove?<div className="hf-approval-actions"><button className="hf-approve" onClick={()=>approve(d,true)}>Aprovar</button><button className="hf-reject" onClick={()=>approve(d,false)}>Reprovar</button></div>:<span className="hf-pill pending">Pendente</span>}</td>
     <td>{d.aprovacao==='Reprovada'?<span className="hf-rejection-reason" title={d.rejectionReason||'Sem motivo informado'}>{d.rejectionReason||'Sem motivo informado'}</span>:<span className="hf-muted">—</span>}</td>
-    <td><span className={d.deliveryDate?'hf-execution':'hf-muted'}>{formatDate(d.deliveryDate || (d as any).delivery_date)}</span></td>
+    <td><span className={d.executionMonth?'hf-execution':'hf-muted'}>{formatExecutionMonth(d.executionMonth || (d as any).execution_month || (d as any).executionDate || (d as any).execution_date || (d as any).executionMonthDate)}</span></td>
     <td>{d.responsavel||'—'}</td>
     <td><span className={`hf-paid-dot ${d.pago?'on':''}`}><i/>{d.pago?'Sim':'Não'}</span></td>
     <td><div className="hf-row-actions">
@@ -1886,12 +1882,9 @@ function DemandModal({value,setValue,clients,editing,isClient,error,saving,close
             <label><span>Horas de análise</span><div className="hf-input-suffix"><input type="number" min="0" step="0.5" value={value.horasAnalise} readOnly={readonly} onChange={e=>setValue({...value,horasAnalise:e.target.value})} placeholder="0"/><small>horas</small></div></label>
             <label><span>Horas necessárias</span><div className="hf-input-suffix"><input type="number" min="0" step="0.5" value={value.horasNecessarias} readOnly={readonly} onChange={e=>setValue({...value,horasNecessarias:e.target.value})} placeholder="0"/><small>horas</small></div></label>
           </div>
-                    <div className="hf-form-grid">
-            <label><span>Mês de análise</span><input type="month" value={value.analysisMonth||''} readOnly={readonly} onChange={e=>setValue({...value,analysisMonth:e.target.value})}/></label>
-            <label><span>Data de solicitação</span><input type="date" value={value.requestDate||''} readOnly={readonly} onChange={e=>setValue({...value,requestDate:e.target.value})}/></label>
-          </div>
           <div className="hf-form-grid">
-            <label><span>Data de entrega</span><input type="date" value={value.deliveryDate||''} readOnly={readonly} onChange={e=>setValue({...value,deliveryDate:e.target.value})}/></label>
+            <label><span>Mês de análise</span><input type="month" value={value.analysisMonth||''} readOnly={readonly} onChange={e=>setValue({...value,analysisMonth:e.target.value})}/></label>
+            <label><span>Mês de execução</span><input type="month" value={value.executionMonth||''} readOnly={readonly} onChange={e=>setValue({...value,executionMonth:e.target.value})}/></label>
           </div>
           <div className="hf-form-grid">
             <label><span>Prioridade {readonly&&<small className="hf-muted"> · editável</small>}</span><select value={value.prioridade} onChange={e=>setValue({...value,prioridade:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
@@ -1904,7 +1897,7 @@ function DemandModal({value,setValue,clients,editing,isClient,error,saving,close
           <div className="hf-section-title"><span>03</span><div><strong>Resultado da aprovação</strong><small>Informações atuais da análise da demanda.</small></div></div>
           <div className="hf-form-grid">
             <label><span>Aprovação</span><input value={editing.aprovacao||'Pendente'} readOnly/></label>
-            <label><span>Data de entrega</span><input value={formatDate(editing.deliveryDate||'')} readOnly/></label>
+            <label><span>Mês de execução</span><input value={formatExecutionMonth(editing.executionMonth||'')} readOnly/></label>
           </div>
           <label><span>Motivo da reprovação</span><textarea value={editing.rejectionReason||'—'} readOnly rows={2}/></label>
         </div>}
@@ -1935,10 +1928,9 @@ function ApprovalModal({demand,month,setMonth,reason,setReason,saving,close,conf
       <div className="hf-decision-demand"><span>Demanda selecionada</span><strong>{demand.problema}</strong><div><span>{demand.horasAnalise+demand.horasNecessarias}h estimadas</span><span>{demand.prioridade}</span><span>{demand.status}</span></div></div>
       <div className="hf-form">
         {approving?<div className="hf-decision-content">
-          <div className="hf-decision-icon approved"><CheckCircle2 size={24}/></div>          <div>
-            <h3>Confirmar aprovação</h3>
-            <p>A demanda será aprovada e seguirá conforme a data de entrega cadastrada.</p>
-          </div>
+          <div className="hf-decision-icon approved"><CheckCircle2 size={24}/></div>
+          <div><h3>Defina o mês de execução</h3><p>A aprovação será registrada hoje, mas a execução pode ser programada para um mês futuro.</p></div>
+          <label><span>Mês de execução</span><input className="hf-month-input" type="month" value={month} onChange={e=>setMonth(e.target.value)} required/><small className="hf-muted">Você pode aprovar agora e programar a execução para outro mês.</small></label>
         </div>:<div className="hf-decision-content">
           <div className="hf-decision-icon rejected"><X size={24}/></div>
           <div><h3>Por que esta demanda foi reprovada?</h3><p>Informe o motivo para que a equipe tenha clareza sobre o que precisa ser ajustado.</p></div>
@@ -3467,26 +3459,6 @@ const styles = `
   }
 }
 `
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
