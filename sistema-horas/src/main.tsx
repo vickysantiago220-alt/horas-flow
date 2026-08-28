@@ -820,7 +820,7 @@ const formatPeriod = (period:string) => {
   useEffect(()=>{
     if(token&&tab==='dashboard')loadDashboard(dashboardClientFilter);
   },[dashboardClientFilter,dashboardPeriod]);
-  useEffect(()=>{if(token&&tab==='usuarios'&&isAdmin)loadUsers()},[tab,token,isAdmin]);
+  useEffect(()=>{if(token&&isAdmin)loadUsers()},[token,isAdmin]);
 
   const updateLocal=(id:string,field:keyof Demand,value:unknown)=>{
     setDemands(current=>current.map(d=>{
@@ -1651,7 +1651,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     {historyDemand&&<HistoryModal demand={historyDemand} loading={historyLoading} close={()=>setHistoryDemand(null)}/>}
     {userModal&&<UserModal value={newUser} setValue={setNewUser} clients={clients} error={userError} saving={userSaving} close={closeUserModal} save={saveUser}/>}
     {clientModal&&<ClientModal value={clientForm} setValue={setClientForm} editing={editingClient} error={clientError} saving={clientSaving} close={()=>setClientModal(false)} save={saveClient}/>}
-    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
+    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
   </div>;
 }
 
@@ -1830,7 +1830,7 @@ function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{na
   </div></div>
 }
 
-function DemandModal({value,setValue,clients,editing,isClient,error,saving,close,save,approve}:{value:any;setValue:(v:any)=>void;clients:Client[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void}){
+function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,close,save,approve}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void}){
   const readonly=isClient;
   const demandForApproval=editing;
 
@@ -1878,7 +1878,23 @@ function DemandModal({value,setValue,clients,editing,isClient,error,saving,close
             <label><span>Prioridade {readonly&&<small className="hf-muted"> · editável</small>}</span><select value={value.prioridade} onChange={e=>setValue({...value,prioridade:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
             <label><span>Status</span><select value={value.status} onChange={e=>setValue({...value,status:e.target.value})} disabled={readonly}>{statuses.map(s=><option key={s}>{s}</option>)}</select></label>
           </div>
-          <label><span>Responsável</span><input value={value.responsavel} onChange={e=>setValue({...value,responsavel:e.target.value})} placeholder="Nome do responsável interno" readOnly={readonly}/></label>
+          <label>
+  <span>Responsável</span>
+  <select
+    value={value.responsavel}
+    onChange={e=>setValue({...value,responsavel:e.target.value})}
+    disabled={readonly}
+  >
+    <option value="">Selecione o responsável</option>
+    {users
+      .filter((u:any)=>Boolean(u.active))
+      .map((u:any)=>(
+        <option key={u.id} value={u.name}>
+          {u.name}
+        </option>
+      ))}
+  </select>
+</label>
         </div>
 
         {editing&&<div className="hf-form-section">
@@ -3448,6 +3464,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 

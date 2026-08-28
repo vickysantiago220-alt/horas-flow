@@ -1626,3 +1626,4 @@
 @media(max-width:1200px){.ss-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.ss-secondary{grid-template-columns:repeat(3,minmax(0,1fr))}.ss-main-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.ss-dashboard-head{align-items:flex-start;flex-direction:column}.ss-dashboard-head-actions{width:100%}.ss-dashboard-head-actions button{flex:1}.ss-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ss-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}.ss-status-content{grid-template-columns:1fr}.ss-donut-wrap{padding:5px 0 10px}}
 @media(max-width:520px){.ss-dashboard-head h1{font-size:25px}.ss-dashboard-head-actions{flex-direction:column}.ss-dashboard-head-actions button{width:100%}.ss-kpis,.ss-secondary{grid-template-columns:1fr}.ss-status-row{grid-template-columns:minmax(120px,1fr) 28px 70px 32px;gap:7px}.ss-hours-footer{grid-template-columns:1fr}}
+ 
