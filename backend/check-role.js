@@ -1,23 +1,21 @@
-require('dotenv').config();
-
 const mysql = require('mysql2/promise');
 
 async function main() {
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: Number(process.env.DB_PORT || 3306),
+  const pool = await mysql.createPool({
+    host: 'localhost',
+    user: 'root',
+    password: 'HoraFlow@2026',
+    database: 'horaflow',
+    charset: 'utf8mb4',
   });
 
-  const [rows] = await connection.query(
+  const [rows] = await pool.query(
     "SHOW COLUMNS FROM users LIKE 'role'"
   );
 
   console.log(rows);
 
-  await connection.end();
+  await pool.end();
 }
 
 main().catch((error) => {

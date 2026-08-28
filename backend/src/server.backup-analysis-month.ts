@@ -100,9 +100,6 @@ const DEMAND_SELECT = `
     problem,
     treatment,
     analysis_hours AS analysisHours,
-    analysis_month AS analysisMonth,
-    request_date AS requestDate,
-    delivery_date AS deliveryDate,
     required_hours AS requiredHours,
     priority,
     status,
@@ -1376,7 +1373,6 @@ app.post(
             problem,
             treatment,
             analysis_hours,
-            analysis_month,
             required_hours,
             priority,
             status,
@@ -1386,14 +1382,11 @@ app.post(
             approved_at,
             rejection_reason,
             execution_month,
-            request_date,
-            delivery_date,
             responsible,
             client_id,
             paid
           )
           VALUES (
-            ?,
             ?,
             ?,
             ?,
@@ -1409,8 +1402,6 @@ app.post(
             NULL,
             ?,
             ?,
-            ?,
-            ?,
             0
           )
           `,
@@ -1419,16 +1410,9 @@ app.post(
             problem.trim(),
             treatment.trim(),
             Number(analysisHours) || 0,
-            req.body.analysisMonth ? (String(req.body.analysisMonth) + '-01') : null,
             Number(requiredHours) || 0,
             priority,
             status,
-            req.body.requestDate
-              ? String(req.body.requestDate)
-              : null,
-            req.body.deliveryDate
-              ? String(req.body.deliveryDate)
-              : null,
             responsible?.trim()
               ? responsible.trim()
               : null,
@@ -1507,9 +1491,6 @@ app.put(
         problem,
         treatment,
         analysisHours = 0,
-        analysisMonth = null,
-        requestDate = null,
-        deliveryDate = null,
         requiredHours = 0,
         priority = 'Média',
         status = 'Aguardando análise',
@@ -1571,12 +1552,9 @@ app.put(
           problem = ?,
           treatment = ?,
           analysis_hours = ?,
-          analysis_month = ?,
           required_hours = ?,
           priority = ?,
           status = ?,
-          request_date = ?,
-          delivery_date = ?,
           client_id = ?,
           responsible = ?,
           updated_at = NOW()
@@ -1586,16 +1564,9 @@ app.put(
           problem.trim(),
           treatment.trim(),
           Number(analysisHours) || 0,
-          analysisMonth ? (String(analysisMonth) + '-01') : null,
           Number(requiredHours) || 0,
           priority,
           status,
-          requestDate
-            ? String(requestDate)
-            : null,
-          deliveryDate
-            ? String(deliveryDate)
-            : null,
           clientId
             ? Number(clientId)
             : null,
@@ -1892,8 +1863,6 @@ app.get(
             approval,
             status,
             rejection_reason AS rejectionReason,
-            request_date AS requestDate,
-            delivery_date AS deliveryDate,
             execution_month AS executionMonth
           FROM demands
           WHERE id = ?
@@ -2046,43 +2015,61 @@ app.post(
   ) => {
     try {
       const id = getId(req.params.id);
+      const { executionMonth } = req.body;
 
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID da demanda inválido.',
+          message:
+            'ID da demanda inválido.',
         });
       }
 
-      const [rows] = await pool.query(
-        `
-        SELECT
-          id,
-          client_id AS clientId,
-          approval
-        FROM demands
-        WHERE id = ?
-        LIMIT 1
-        `,
-        [id]
-      );
+      if (
+        !executionMonth ||
+        !/^\d{4}-\d{2}$/.test(String(executionMonth))
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            'Informe o mês de execução no formato YYYY-MM.',
+        });
+      }
 
-      const demand = (rows as any[])[0];
+      const [rows] =
+        await pool.query(
+          `
+          SELECT
+            id,
+            client_id AS clientId,
+            approval,
+            execution_month AS executionMonth
+          FROM demands
+          WHERE id = ?
+          `,
+          [id]
+        );
+
+      const demand =
+        (rows as any[])[0];
 
       if (!demand) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda não encontrada.',
+          message:
+            'Demanda não encontrada.',
         });
       }
 
       if (
         req.user?.role === 'CLIENTE' &&
-        Number(demand.clientId) !== Number(req.user.clientId)
+        Number(demand.clientId) !==
+          Number(req.user.clientId)
       ) {
         return res.status(403).json({
           success: false,
-          message: 'Você não possui acesso a esta demanda.',
+          message:
+            'Você não possui acesso a esta demanda.',
         });
       }
 
@@ -2095,12 +2082,14 @@ app.post(
           approved_by_user_id = ?,
           approved_at = NOW(),
           rejection_reason = NULL,
+          execution_month = ?,
           updated_at = NOW()
         WHERE id = ?
         `,
         [
           req.user?.name || null,
           req.user?.id || null,
+          `${String(executionMonth)}-01`,
           id,
         ]
       );
@@ -2112,10 +2101,18 @@ app.post(
         demand.approval,
         'Aprovada'
       );
+      await recordDemandHistory(
+        id,
+        req,
+        'Mês de execução',
+        demand.executionMonth,
+        `${String(executionMonth)}-01`
+      );
 
       return res.json({
         success: true,
-        message: 'Demanda aprovada com sucesso.',
+        message:
+          'Demanda aprovada com sucesso.',
       });
 
     } catch (error: any) {
@@ -2126,12 +2123,28 @@ app.post(
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao aprovar demanda.',
+        message:
+          'Erro ao aprovar demanda.',
         error: error?.message,
+        code: error?.code,
+        sqlMessage: error?.sqlMessage,
       });
     }
   }
-)
+);
+
+
+// =====================================================
+// REPROVAR DEMANDA
+// ADMIN / CLIENTE
+//
+// Ao reprovar:
+// approval = Reprovada
+// status = Pendente
+// salva responsável
+// salva motivo
+// =====================================================
+
 app.post(
   '/api/demands/:id/reject',
   authorize(
@@ -2575,34 +2588,33 @@ app.get(
         );
 
       const summary =
-        (rows as any[])[0];      
-      // Horas analisadas: usa o mês de análise quando um período é selecionado.
-      const analyzedHoursConditions: string[] = [];
-      const analyzedHoursParams: any[] = [];
+        (rows as any[])[0];
 
-      analyzedHoursConditions.push("status = 'Analisada'");
-
-      if (period && period !== 'Todos') {
-        analyzedHoursConditions.push(
-          "DATE_FORMAT(analysis_month, '%Y-%m') = ?"
-        );
-        analyzedHoursParams.push(period);
-      }
-
-      if (req.user?.role === 'CLIENTE') {
-        analyzedHoursConditions.push('client_id = ?');
-        analyzedHoursParams.push(req.user.clientId);
-      }
-
+      // Horas analisadas: independente do período selecionado.
+      // Considera somente demandas com status "Analisada".
+      // Para CLIENTE, respeita apenas o cliente logado.
       const analyzedHoursWhere =
-        `WHERE ${analyzedHoursConditions.join(' AND ')}`;
+        req.user?.role === 'CLIENTE'
+          ? 'WHERE client_id = ?'
+          : '';
+
+      const analyzedHoursParams =
+        req.user?.role === 'CLIENTE'
+          ? [req.user.clientId]
+          : [];
 
       const [analyzedRows] =
         await pool.query(
           `
           SELECT
             COALESCE(
-              SUM(analysis_hours),
+              SUM(
+                CASE
+                  WHEN status = 'Analisada'
+                  THEN COALESCE(analysis_hours, 0)
+                  ELSE 0
+                END
+              ),
               0
             ) AS analyzedHours
           FROM demands
@@ -2756,84 +2768,23 @@ app.use(
 // SERVIDOR
 // =====================================================
 
-async function startServer() {
-  try {
-    const [columns] = await pool.query(
-      `
-      SELECT COUNT(*) AS total
-      FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'demands'
-        AND COLUMN_NAME = 'analysis_month'
-      `
+app.listen(
+  PORT,
+  () => {
+    console.log(
+      `Backend rodando em http://localhost:${PORT}`
     );
-
-    const [dateColumns] = await pool.query(`
-      SELECT COLUMN_NAME
-      FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'demands'
-        AND COLUMN_NAME IN ('request_date', 'delivery_date')
-    `);
-
-    const existingDateColumns = new Set(
-      (dateColumns as any[]).map((row) => row.COLUMN_NAME)
-    );
-
-    if (!existingDateColumns.has('request_date')) {
-      await pool.query(`
-        ALTER TABLE demands
-        ADD COLUMN request_date DATE NULL
-      `);
-      console.log('Coluna request_date criada com sucesso.');
-    }
-
-    if (!existingDateColumns.has('delivery_date')) {
-      await pool.query(`
-        ALTER TABLE demands
-        ADD COLUMN delivery_date DATE NULL
-      `);
-      console.log('Coluna delivery_date criada com sucesso.');
-    }
-    const hasAnalysisMonth =
-      Number((columns as any[])[0]?.total || 0) > 0;
-
-    if (!hasAnalysisMonth) {
-      await pool.query(
-        `
-        ALTER TABLE demands
-        ADD COLUMN analysis_month DATE NULL
-        `
-      );
-
-      console.log(
-        'Coluna analysis_month criada com sucesso.'
-      );
-    } else {
-      console.log(
-        'Coluna analysis_month já existe.'
-      );
-    }
-
-    app.listen(
-      PORT,
-      () => {
-        console.log(
-          `Backend rodando em http://localhost:${PORT}`
-        );
-      }
-    );
-  } catch (error) {
-    console.error(
-      'ERRO AO INICIALIZAR BANCO:',
-      error
-    );
-
-    process.exit(1);
   }
-}
+);
 
-startServer();
+
+
+
+
+
+
+
+
 
 
 

@@ -30,7 +30,7 @@ type HistoryItem = { id:string; date:string; user:string; field:string; oldValue
 type Demand = {
   id:string; numero:number; problema:string; tratamento:string; horasAnalise:number; horasNecessarias:number;
   prioridade:Priority; status:Status; aprovacao:'Pendente'|'Aprovada'|'Reprovada'; aprovadoPor:string;
-  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; executionMonth?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
+  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
 };
 
 const API = 'https://horas-flow.onrender.com/api';
@@ -80,14 +80,13 @@ function normalizeDemand(raw:any):Demand {
   const analysisMonth = raw.analysisMonth ?? raw.analysis_month ?? '';
   const requestDate = raw.requestDate ?? raw.request_date ?? '';
   const deliveryDate = raw.deliveryDate ?? raw.delivery_date ?? '';
-  const executionMonth = raw.executionMonth ?? raw.execution_month ?? raw.executionDate ?? raw.execution_date ?? raw.execution_month_date ?? raw.executionMonthDate ?? '';
   const created = raw.createdAt ?? raw.created_at ?? new Date().toISOString();
   return {
     id:String(raw.id), numero:Number(raw.number ?? raw.numero ?? 0), problema:raw.problem ?? raw.problema ?? '',
     tratamento:raw.treatment ?? raw.tratamento ?? '', horasAnalise:Number(raw.analysisHours ?? raw.analysis_hours ?? raw.horasAnalise ?? 0),
     horasNecessarias:Number(raw.requiredHours ?? raw.required_hours ?? raw.horasNecessarias ?? 0), prioridade:normalizePriority(raw.priority ?? raw.prioridade),
     status:raw.status ?? 'Pendente', aprovacao:normalizeApproval(raw.approval ?? raw.aprovacao), aprovadoPor:raw.approvedBy ?? raw.approved_by ?? '',
-    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, requestDate, deliveryDate, executionMonth,
+    aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, requestDate, deliveryDate,
     rejectionReason:raw.rejectionReason ?? raw.rejection_reason ?? raw.rejection ?? '',
     pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '',
     criadoEm:String(created).slice(0,10), history:raw.history ?? []
@@ -155,7 +154,6 @@ const formatPeriod = (period:string) => {
   const [demandPriorityFilter,setDemandPriorityFilter]=useState('Todas');
   const [demandClientFilter,setDemandClientFilter]=useState('Todos');
   const [demandPeriod,setDemandPeriod]=useState('Todos');
-  const [demandExecutionMonthFilter,setDemandExecutionMonthFilter]=useState('');
   const [demandPage,setDemandPage]=useState(1);
   const demandPageSize=10;
   const [historyDemand,setHistoryDemand]=useState<Demand|null>(null);
@@ -790,7 +788,7 @@ const formatPeriod = (period:string) => {
         rejectedDemands:Number(d.rejectedDemands||0),
         pendingApprovalDemands:Number(d.pendingApprovalDemands ?? 0),
         pendingApprovalHoursTotal:Number(d.pendingApprovalHoursTotal ?? 0),
-        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getExecutionMonthKey(x.deliveryDate || (x as any).delivery_date)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
+        finishedHours:Number((demands||[]).filter((x:any)=>normalizeStatus(x.status)==='Concluída' && (dashboardPeriod==='Todos' || getDeliveryMonthKey(x.deliveryDate || (x as any).delivery_date)===dashboardPeriod)).reduce((sum:number,x:any)=>sum+Number(x.horasAnalise||0)+Number(x.horasNecessarias||0),0)),
         finishedDemands:Number(d.finishedDemands ?? d.finalizedDemands ?? 0),
         byStatus:d.byStatus||{},
         byClient:d.byClient||[]
@@ -967,7 +965,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const approve=async(d:Demand,approved=true)=>openApproval(d,approved);
 
-  useEffect(()=>{setDemandPage(1)},[demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod,demandExecutionMonthFilter]);
+  useEffect(()=>{setDemandPage(1)},[demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod]);
 
   const filtered=useMemo(()=>{
     const result=demands.filter(d=>{
@@ -978,13 +976,12 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
-        (demandPeriod==='Todos'||d.criadoEm.startsWith(demandPeriod)) &&
-        (!demandExecutionMonthFilter||getExecutionMonthKey(d.deliveryDate || (d as any).delivery_date)==demandExecutionMonthFilter);
+        (demandPeriod==='Todos'||d.criadoEm.startsWith(demandPeriod))
     });
 
     // Mais recente primeiro: número maior = demanda mais nova.
     return result.sort((a,b)=>Number(b.numero||0)-Number(a.numero||0));
-  },[demands,demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod,demandExecutionMonthFilter]);
+  },[demands,demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod]);
 
   const demandPageCount=Math.max(1,Math.ceil(filtered.length/demandPageSize));
   const paginatedDemands=useMemo(()=>{
@@ -997,7 +994,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const dashboardDemands=useMemo(()=>demands.filter(d=>{
     const matchesClient = dashboardClientFilter==='Todos' || String((d as any).clientId||'')===String(dashboardClientFilter);
-    const matchesPeriod = dashboardPeriod==='Todos' || getExecutionMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
+    const matchesPeriod = dashboardPeriod==='Todos' || getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
     return matchesClient && matchesPeriod;
   }).slice(0,5),[demands,dashboardClientFilter,dashboardPeriod]);
 
@@ -1047,7 +1044,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   };
 
   const copyTable=async()=>{
-    const header=['Nº','Cliente','Problema','Tratamento','Análise','Horas necessárias','Prioridade','Status','Aprovação','Aprovado em','Execução','Aprovado por','Responsável','Pago'];
+    const header=['Nº','Cliente','Problema','Tratamento','Análise','Horas necessárias','Prioridade','Status','Aprovação','Aprovado em','Data de entrega','Aprovado por','Responsável','Pago'];
     const rows=filtered.map(d=>[d.numero,(d as any).clientName||'',d.problema,d.tratamento,d.horasAnalise,d.horasNecessarias,d.prioridade,d.status,d.aprovacao,d.aprovadoEm?new Date(d.aprovadoEm).toLocaleString('pt-BR'):'',formatDate(d.deliveryDate || (d as any).delivery_date),d.aprovadoPor,d.responsavel,d.pago?'Sim':'Não']);
     await navigator.clipboard.writeText([header,...rows].map(r=>r.join('\t')).join('\n'));setCopied(true);setTimeout(()=>setCopied(false),1600);
   };
@@ -1221,29 +1218,6 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                   </select>
                 </label>
 
-                <label>
-                  <span>Execução</span>
-
-                  <div className="hf-execution-filter-modal">
-                    <CalendarDays size={16}/>
-
-                    <input
-                      type="month"
-                      value={demandExecutionMonthFilter}
-                      onChange={e=>setDemandExecutionMonthFilter(e.target.value)}
-                    />
-
-                    {demandExecutionMonthFilter && (
-                      <button
-                        type="button"
-                        onClick={()=>setDemandExecutionMonthFilter('')}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </label>
-
               </div>
 
               <div className="hf-filter-modal-footer">
@@ -1257,7 +1231,6 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                     setDemandPriorityFilter('Todas');
                     setDemandClientFilter('Todos');
                     setDemandPeriod('Todos');
-                    setDemandExecutionMonthFilter('');
                   }}
                 >
                   Limpar filtros
@@ -1754,12 +1727,20 @@ function formatDate(value:any){
   if(br)return raw;
   return raw;
 }
-function formatExecutionMonth(value:any){if(!value)return '—';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[2]}/${match[1]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[2]}/${br[3]}`;return raw}
-function getExecutionMonthKey(value:any){if(!value)return '';const raw=String(value);const match=raw.match(/(\d{4})-(\d{2})/);if(match)return `${match[1]}-${match[2]}`;const br=raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);if(br)return `${br[3]}-${br[2]}`;return ''}
+function getDeliveryMonthKey(value:any){
+  if(!value)return '';
+  const raw=String(value);
+  const match=raw.match(/^(\d{4})-(\d{2})/);
+  if(match)return `${match[1]}-${match[2]}`;
+  const br=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(br)return `${br[3]}-${br[2]}`;
+  return '';
+}
+
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
 
 function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,isClient,clients}:{demands:Demand[];remove:(id:string)=>void;approve:(d:Demand,approved?:boolean)=>void;history:(d:Demand)=>void;canEdit:boolean;canApprove:boolean;onEdit:(d:Demand)=>void;isClient:boolean;clients:any[]}){
-  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Execução</th><th>Responsável</th><th>Pago</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id}>
+  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th>Pago</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
     <td>
   {(() => {
@@ -3467,6 +3448,14 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
 
 
 
