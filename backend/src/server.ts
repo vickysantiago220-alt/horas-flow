@@ -1891,7 +1891,8 @@ app.get(
             status,
             rejection_reason AS rejectionReason,
             request_date AS requestDate,
-            delivery_date AS deliveryDate,          FROM demands
+            delivery_date AS deliveryDate
+          FROM demands
           WHERE id = ?
           LIMIT 1
         `,
@@ -2817,6 +2818,9 @@ async function startServer() {
 }
 
 startServer();
+
+
+
 
 
 
