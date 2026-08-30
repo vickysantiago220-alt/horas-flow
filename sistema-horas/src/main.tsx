@@ -970,7 +970,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   const filtered=useMemo(()=>{
     const result=demands.filter(d=>{
       const text=`${d.numero} ${d.problema} ${d.tratamento} ${d.responsavel}`.toLowerCase();
-      const matchesClient = demandClientFilter==='Todos' || String((d as any).clientId||'')===String(demandClientFilter);
+      const demandClientId = (d as any).clientId ?? (d as any).client_id ?? ''; const matchesClient = demandClientFilter==='Todos' || String(demandClientId)===String(demandClientFilter);
       return text.includes(demandSearch.toLowerCase()) &&
         matchesClient &&
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
@@ -992,11 +992,136 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   useEffect(()=>{if(demandPage>demandPageCount)setDemandPage(demandPageCount)},[demandPage,demandPageCount]);
 
-  const dashboardDemands=useMemo(()=>demands.filter(d=>{
-    const matchesClient = dashboardClientFilter==='Todos' || String((d as any).clientId||'')===String(dashboardClientFilter);
-    const matchesPeriod = dashboardPeriod==='Todos' || getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
-    return matchesClient && matchesPeriod;
-  }).slice(0,5),[demands,dashboardClientFilter,dashboardPeriod]);
+  const dashboardFilteredDemands=useMemo(()=>{
+    return demands.filter(d=>{
+      const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
+      const matchesClient=dashboardClientFilter==='Todos' ||
+        String(demandClientId)===String(dashboardClientFilter);
+
+      const matchesPeriod=dashboardPeriod==='Todos' ||
+        getDeliveryMonthKey(
+          d.deliveryDate || (d as any).delivery_date
+        )===dashboardPeriod;
+
+      return matchesClient && matchesPeriod;
+    });
+  },[demands,dashboardClientFilter,dashboardPeriod]);
+
+  const dashboardLocalStats=useMemo(()=>{
+    const list=dashboardFilteredDemands;
+
+    const byStatus:Record<string,number>={};
+
+    const statusPeriodMatches=(d:Demand)=>{
+      if(dashboardPeriod==='Todos') return true;
+
+      const status=normalizeStatus(d.status);
+
+      if(status==='Analisada'){
+        return String(d.analysisMonth || '').slice(0,7)===dashboardPeriod;
+      }
+
+      if(status==='Concluída'){
+        return getDeliveryMonthKey(
+          d.deliveryDate || (d as any).delivery_date
+        )===dashboardPeriod;
+      }
+
+      return String(d.requestDate || '').slice(0,7)===dashboardPeriod;
+    };
+
+    statuses.forEach(status=>{
+      byStatus[status]=demands.filter(d=>{
+        const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
+
+        const matchesClient=dashboardClientFilter==='Todos' ||
+          String(demandClientId)===String(dashboardClientFilter);
+
+        return matchesClient &&
+          normalizeStatus(d.status)===status &&
+          statusPeriodMatches(d);
+      }).length;
+    });
+
+    const approvedDemands=list.filter(
+      d=>normalizeApproval(d.aprovacao)==='Aprovada'
+    ).length;
+
+    const rejectedDemands=list.filter(
+      d=>normalizeApproval(d.aprovacao)==='Reprovada'
+    ).length;
+
+    const pendingApprovalDemands=list.filter(
+      d=>normalizeApproval(d.aprovacao)==='Pendente'
+    ).length;
+
+    const analysisHours=demands
+      .filter(d=>{
+        const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
+
+        const matchesClient=dashboardClientFilter==='Todos' ||
+          String(demandClientId)===String(dashboardClientFilter);
+
+        const matchesAnalysisPeriod=dashboardPeriod==='Todos' ||
+          String(d.analysisMonth || '').slice(0,7)===dashboardPeriod;
+
+        return matchesClient &&
+          normalizeStatus(d.status)==='Analisada' &&
+          matchesAnalysisPeriod;
+      })
+      .reduce(
+        (sum,d)=>sum+Number(d.horasAnalise||0),
+        0
+      );
+
+    const requiredHours=list.reduce(
+      (sum,d)=>sum+Number(d.horasNecessarias||0),0
+    );
+
+    const finishedDemands=list.filter(
+      d=>normalizeStatus(d.status)==='Concluída'
+    ).length;
+
+    const finishedHours=list
+      .filter(d=>normalizeStatus(d.status)==='Concluída')
+      .reduce(
+        (sum,d)=>sum+
+          Number(d.horasAnalise||0)+
+          Number(d.horasNecessarias||0),
+        0
+      );
+
+    return {
+      totalDemands:list.length,
+      totalHours:analysisHours+requiredHours,
+      analysisHours,
+      requiredHours,
+      approvedDemands,
+      rejectedDemands,
+      pendingApprovalDemands,
+      pendingApprovalHoursTotal:list
+        .filter(d=>normalizeApproval(d.aprovacao)==='Pendente')
+        .reduce(
+          (sum,d)=>sum+
+            Number(d.horasAnalise||0)+
+            Number(d.horasNecessarias||0),
+          0
+        ),
+      finishedDemands,
+      finishedHours,
+      byStatus
+    };
+  },[dashboardFilteredDemands]);
+const dashboardDemands=useMemo(()=>{
+    return demands.filter(d=>{
+      const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
+      const matchesClient=dashboardClientFilter==='Todos' ||
+        String(demandClientId)===String(dashboardClientFilter);
+      const matchesPeriod=dashboardPeriod==='Todos' ||
+        getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
+      return matchesClient && matchesPeriod;
+    }).slice(0,5);
+  },[demands,dashboardClientFilter,dashboardPeriod]);
 
 
 
@@ -1092,7 +1217,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     </option>
   ))}
 </select>
-            <span className="hf-filter-count">{dashboard.totalDemands} demandas</span>
+            <span className="hf-filter-count">{dashboardLocalStats.totalDemands} demandas</span>
           </section>
         ) : (
           <section className="hf-filters hf-filters-clean">
@@ -1187,9 +1312,8 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                   </select>
                 </label>
 
-                {isAdmin && (
-                  <label>
-                    <span>Clientes</span>
+                <label>
+                  <span>Cliente</span>
                     <select
                       value={demandClientFilter}
                       onChange={e=>setDemandClientFilter(e.target.value)}
@@ -1200,7 +1324,6 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                       )}
                     </select>
                   </label>
-                )}
 
                 <label>
                   <span>Períodos</span>
@@ -1278,26 +1401,26 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
           >
             <Card
               title="Horas analisadas"
-              value={dashboardLoading?'…':`${dashboard.analyzedHours}h`}
+              value={dashboardLoading?'…':`${dashboardLocalStats.analysisHours}h`}
               icon={<CheckCircle2/>}
             />
 
             <Card
               title="Horas concluídas"
-              value={dashboardLoading?'…':`${dashboard.finishedHours}h`}
+              value={dashboardLoading?'…':`${dashboardLocalStats.finishedHours}h`}
               icon={<CheckCircle2/>}
             />
 
             <Card
-              title="Total do mês"
-              value={dashboardLoading
-                ? '…'
-                : `${(
-                    Number(dashboard.analyzedHours || 0) +
-                    Number(dashboard.finishedHours || 0)
-                  ).toFixed(1)}h`}
-              icon={<Clock3/>}
-            />
+  title="Total do mês"
+  value={dashboardLoading
+    ? '…'
+    : `${(
+        Number(dashboardLocalStats.analysisHours || 0) +
+        Number(dashboardLocalStats.finishedHours || 0)
+      ).toFixed(1)}h`}
+  icon={<Clock3/>}
+/>
           </section>
 
           <section
@@ -1337,7 +1460,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                   fontWeight:700
                 }}
               >
-                {dashboardLoading?'…':dashboard.totalDemands}
+                {dashboardLoading?'…':dashboardLocalStats.totalDemands}
               </strong>
             </div>
 
@@ -1367,7 +1490,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                   fontWeight:700
                 }}
               >
-                {dashboardLoading?'…':dashboard.approvedDemands}
+                {dashboardLoading?'…':dashboardLocalStats.approvedDemands}
               </strong>
             </div>
 
@@ -1397,7 +1520,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
                   fontWeight:700
                 }}
               >
-                {dashboardLoading?'…':dashboard.rejectedDemands}
+                {dashboardLoading?'…':dashboardLocalStats.rejectedDemands}
               </strong>
             </div>
 
@@ -1429,7 +1552,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
               >
                 {dashboardLoading
                   ? '…'
-                  : `${dashboard.pendingApprovalHoursTotal}h`}
+                  : `${dashboardLocalStats.pendingApprovalHoursTotal}h`}
               </strong>
             </div>
           </section>
@@ -1463,7 +1586,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         inset:"0",
         borderRadius:"50%",
         background:(() => {
-          const total = dashboard.totalDemands || 0;
+          const total = dashboardLocalStats.totalDemands || 0;
 
           if (!total) return "#edf1f7";
 
@@ -1480,7 +1603,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
           const pieces = statuses
             .map((s) => {
-              const count = dashboard.byStatus[s] || 0;
+              const count = dashboardLocalStats.byStatus[s] || 0;
               const percent = (count / total) * 100;
               const startPercent = current;
               const endPercent = current + percent;
@@ -1517,7 +1640,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         lineHeight:1,
         color:"#18243b"
       }}>
-        {dashboard.totalDemands}
+        {dashboardLocalStats.totalDemands}
       </strong>
 
       <span style={{
@@ -1539,8 +1662,8 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
   }}>
 
     {statuses.map((s) => {
-      const count = dashboard.byStatus[s] || 0;
-      const total = dashboard.totalDemands || 0;
+      const count = dashboardLocalStats.byStatus[s] || 0;
+      const total = dashboardLocalStats.totalDemands || 0;
       const percentage = total ? (count / total) * 100 : 0;
 
       const colors:Record<string,string> = {
@@ -3464,6 +3587,24 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
