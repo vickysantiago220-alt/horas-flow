@@ -2577,7 +2577,32 @@ const dashboardDemands=useMemo(()=>{
             />
           </section>
 
-        </>:<section className="hf-panel"><div className="hf-panel-title"><div><h2>Planilha de demandas</h2><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==="cards" ? <DemandCardsView demands={paginatedDemands} onOpen={openEditDemand}/> : <DemandTable demands={paginatedDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient} clients={clients}/>}<div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div><div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
+        </>:<section className="hf-panel"><div className="hf-panel-title"><div><h2>Planilha de demandas</h2>
+<div className="hf-view-switcher">
+  <button type="button" className={demandView==='table'?'active':''} onClick={()=>setDemandView('table')}>
+    <span>☷</span> Tabela
+  </button>
+  <button type="button" className={demandView==='cards'?'active':''} onClick={()=>setDemandView('cards')}>
+    <span>▦</span> Cards
+  </button>
+  <button type="button" className={demandView==='kanban'?'active':''} onClick={()=>setDemandView('kanban')}>
+    <span>▤</span> Kanban
+  </button>
+</div><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==="cards"
+  ? <DemandCardsView demands={paginatedDemands} onOpen={openEditDemand}/>
+  : demandView==="kanban"
+    ? <DemandKanbanView demands={filtered} onOpen={openEditDemand}/>
+    : <DemandTable
+        demands={paginatedDemands}
+        remove={removeDemand}
+        approve={approve}
+        history={openHistory}
+        canEdit={isInternal}
+        canApprove={isAdmin||isClient}
+        onEdit={openEditDemand}
+        isClient={isClient}
+        clients={clients}
+      />}<div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div><div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
       </>}
     </main>
 
@@ -2673,6 +2698,81 @@ function getDeliveryMonthKey(value:any){
 
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
 
+function DemandKanbanView({demands,onOpen}:{demands:Demand[];onOpen:(d:Demand)=>void}){
+  const columns=[
+    'Aguardando análise',
+    'Em análise',
+    'Analisada',
+    'Em desenvolvimento',
+    'Em homologação',
+    'Concluída'
+  ];
+
+  return <div className="hf-kanban">
+    {columns.map(column=>{
+      const items=demands.filter(d=>
+        normalizeStatus(d.status)===normalizeStatus(column)
+      );
+
+      return <section
+        className="hf-kanban-column"
+        key={column}
+      >
+        <div className="hf-kanban-column-head">
+          <div>
+            <strong>{column}</strong>
+            <span>{items.length}</span>
+          </div>
+        </div>
+
+        <div className="hf-kanban-list">
+          {items.length===0 ? (
+            <div className="hf-kanban-empty">
+              Nenhuma demanda
+            </div>
+          ) : (
+            items.map(d=>
+              <button
+                type="button"
+                className="hf-kanban-card"
+                key={d.id}
+                onClick={()=>onOpen(d)}
+              >
+                <div className="hf-kanban-card-top">
+                  <span>
+                    #{String(d.numero).padStart(3,'0')}
+                  </span>
+
+                  <b>
+                    {d.prioridade||'—'}
+                  </b>
+                </div>
+
+                <strong>
+                  {d.problema||'Sem descrição da demanda'}
+                </strong>
+
+                <p>
+                  {(d as any).clientName||'Cliente não informado'}
+                </p>
+
+                <div className="hf-kanban-card-footer">
+                  <span>
+                    {d.horasNecessarias||0}h
+                  </span>
+
+                  <span>
+                    {d.responsavel||'Sem responsável'}
+                  </span>
+                </div>
+              </button>
+            )
+          )}
+        </div>
+      </section>
+    })}
+  </div>
+}
 function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,isClient,clients}:{demands:Demand[];remove:(id:string)=>void;approve:(d:Demand,approved?:boolean)=>void;history:(d:Demand)=>void;canEdit:boolean;canApprove:boolean;onEdit:(d:Demand)=>void;isClient:boolean;clients:any[]}){
   return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th>Pago</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
@@ -2934,7 +3034,12 @@ function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loadi
   </div></div>
 }
 
-const styles = `/* =====================================================
+const styles = `
+/* SAPHIRE VIEW SWITCHER MODERN */
+.hf-view-switcher{display:inline-flex!important;align-items:center!important;gap:3px!important;padding:4px!important;margin:0!important;background:#f5f7fb!important;border:1px solid #e4e9f1!important;border-radius:12px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 2px 8px rgba(15,23,42,.04)!important}.hf-view-switcher button{appearance:none!important;-webkit-appearance:none!important;height:34px!important;min-width:82px!important;padding:0 12px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#7b8799!important;font-family:inherit!important;font-size:11px!important;font-weight:700!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;cursor:pointer!important;outline:none!important;box-shadow:none!important;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .15s ease!important}.hf-view-switcher button span{font-size:13px!important;line-height:1!important;opacity:.85!important}.hf-view-switcher button:hover{background:#edf2ff!important;color:#315efb!important;transform:translateY(-1px)!important}.hf-view-switcher button.active{background:#fff!important;color:#315efb!important;box-shadow:0 2px 7px rgba(15,23,42,.10),0 1px 2px rgba(15,23,42,.04)!important}.hf-view-switcher button.active span{opacity:1!important}.hf-view-switcher button:active{transform:scale(.97)!important}.hf-view-switcher button:focus-visible{box-shadow:0 0 0 3px rgba(49,94,251,.14)!important}@media(max-width:650px){.hf-view-switcher{width:100%!important}.hf-view-switcher button{flex:1!important;min-width:0!important}}
+
+.hf-demand-cards{display:grid;grid-template-columns:repeat(3,minmax(240px,1fr));gap:14px;margin-top:16px}.hf-demand-card{appearance:none;width:100%;box-sizing:border-box;border:1px solid #e4e9f0;background:#fff;border-radius:16px;padding:16px;text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(15,23,42,.04);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.hf-demand-card:hover{transform:translateY(-3px);border-color:#cfd9ee;box-shadow:0 12px 28px rgba(15,23,42,.08)}.hf-demand-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.hf-demand-number{font-size:11px;font-weight:800;color:#315efb}.hf-demand-status{padding:5px 9px;border-radius:999px;background:#f1f4f8;color:#687489;font-size:10px;font-weight:700}.hf-demand-card-client{margin-top:14px;color:#7d899b;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hf-demand-card h3{margin:7px 0 5px;color:#202b3f;font-size:14px;line-height:1.45}.hf-demand-card>p{margin:0;color:#8994a7;font-size:11px;line-height:1.5;min-height:34px}.hf-demand-card-footer{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid #edf0f5}.hf-demand-card-footer span{min-width:0}.hf-demand-card-footer small{display:block;color:#9aa4b3;font-size:9px;margin-bottom:3px}.hf-demand-card-footer strong{display:block;color:#465268;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:1050px){.hf-demand-cards{grid-template-columns:repeat(2,minmax(240px,1fr))}}@media(max-width:650px){.hf-demand-cards{grid-template-columns:1fr}}
+.hf-kanban{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:14px;margin-top:14px;overflow-x:auto;padding-bottom:4px}.hf-kanban-column{min-width:220px;background:#f7f9fc;border:1px solid #e5eaf1;border-radius:15px;padding:12px}.hf-kanban-column-head{padding:4px 4px 12px}.hf-kanban-column-head>div{display:flex;align-items:center;justify-content:space-between;gap:8px}.hf-kanban-column-head strong{color:#344158;font-size:12px}.hf-kanban-column-head span{min-width:24px;height:24px;display:grid;place-items:center;border-radius:8px;background:#eaf0ff;color:#315efb;font-size:10px;font-weight:800}.hf-kanban-list{display:grid;gap:9px}.hf-kanban-empty{min-height:100px;display:grid;place-items:center;text-align:center;color:#a0a9b7;font-size:10px;border:1px dashed #dce2eb;border-radius:11px;background:#fff}.hf-kanban-card{width:100%;border:1px solid #e4e9f0;border-radius:12px;background:#fff;padding:12px;text-align:left;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.hf-kanban-card:hover{transform:translateY(-2px);border-color:#d3dcf0;box-shadow:0 8px 20px rgba(15,23,42,.07)}.hf-kanban-card-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:9px}.hf-kanban-card-top span{color:#315efb;font-size:10px;font-weight:800}.hf-kanban-card-top b{color:#7b8799;font-size:9px;background:#f3f5f8;border-radius:999px;padding:4px 7px}.hf-kanban-card>strong{display:block;color:#27344b;font-size:11px;line-height:1.45}.hf-kanban-card>p{margin:6px 0 0;color:#8a95a6;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hf-kanban-card-footer{display:flex;justify-content:space-between;gap:8px;margin-top:11px;padding-top:9px;border-top:1px solid #eef1f5}.hf-kanban-card-footer span{color:#68758a;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:1100px){.hf-kanban{grid-template-columns:repeat(2,minmax(240px,1fr))}}@media(max-width:650px){.hf-kanban{grid-template-columns:1fr}}/* =====================================================
    SAPHIRE UI MOTION 2.0
    Microinterações e refinamento visual
    ===================================================== */
@@ -4885,6 +4990,15 @@ const styles = `/* =====================================================
   }
 }
 `
+
+
+
+
+
+
+
+
+
 
 
 
