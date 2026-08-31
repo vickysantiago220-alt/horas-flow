@@ -102,7 +102,7 @@ function App(){
   const [loginLoading,setLoginLoading]=useState(false);
   const [loginError,setLoginError]=useState('');
 
-  const [tab,setTab]=useState<'dashboard'|'demandas'|'usuarios'|'clientes'>('dashboard');
+  const [tab,setTab]=useState<'meu-dia'|'dashboard'|'demandas'|'usuarios'|'clientes'>('meu-dia');
   const [demands,setDemands]=useState<Demand[]>([]);
   const [users,setUsers]=useState<User[]>([]);
   const [clients,setClients]=useState<Client[]>([]);
@@ -1182,6 +1182,7 @@ const dashboardDemands=useMemo(()=>{
     <aside className={`hf-sidebar ${mobileMenu?'open':''}`}>
       <div className="hf-brand-logo"><strong>Saphire</strong><span>Sheet</span></div>
       <nav>
+        <Nav active={tab==='meu-dia'} icon={<CalendarDays size={18}/>} text="Meu Dia" onClick={()=>{setTab('meu-dia');setMobileMenu(false)}}/>
         <Nav active={tab==='dashboard'} icon={<LayoutDashboard size={18}/>} text="Dashboard" onClick={()=>{setTab('dashboard');setMobileMenu(false)}}/>
         <Nav active={tab==='demandas'} icon={<BarChart3 size={18}/>} text="Demandas" onClick={()=>{setTab('demandas');setMobileMenu(false)}}/>
         {(isAdmin||isInternal)&&<Nav active={tab==='clientes'} icon={<Building2 size={18}/>} text="Clientes" onClick={()=>{setTab('clientes');setMobileMenu(false)}}/>}
@@ -1193,7 +1194,25 @@ const dashboardDemands=useMemo(()=>{
     <main className="hf-main">
       <header className="hf-topbar">
         <button className="hf-menu" onClick={()=>setMobileMenu(true)}><Menu size={20}/></button>
-        <div><div className="hf-eyebrow">Saphire Sheet • Gestão</div><h1>{tab==='dashboard'?'Visão geral':tab==='demandas'?'Demandas':tab==='clientes'?'Clientes':'Usuários'}</h1><p>{tab==='usuarios'?'Cadastre usuários e controle o acesso ao sistema.':tab==='clientes'?'Gerencie empresas e vincule suas demandas.':'Acompanhe demandas, aprovações e horas desempenhadas.'}</p></div>
+        <div><div className="hf-eyebrow">Saphire Sheet • Gestão</div><h1>
+  {tab==='meu-dia'
+    ? 'Meu Dia'
+    : tab==='dashboard'
+      ? 'Visão geral'
+      : tab==='demandas'
+        ? 'Demandas'
+        : tab==='clientes'
+          ? 'Clientes'
+          : 'Usuários'}
+</h1><p>
+  {tab==='meu-dia'
+    ? 'Organize seu trabalho e veja o que precisa da sua atenção.'
+    : tab==='usuarios'
+      ? 'Cadastre usuários e controle o acesso ao sistema.'
+      : tab==='clientes'
+        ? 'Gerencie empresas e vincule suas demandas.'
+        : 'Acompanhe demandas, aprovações e horas desempenhadas.'}
+</p></div>
         <div className="hf-top-actions">{(tab==='demandas'||tab==='dashboard')&&isInternal&&<button className="hf-primary" onClick={openNewDemand}><Plus size={17}/> Nova demanda</button>}{tab==='clientes'&&isAdmin&&<button className="hf-primary" onClick={()=>openClientModal()}><Plus size={17}/> Novo cliente</button>}<div className="hf-top-avatar">{user.name.slice(0,1).toUpperCase()}</div></div>
       </header>
 
@@ -1201,7 +1220,659 @@ const dashboardDemands=useMemo(()=>{
 
       {tab==='usuarios'&&<UsersPage users={users} clients={clients} loading={loading} onNew={openUserModal} onRefresh={loadUsers} isAdmin={isAdmin}/>}
       {tab==='clientes'&&<ClientsPage clients={clients} demands={demands} isAdmin={isAdmin} onNew={()=>openClientModal()} onEdit={openClientModal} onDemand={openEditDemand}/>}
-      {(tab==='dashboard'||tab==='demandas')&&<>
+      {tab==='meu-dia'?<>
+          {(() => {
+            const hoje = new Date();
+            const hojeKey = hoje.toISOString().slice(0,10);
+
+            // Base geral das demandas que o usuário pode visualizar
+            const minhasDemandas = demands.filter(d => {
+              if (isAdmin) {
+                return true;
+              }
+
+              if (isClient) {
+                const demandClientId =
+                  (d as any).clientId ??
+                  (d as any).client_id ??
+                  '';
+
+                const userClientId =
+                  (user as any)?.clientId ??
+                  (user as any)?.client_id ??
+                  '';
+
+                return String(demandClientId) === String(userClientId);
+              }
+
+              if (isInternal) {
+                const responsavel =
+                  String(d.responsavel || '').trim().toLowerCase();
+
+                const nomeUsuario =
+                  String(user?.name || '').trim().toLowerCase();
+
+                return responsavel === nomeUsuario;
+              }
+
+              return false;
+            });
+
+            const aguardandoAnalise = minhasDemandas.filter(
+              d => normalizeStatus(d.status) === 'Aguardando análise'
+            ).length;
+
+            const emAnalise = minhasDemandas.filter(
+              d => normalizeStatus(d.status) === 'Em análise'
+            ).length;
+
+            const analisadas = minhasDemandas.filter(
+              d => normalizeStatus(d.status) === 'Analisada'
+            ).length;
+
+            const emDesenvolvimento = minhasDemandas.filter(
+              d => normalizeStatus(d.status) === 'Em desenvolvimento'
+            ).length;
+
+            const emHomologacao = minhasDemandas.filter(
+              d => normalizeStatus(d.status) === 'Em homologação'
+            ).length;
+
+            const concluidas = minhasDemandas.filter(
+              d => normalizeStatus(d.status) === 'Concluída'
+            ).length;
+
+            const pendentesAprovacao = minhasDemandas.filter(
+              d => normalizeApproval(d.aprovacao) === 'Pendente'
+            ).length;
+
+            const entregasHoje = minhasDemandas.filter(d => {
+              const entrega = String(
+                d.deliveryDate || (d as any).delivery_date || ''
+              ).slice(0,10);
+
+              return entrega === hojeKey;
+            }).length;
+
+            const atrasadas = minhasDemandas.filter(d => {
+              const entrega = String(
+                d.deliveryDate || (d as any).delivery_date || ''
+              ).slice(0,10);
+
+              return entrega &&
+                entrega < hojeKey &&
+                !['Concluída','Reprovada'].includes(normalizeStatus(d.status));
+            });
+
+            const hojeDemandas = minhasDemandas.filter(d => {
+              const entrega = String(
+                d.deliveryDate || (d as any).delivery_date || ''
+              ).slice(0,10);
+
+              return entrega === hojeKey;
+            });
+
+            const emAndamento = minhasDemandas.filter(d =>
+              ['Em análise','Em desenvolvimento','Em homologação'].includes(
+                normalizeStatus(d.status)
+              )
+            );
+
+            const aguardandoAcao = minhasDemandas.filter(d =>
+              ['Aguardando aprovação','Aguardando análise'].includes(
+                normalizeStatus(d.status)
+              )
+            );
+
+            const proximas = minhasDemandas
+              .filter(d => {
+                const entrega = String(
+                  d.deliveryDate || (d as any).delivery_date || ''
+                ).slice(0,10);
+
+                return entrega >= hojeKey &&
+                  !['Concluída','Reprovada'].includes(normalizeStatus(d.status));
+              })
+              .sort((a,b) => {
+                const da = String(a.deliveryDate || (a as any).delivery_date || '');
+                const db = String(b.deliveryDate || (b as any).delivery_date || '');
+                return da.localeCompare(db);
+              })
+              .slice(0,5);
+
+            const horasAnalisadas = minhasDemandas
+              .filter(d => normalizeStatus(d.status) === 'Analisada')
+              .reduce((sum,d) => sum + Number(d.horasAnalise || 0), 0);
+
+            const horasNecessarias = minhasDemandas
+              .reduce((sum,d) => sum + Number(d.horasNecessarias || 0), 0);
+
+            return (
+              <>
+                <section className="hf-dashboard-header">
+                  <div>
+                    <div className="hf-eyebrow">Saphire Sheet • Central de trabalho</div>
+                    <h1>Meu Dia</h1>
+                    <p>
+                      Olá, {user?.name?.split(' ')[0] || 'usuário'} 👋
+                      Aqui está o que precisa da sua atenção.
+                    </p>
+                  </div>
+
+                  <div className="hf-dashboard-actions">
+                    {isInternal && (
+                      <button className="hf-primary" onClick={openNewDemand}>
+                        <Plus size={17}/>
+                        Nova demanda
+                      </button>
+                    )}
+                  </div>
+                </section>
+
+                <section
+                  className="hf-dashboard-kpis"
+                  style={{
+                    display:"grid",
+                    gridTemplateColumns:"repeat(4,minmax(0,1fr))",
+                    gap:"16px",
+                    width:"100%",
+                    marginTop:"12px"
+                  }}
+                >
+                  <Card
+                    title="Aguardando análise"
+                    value={aguardandoAnalise}
+                    icon={<Clock3/>}
+                  />
+
+                  <Card
+                    title="Em análise"
+                    value={emAnalise}
+                    icon={<Search/>}
+                  />
+
+                  <Card
+                    title="Analisadas"
+                    value={analisadas}
+                    icon={<CheckCircle2/>}
+                  />
+
+                  <Card
+                    title="Em desenvolvimento"
+                    value={emDesenvolvimento}
+                    icon={<BarChart3/>}
+                  />
+
+                  <Card
+                    title="Em homologação"
+                    value={emHomologacao}
+                    icon={<Clipboard/>}
+                  />
+
+                  <Card
+                    title="Concluídas"
+                    value={concluidas}
+                    icon={<CheckCircle2/>}
+                  />
+
+                  <Card
+                    title="Pendentes de aprovação"
+                    value={pendentesAprovacao}
+                    icon={<AlertCircle/>}
+                  />
+
+                  <Card
+                    title="Entregas hoje"
+                    value={entregasHoje}
+                    icon={<CalendarDays/>}
+                  />
+                </section>
+
+                <section
+                  style={{
+                    display:"grid",
+                    gridTemplateColumns:"minmax(0,1.5fr) minmax(300px,.8fr)",
+                    gap:"20px",
+                    marginTop:"20px"
+                  }}
+                >
+                  <div className="hf-panel">
+                    <div className="hf-panel-title">
+                      <div>
+                        <h2>🎯 Precisa da sua atenção</h2>
+                        <p>O que merece sua atenção primeiro.</p>
+                      </div>
+
+                      {atrasadas.length + hojeDemandas.length + aguardandoAcao.length > 0 && (
+                        <span className="hf-filter-count">
+                          {atrasadas.length + hojeDemandas.length + aguardandoAcao.length} pendências
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{
+                      display:"flex",
+                      flexDirection:"column",
+                      gap:"10px"
+                    }}>
+
+                      {[...atrasadas,...hojeDemandas,...aguardandoAcao]
+                        .filter((d,i,arr) =>
+                          arr.findIndex(x => x.id === d.id) === i
+                        )
+                        .slice(0,6)
+                        .map(d => {
+
+                          const entrega = String(
+                            d.deliveryDate ||
+                            (d as any).delivery_date ||
+                            ''
+                          ).slice(0,10);
+
+                          const status = normalizeStatus(d.status);
+
+                          const isAtrasada =
+                            atrasadas.some(x => x.id === d.id);
+
+                          const isHoje =
+                            hojeDemandas.some(x => x.id === d.id);
+
+                          const isAguardando =
+                            aguardandoAcao.some(x => x.id === d.id);
+
+                          const label = isAtrasada
+                            ? 'ATRASADA'
+                            : isHoje
+                              ? 'ENTREGA HOJE'
+                              : isAguardando
+                                ? 'AGUARDANDO AÇÃO'
+                                : status;
+
+                          return (
+                            <div
+                              key={d.id}
+                              style={{
+                                display:"flex",
+                                alignItems:"center",
+                                justifyContent:"space-between",
+                                gap:"16px",
+                                padding:"15px 16px",
+                                border:"1px solid #e5eaf2",
+                                borderRadius:"12px",
+                                background:"#fff"
+                              }}
+                            >
+
+                              <div style={{
+                                minWidth:0,
+                                flex:1
+                              }}>
+
+                                <div style={{
+                                  display:"flex",
+                                  alignItems:"center",
+                                  gap:"8px",
+                                  flexWrap:"wrap",
+                                  marginBottom:"6px"
+                                }}>
+
+                                  <span style={{
+                                    fontSize:"12px",
+                                    fontWeight:700,
+                                    color:"#64748b"
+                                  }}>
+                                    #{d.numero}
+                                  </span>
+
+                                  <span style={{
+                                    fontSize:"12px",
+                                    color:"#8b97a8"
+                                  }}>
+                                    {(d as any).clientName || 'Cliente'}
+                                  </span>
+
+                                  <span style={{
+                                    fontSize:"10px",
+                                    fontWeight:800,
+                                    letterSpacing:".4px",
+                                    padding:"4px 8px",
+                                    borderRadius:"999px",
+                                    background:
+                                      isAtrasada
+                                        ? "#fef2f2"
+                                        : isHoje
+                                          ? "#fff7ed"
+                                          : "#fffbeb",
+                                    color:
+                                      isAtrasada
+                                        ? "#dc2626"
+                                        : isHoje
+                                          ? "#ea580c"
+                                          : "#b45309"
+                                  }}>
+                                    {label}
+                                  </span>
+
+                                </div>
+
+                                <strong style={{
+                                  display:"block",
+                                  color:"#18243b",
+                                  marginBottom:"7px",
+                                  fontSize:"14px"
+                                }}>
+                                  {d.problema}
+                                </strong>
+
+                                <div style={{
+                                  display:"flex",
+                                  gap:"8px",
+                                  flexWrap:"wrap",
+                                  alignItems:"center",
+                                  fontSize:"12px",
+                                  color:"#8b97a8"
+                                }}>
+                                  <span>{status}</span>
+
+                                  <span>•</span>
+
+                                  <span>{d.prioridade}</span>
+
+                                  {entrega && (
+                                    <>
+                                      <span>•</span>
+                                      <span>
+                                        Entrega: {formatDate(entrega)}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+
+                              </div>
+
+                              <button
+                                className="hf-secondary"
+                                onClick={() => {
+                                  setTab('demandas');
+                                  setDemandSearch(String(d.numero));
+                                }}
+                              >
+                                Abrir
+                              </button>
+
+                            </div>
+                          );
+                        })}
+
+                      {!atrasadas.length &&
+                       !hojeDemandas.length &&
+                       !aguardandoAcao.length && (
+                        <div className="hf-empty">
+                          <CheckCircle2 size={28}/>
+                          <strong>Tudo em dia 🎉</strong>
+                          <span>
+                            Não há demandas exigindo sua atenção agora.
+                          </span>
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+                  <div className="hf-panel">
+                    <div className="hf-panel-title">
+                      <div>
+                        <h2>📊 Meu resumo</h2>
+                        <p>Seus principais números.</p>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display:"flex",
+                      flexDirection:"column",
+                      gap:"14px"
+                    }}>
+                      <div>
+                        <span className="hf-dashboard-mini-label">
+                          Minhas demandas
+                        </span>
+                        <strong style={{
+                          display:"block",
+                          fontSize:"28px",
+                          color:"#18243b"
+                        }}>
+                          {minhasDemandas.length}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span className="hf-dashboard-mini-label">
+                          Horas analisadas
+                        </span>
+                        <strong style={{
+                          display:"block",
+                          fontSize:"28px",
+                          color:"#18243b"
+                        }}>
+                          {horasAnalisadas}h
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span className="hf-dashboard-mini-label">
+                          Horas necessárias
+                        </span>
+                        <strong style={{
+                          display:"block",
+                          fontSize:"28px",
+                          color:"#18243b"
+                        }}>
+                          {horasNecessarias}h
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="hf-panel" style={{marginTop:"20px"}}>
+                  <div className="hf-panel-title">
+                    <div>
+                      <h2>🚀 Meu fluxo</h2>
+                      <p>Veja onde suas demandas estão no processo.</p>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display:"grid",
+                    gridTemplateColumns:"repeat(3,minmax(0,1fr))",
+                    gap:"12px",
+                    marginTop:"16px"
+                  }}>
+                    {[
+                      {
+                        label:"Aguardando análise",
+                        status:"Aguardando análise",
+                        icon:<Clock3/>
+                      },
+                      {
+                        label:"Em análise",
+                        status:"Em análise",
+                        icon:<Search/>
+                      },
+                      {
+                        label:"Analisadas",
+                        status:"Analisada",
+                        icon:<CheckCircle2/>
+                      },
+                      {
+                        label:"Em desenvolvimento",
+                        status:"Em desenvolvimento",
+                        icon:<BarChart3/>
+                      },
+                      {
+                        label:"Em homologação",
+                        status:"Em homologação",
+                        icon:<Clipboard/>
+                      },
+                      {
+                        label:"Concluídas",
+                        status:"Concluída",
+                        icon:<CheckCircle2/>
+                      }
+                    ].map(item => {
+                      const demandasStatus = minhasDemandas.filter(
+                        d => normalizeStatus(d.status) === item.status
+                      );
+
+                      const horasStatus = demandasStatus.reduce(
+                        (sum,d) =>
+                          sum +
+                          Number(d.horasAnalise || 0) +
+                          Number(d.horasNecessarias || 0),
+                        0
+                      );
+
+                      return (
+                        <button
+                          key={item.status}
+                          type="button"
+                          onClick={() => {
+                            setTab('demandas');
+
+                            // Abre a listagem já filtrada pelo status selecionado
+                            // e limpa os demais filtros para garantir o resultado correto.
+                            setDemandStatusFilter(item.status);
+                            setDemandSearch('');
+                            setDemandApprovalFilter('Todas');
+                            setDemandPriorityFilter('Todas');
+                            setDemandClientFilter('Todos');
+                            setDemandPeriod('Todos');
+                            setDemandFiltersOpen(false);
+                          }}
+                          style={{
+                            textAlign:"left",
+                            border:"1px solid #e5eaf2",
+                            borderRadius:"14px",
+                            background:"#fff",
+                            padding:"16px",
+                            cursor:"pointer",
+                            transition:"all .2s ease"
+                          }}
+                        >
+                          <div style={{
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"space-between",
+                            marginBottom:"12px"
+                          }}>
+                            <span style={{
+                              display:"flex",
+                              alignItems:"center",
+                              justifyContent:"center",
+                              width:"34px",
+                              height:"34px",
+                              borderRadius:"10px",
+                              background:"#f3f6fa",
+                              color:"#18243b"
+                            }}>
+                              {item.icon}
+                            </span>
+
+                            <span style={{
+                              fontSize:"12px",
+                              color:"#8b97a8"
+                            }}>
+                              Ver demandas →
+                            </span>
+                          </div>
+
+                          <strong style={{
+                            display:"block",
+                            fontSize:"28px",
+                            color:"#18243b",
+                            lineHeight:"1"
+                          }}>
+                            {demandasStatus.length}
+                          </strong>
+
+                          <span style={{
+                            display:"block",
+                            marginTop:"7px",
+                            fontSize:"13px",
+                            fontWeight:600,
+                            color:"#4d5b70"
+                          }}>
+                            {item.label}
+                          </span>
+
+                          <span style={{
+                            display:"block",
+                            marginTop:"5px",
+                            fontSize:"12px",
+                            color:"#8b97a8"
+                          }}>
+                            {horasStatus.toFixed(1)}h envolvidas
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+                <section className="hf-panel" style={{marginTop:"20px"}}>
+                  <div className="hf-panel-title">
+                    <div>
+                      <h2>📅 Próximas entregas</h2>
+                      <p>O que vem pela frente.</p>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display:"flex",
+                    flexDirection:"column",
+                    gap:"8px"
+                  }}>
+                    {proximas.map(d => (
+                      <div
+                        key={d.id}
+                        style={{
+                          display:"grid",
+                          gridTemplateColumns:"110px 1fr auto",
+                          gap:"16px",
+                          alignItems:"center",
+                          padding:"12px 0",
+                          borderBottom:"1px solid #eef1f5"
+                        }}
+                      >
+                        <strong>
+                          {formatDate(d.deliveryDate)}
+                        </strong>
+
+                        <div>
+                          <strong>{d.problema}</strong>
+                          <div style={{
+                            fontSize:"12px",
+                            color:"#8b97a8",
+                            marginTop:"3px"
+                          }}>
+                            #{d.numero} • {d.status}
+                          </div>
+                        </div>
+
+                        <span>{d.prioridade}</span>
+                      </div>
+                    ))}
+
+                    {!proximas.length && (
+                      <div className="hf-empty">
+                        Nenhuma próxima entrega encontrada.
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </>
+            );
+          })()}
+        </> : null}
+        {(tab==='dashboard'||tab==='demandas')&&<>
         {tab==='dashboard' ? (
           <section className="hf-filters hf-filters-clean">
             {isAdmin&&<select value={dashboardClientFilter} onChange={e=>setDashboardClientFilter(e.target.value)}><option value="Todos">Todos os clientes</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
@@ -3587,6 +4258,21 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
