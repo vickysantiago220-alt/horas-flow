@@ -155,6 +155,7 @@ const formatPeriod = (period:string) => {
   const [demandClientFilter,setDemandClientFilter]=useState('Todos');
   const [demandPeriod,setDemandPeriod]=useState('Todos');
   const [demandPage,setDemandPage]=useState(1);
+  const [demandView,setDemandView]=useState<'table'|'cards'|'kanban'>('table');
   const demandPageSize=10;
   const [historyDemand,setHistoryDemand]=useState<Demand|null>(null);
   const [historyLoading,setHistoryLoading]=useState(false);
@@ -2047,6 +2048,8 @@ const dashboardDemands=useMemo(()=>{
   Filtros
 </button>
           </section>
+
+          
         )}
 
         {demandFiltersOpen && (
@@ -2574,7 +2577,7 @@ const dashboardDemands=useMemo(()=>{
             />
           </section>
 
-        </>:<section className="hf-panel"><div className="hf-panel-title"><div><h2>Planilha de demandas</h2><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div><DemandTable demands={paginatedDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient} clients={clients}/><div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div><div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
+        </>:<section className="hf-panel"><div className="hf-panel-title"><div><h2>Planilha de demandas</h2><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==="cards" ? <DemandCardsView demands={paginatedDemands} onOpen={openEditDemand}/> : <DemandTable demands={paginatedDemands} remove={removeDemand} approve={approve} history={openHistory} canEdit={isInternal} canApprove={isAdmin||isClient} onEdit={openEditDemand} isClient={isClient} clients={clients}/>}<div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div><div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
       </>}
     </main>
 
@@ -2742,6 +2745,52 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
   </tr>)}</tbody></table>{!demands.length&&<div className="hf-empty"><Search size={28}/><strong>Nenhuma demanda encontrada</strong><span>Ajuste os filtros ou crie uma nova demanda.</span></div>}</div>
 }
 
+function DemandCardsView({demands,onOpen}:{demands:Demand[];onOpen:(d:Demand)=>void}){
+  if(!demands.length)return <div className="hf-empty-page"><h3>Nenhuma demanda encontrada</h3><p>Ajuste os filtros para visualizar outras demandas.</p></div>;
+
+  return <div className="hf-demand-cards">
+    {demands.map(d=>{
+      const statusClass=String(d.status||'').toLowerCase().replace(/\s+/g,'-').replace(/[áã]/g,'a').replace(/ç/g,'c');
+
+      return <button
+        type="button"
+        className="hf-demand-card"
+        key={d.id}
+        onClick={()=>onOpen(d)}
+      >
+        <div className="hf-demand-card-top">
+          <span className="hf-demand-number">#{String(d.numero).padStart(3,'0')}</span>
+          <span className={"hf-demand-status "+statusClass}>{d.status}</span>
+        </div>
+
+        <div className="hf-demand-card-client">
+          {(d as any).clientName||'Cliente não informado'}
+        </div>
+
+        <h3>{d.problema||'Sem descrição da demanda'}</h3>
+
+        <p>{d.tratamento||'Sem tratamento informado.'}</p>
+
+        <div className="hf-demand-card-footer">
+          <span>
+            <small>Horas</small>
+            <strong>{d.horasNecessarias||0}h</strong>
+          </span>
+
+          <span>
+            <small>Prioridade</small>
+            <strong>{d.prioridade||'—'}</strong>
+          </span>
+
+          <span>
+            <small>Responsável</small>
+            <strong>{d.responsavel||'—'}</strong>
+          </span>
+        </div>
+      </button>
+    })}
+  </div>
+}
 function ClientsPage({clients,demands,isAdmin,onNew,onEdit,onDemand}:{clients:Client[];demands:Demand[];isAdmin:boolean;onNew:()=>void;onEdit:(c:Client)=>void;onDemand:(d:Demand)=>void}){
   return <section className="hf-panel"><div className="hf-panel-title"><div><h2>Clientes / Empresas</h2><p className="hf-muted">Empresas cadastradas no HoraFlow e suas demandas vinculadas.</p></div>{isAdmin&&<button className="hf-primary" onClick={onNew}><Plus size={17}/> Novo cliente</button>}</div>
     {!clients.length?<div className="hf-empty-page"><Building2 size={40}/><h3>Nenhuma empresa cadastrada</h3><p>Cadastre a primeira empresa para poder vincular usuários e demandas.</p>{isAdmin&&<button className="hf-primary" onClick={onNew}><Plus size={16}/> Cadastrar empresa</button>}</div>:
@@ -2885,7 +2934,172 @@ function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loadi
   </div></div>
 }
 
-const styles = `
+const styles = `/* =====================================================
+   SAPHIRE UI MOTION 2.0
+   Microinterações e refinamento visual
+   ===================================================== */
+
+.hf-main {
+  animation: sapphirePageIn .28s ease-out;
+}
+
+@keyframes sapphirePageIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cards */
+.hf-card,
+.hf-user-card,
+.hf-client-card {
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease,
+    border-color .2s ease;
+}
+
+.hf-card:hover,
+.hf-user-card:hover,
+.hf-client-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15,23,42,.07);
+}
+
+/* Botões */
+.hf-primary,
+.hf-secondary,
+.hf-command-trigger,
+.hf-icon-btn {
+  transition:
+    transform .16s ease,
+    box-shadow .16s ease,
+    background-color .16s ease,
+    border-color .16s ease;
+}
+
+.hf-primary:hover,
+.hf-secondary:hover,
+.hf-command-trigger:hover {
+  transform: translateY(-1px);
+}
+
+.hf-primary:active,
+.hf-secondary:active,
+.hf-command-trigger:active,
+.hf-icon-btn:active {
+  transform: scale(.97);
+}
+
+/* Sidebar */
+.hf-sidebar nav button {
+  transition:
+    background-color .18s ease,
+    color .18s ease,
+    transform .18s ease;
+}
+
+.hf-sidebar nav button:hover {
+  transform: translateX(2px);
+}
+
+/* Avatar */
+.hf-top-avatar {
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease;
+}
+
+.hf-top-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 5px 14px rgba(15,23,42,.15);
+}
+
+/* Modais */
+.hf-modal-backdrop,
+.hf-command-backdrop {
+  animation: sapphireBackdropIn .2s ease-out;
+}
+
+@keyframes sapphireBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.hf-modal,
+.hf-command-modal {
+  animation: sapphireModalIn .24s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes sapphireModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Command Center */
+.hf-command-item {
+  transition:
+    background-color .16s ease,
+    transform .16s ease;
+}
+
+.hf-command-item:hover {
+  transform: translateX(2px);
+}
+
+/* Inputs */
+.hf-form input,
+.hf-form select,
+.hf-form textarea,
+.hf-search input {
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease,
+    background-color .18s ease;
+}
+
+/* Barras */
+.hf-bar i {
+  animation: sapphireProgressIn .7s ease-out;
+}
+
+@keyframes sapphireProgressIn {
+  from {
+    width: 0;
+  }
+}
+
+/* Acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+  .hf-main,
+  .hf-modal,
+  .hf-command-modal,
+  .hf-modal-backdrop,
+  .hf-command-backdrop,
+  .hf-bar i {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .hf-hours-tooltip{
   position:relative;
   display:inline-flex;
@@ -4671,6 +4885,19 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
