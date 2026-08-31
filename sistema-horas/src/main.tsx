@@ -1462,7 +1462,18 @@ const dashboardDemands=useMemo(()=>{
               )
             );
 
-            const proximas = minhasDemandas
+            const filtrarDemandasPorStatus = (status:string) => {
+  setDemandStatusFilter(normalizeStatus(status));
+  setDemandSearch('');
+  setDemandApprovalFilter('Todas');
+  setDemandPriorityFilter('Todas');
+  setDemandClientFilter('Todos');
+  setDemandPeriod('Todos');
+  setDemandPage(1);
+  setDemandFiltersOpen(false);
+  setTab('demandas');
+};
+const proximas = minhasDemandas
               .filter(d => {
                 const entrega = String(
                   d.deliveryDate || (d as any).delivery_date || ''
@@ -1520,37 +1531,43 @@ const dashboardDemands=useMemo(()=>{
                   <Card
                     title="Aguardando análise"
                     value={aguardandoAnalise}
-                    icon={<Clock3/>}
+                    icon={<Clock3
+                    onClick={()=>filtrarDemandasPorStatus("Aguardando análise")}/>}
                   />
 
                   <Card
                     title="Em análise"
                     value={emAnalise}
-                    icon={<Search/>}
+                    icon={<Search
+                    onClick={()=>filtrarDemandasPorStatus("Em análise")}/>}
                   />
 
                   <Card
                     title="Analisadas"
                     value={analisadas}
-                    icon={<CheckCircle2/>}
+                    icon={<CheckCircle2
+                    onClick={()=>filtrarDemandasPorStatus("Analisada")}/>}
                   />
 
                   <Card
                     title="Em desenvolvimento"
                     value={emDesenvolvimento}
-                    icon={<BarChart3/>}
+                    icon={<BarChart3
+                    onClick={()=>filtrarDemandasPorStatus("Em desenvolvimento")}/>}
                   />
 
                   <Card
                     title="Em homologação"
                     value={emHomologacao}
-                    icon={<Clipboard/>}
+                    icon={<Clipboard
+                    onClick={()=>filtrarDemandasPorStatus("Em homologação")}/>}
                   />
 
                   <Card
                     title="Concluídas"
                     value={concluidas}
-                    icon={<CheckCircle2/>}
+                    icon={<CheckCircle2
+                    onClick={()=>filtrarDemandasPorStatus("Concluída")}/>}
                   />
 
                   <Card
@@ -1811,150 +1828,6 @@ const dashboardDemands=useMemo(()=>{
                   </div>
                 </section>
 
-                <section className="hf-panel" style={{marginTop:"20px"}}>
-                  <div className="hf-panel-title">
-                    <div>
-                      <h2>🚀 Meu fluxo</h2>
-                      <p>Veja onde suas demandas estão no processo.</p>
-                    </div>
-                  </div>
-
-                  <div style={{
-                    display:"grid",
-                    gridTemplateColumns:"repeat(3,minmax(0,1fr))",
-                    gap:"12px",
-                    marginTop:"16px"
-                  }}>
-                    {[
-                      {
-                        label:"Aguardando análise",
-                        status:"Aguardando análise",
-                        icon:<Clock3/>
-                      },
-                      {
-                        label:"Em análise",
-                        status:"Em análise",
-                        icon:<Search/>
-                      },
-                      {
-                        label:"Analisadas",
-                        status:"Analisada",
-                        icon:<CheckCircle2/>
-                      },
-                      {
-                        label:"Em desenvolvimento",
-                        status:"Em desenvolvimento",
-                        icon:<BarChart3/>
-                      },
-                      {
-                        label:"Em homologação",
-                        status:"Em homologação",
-                        icon:<Clipboard/>
-                      },
-                      {
-                        label:"Concluídas",
-                        status:"Concluída",
-                        icon:<CheckCircle2/>
-                      }
-                    ].map(item => {
-                      const demandasStatus = minhasDemandas.filter(
-                        d => normalizeStatus(d.status) === item.status
-                      );
-
-                      const horasStatus = demandasStatus.reduce(
-                        (sum,d) =>
-                          sum +
-                          Number(d.horasAnalise || 0) +
-                          Number(d.horasNecessarias || 0),
-                        0
-                      );
-
-                      return (
-                        <button
-                          key={item.status}
-                          type="button"
-                          onClick={() => {
-                            setTab('demandas');
-
-                            // Abre a listagem já filtrada pelo status selecionado
-                            // e limpa os demais filtros para garantir o resultado correto.
-                            setDemandStatusFilter(item.status);
-                            setDemandSearch('');
-                            setDemandApprovalFilter('Todas');
-                            setDemandPriorityFilter('Todas');
-                            setDemandClientFilter('Todos');
-                            setDemandPeriod('Todos');
-                            setDemandFiltersOpen(false);
-                          }}
-                          style={{
-                            textAlign:"left",
-                            border:"1px solid #e5eaf2",
-                            borderRadius:"14px",
-                            background:"#fff",
-                            padding:"16px",
-                            cursor:"pointer",
-                            transition:"all .2s ease"
-                          }}
-                        >
-                          <div style={{
-                            display:"flex",
-                            alignItems:"center",
-                            justifyContent:"space-between",
-                            marginBottom:"12px"
-                          }}>
-                            <span style={{
-                              display:"flex",
-                              alignItems:"center",
-                              justifyContent:"center",
-                              width:"34px",
-                              height:"34px",
-                              borderRadius:"10px",
-                              background:"#f3f6fa",
-                              color:"#18243b"
-                            }}>
-                              {item.icon}
-                            </span>
-
-                            <span style={{
-                              fontSize:"12px",
-                              color:"#8b97a8"
-                            }}>
-                              Ver demandas →
-                            </span>
-                          </div>
-
-                          <strong style={{
-                            display:"block",
-                            fontSize:"28px",
-                            color:"#18243b",
-                            lineHeight:"1"
-                          }}>
-                            {demandasStatus.length}
-                          </strong>
-
-                          <span style={{
-                            display:"block",
-                            marginTop:"7px",
-                            fontSize:"13px",
-                            fontWeight:600,
-                            color:"#4d5b70"
-                          }}>
-                            {item.label}
-                          </span>
-
-                          <span style={{
-                            display:"block",
-                            marginTop:"5px",
-                            fontSize:"12px",
-                            color:"#8b97a8"
-                          }}>
-                            {horasStatus.toFixed(1)}h envolvidas
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
                 <section className="hf-panel" style={{marginTop:"20px"}}>
                   <div className="hf-panel-title">
                     <div>
@@ -2674,7 +2547,7 @@ function UserModal({value,setValue,clients,error,saving,close,save}:{value:any;s
 
 function Nav({active,icon,text,onClick,disabled}:{active:boolean;icon:React.ReactNode;text:string;onClick:()=>void;disabled?:boolean}){return <button disabled={disabled} className={`hf-nav ${active?'active':''} ${disabled?'disabled':''}`} onClick={onClick}>{icon}<span>{text}</span></button>}
 function PanelTitle({title,icon}:{title:string;icon?:React.ReactNode}){return <div className="hf-panel-title"><h2>{title}</h2>{icon}</div>}
-function Card({title,value,icon}:{title:string;value:string|number;icon:React.ReactNode}){return <div className="hf-card"><div className="hf-card-icon">{icon}</div><span>{title}</span><strong>{value}</strong></div>}
+function Card({title,value,icon,onClick}:{title:string;value:string|number;icon:React.ReactNode;onClick?:()=>void}){return <div className="hf-card" onClick={onClick} role={onClick?"button":undefined} tabIndex={onClick?0:undefined} onKeyDown={e=>{if(onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();onClick()}}} style={onClick?{cursor:"pointer"}:undefined}><div className="hf-card-icon">{icon}</div><span>{title}</span><strong>{value}</strong></div>}
 function slug(s:string){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replaceAll(' ','-')}
 function formatApprovalDate(value:any){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('pt-BR')}
 function formatDate(value:any){
@@ -4990,6 +4863,15 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
 
 
 
