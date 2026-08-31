@@ -760,6 +760,13 @@ const formatPeriod = (period:string) => {
 
   const logout=()=>{localStorage.removeItem('horaflow-token');localStorage.removeItem('horaflow-user');setToken(null);setUser(null);setTab('dashboard')};
 
+  // Após login ou restauração da sessão, iniciar sempre no Meu Dia.
+  useEffect(()=>{
+    if(token && user){
+      setTab('meu-dia');
+    }
+  },[token,user]);
+
   const loadDemands=async()=>{
     try{setLoading(true);setApiError('');const data=await request('/demands');setDemands((data.data||[]).map((d:any)=>({...normalizeDemand(d),clientId:d.clientId??d.client_id??null,clientName:d.clientName??d.client_name??''})));}
     catch(error:any){setApiError(error.message)}
@@ -4258,6 +4265,7 @@ const styles = `
   }
 }
 `
+
 
 
 
