@@ -2462,9 +2462,9 @@ const proximas = minhasDemandas
     <span>▤</span> Kanban
   </button>
 </div><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==="cards"
-  ? <DemandCardsView demands={paginatedDemands} onOpen={openEditDemand}/>
+  ? <DemandCardsView demands={paginatedDemands} clients={clients} onOpen={openEditDemand}/>
   : demandView==="kanban"
-    ? <DemandKanbanView demands={filtered} onOpen={openEditDemand}/>
+    ? <DemandKanbanView demands={filtered} clients={clients} onOpen={openEditDemand}/>
     : <DemandTable
         demands={paginatedDemands}
         remove={removeDemand}
@@ -2571,7 +2571,7 @@ function getDeliveryMonthKey(value:any){
 
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
 
-function DemandKanbanView({demands,onOpen}:{demands:Demand[];onOpen:(d:Demand)=>void}){
+function DemandKanbanView({demands,clients,onOpen}:{demands:Demand[];clients:Client[];onOpen:(d:Demand)=>void}){
   const columns=[
     'Aguardando análise',
     'Em análise',
@@ -2626,7 +2626,13 @@ function DemandKanbanView({demands,onOpen}:{demands:Demand[];onOpen:(d:Demand)=>
                 </strong>
 
                 <p>
-                  {(d as any).clientName||'Cliente não informado'}
+                  {(() => {
+                    const clientId = (d as any).clientId ?? (d as any).client_id;
+                    const client = clients.find(
+                      (c:any) => String(c.id) === String(clientId)
+                    );
+                    return client?.name || (d as any).clientName || (d as any).client_name || 'Cliente não informado';
+                  })()}
                 </p>
 
                 <div className="hf-kanban-card-footer">
@@ -2718,7 +2724,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
   </tr>)}</tbody></table>{!demands.length&&<div className="hf-empty"><Search size={28}/><strong>Nenhuma demanda encontrada</strong><span>Ajuste os filtros ou crie uma nova demanda.</span></div>}</div>
 }
 
-function DemandCardsView({demands,onOpen}:{demands:Demand[];onOpen:(d:Demand)=>void}){
+function DemandCardsView({demands,clients,onOpen}:{demands:Demand[];clients:Client[];onOpen:(d:Demand)=>void}){
   if(!demands.length)return <div className="hf-empty-page"><h3>Nenhuma demanda encontrada</h3><p>Ajuste os filtros para visualizar outras demandas.</p></div>;
 
   return <div className="hf-demand-cards">
@@ -2737,7 +2743,13 @@ function DemandCardsView({demands,onOpen}:{demands:Demand[];onOpen:(d:Demand)=>v
         </div>
 
         <div className="hf-demand-card-client">
-          {(d as any).clientName||'Cliente não informado'}
+          {(() => {
+            const clientId = (d as any).clientId ?? (d as any).client_id;
+            const client = clients.find(
+              (c:any) => String(c.id) === String(clientId)
+            );
+            return client?.name || (d as any).clientName || (d as any).client_name || 'Cliente não informado';
+          })()}
         </div>
 
         <h3>{d.problema||'Sem descrição da demanda'}</h3>
@@ -4863,6 +4875,12 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
 
 
 
