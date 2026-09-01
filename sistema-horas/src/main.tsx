@@ -2497,7 +2497,7 @@ function UserModal({value,setValue,clients,error,saving,close,save}:{value:any;s
 
   useEffect(()=>{setShowPassword(false)},[value.name,value.email]);
 
-  return <div className="hf-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  return <div className="hf-modal-backdrop">
     <div className="hf-modal user-modal">
       <div className="hf-modal-head">
         <div><span className="hf-eyebrow">Controle de acesso</span><h2>Novo usuário</h2><p>Cadastre o acesso e defina o perfil da pessoa.</p></div>
@@ -2784,7 +2784,7 @@ function ClientsPage({clients,demands,isAdmin,onNew,onEdit,onDemand}:{clients:Cl
 }
 
 function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{name:string;email:string};setValue:(v:any)=>void;editing:Client|null;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void}){
-  return <div className="hf-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><div className="hf-modal user-modal">
+  return <div className="hf-modal-backdrop"><div className="hf-modal user-modal">
     <div className="hf-modal-head"><div><span className="hf-eyebrow">Cadastro de empresa</span><h2>{editing?'Editar cliente':'Novo cliente'}</h2><p>Cadastre a empresa que poderá receber usuários e demandas.</p></div><button onClick={close}><X size={20}/></button></div>
     <form onSubmit={save} className="hf-form"><label>Nome da empresa<input value={value.name} onChange={e=>setValue({...value,name:e.target.value})} placeholder="Ex.: ABHO" autoComplete="off"/></label><label>E-mail<input type="email" value={value.email} onChange={e=>setValue({...value,email:e.target.value})} placeholder="contato@empresa.com.br" autoComplete="off"/></label>
     {error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}<div className="hf-form-actions"><button type="button" className="hf-secondary" onClick={close}>Cancelar</button><button className="hf-primary" disabled={saving}>{saving?'Salvando...':editing?'Salvar alterações':'Cadastrar empresa'}</button></div></form>
@@ -2795,7 +2795,7 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
   const readonly=isClient;
   const demandForApproval=editing;
 
-  return <div className="hf-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  return <div className="hf-modal-backdrop">
     <div className="hf-modal hf-demand-modal">
       <div className="hf-modal-head">
         <div>
@@ -2823,20 +2823,70 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
         </div>
 
         <div className="hf-form-section">
-          <div className="hf-section-title"><span>02</span><div><strong>Estimativa e classificação</strong><small>{readonly?'Consulte as estimativas e ajuste somente a prioridade.':'Defina horas, prioridade e status.'}</small></div></div>
-          <div className="hf-form-grid">
-            <label><span>Horas de análise</span><div className="hf-input-suffix"><input type="number" min="0" step="0.5" value={value.horasAnalise} readOnly={readonly} onChange={e=>setValue({...value,horasAnalise:e.target.value})} placeholder="0"/><small>horas</small></div></label>
-            <label><span>Horas necessárias</span><div className="hf-input-suffix"><input type="number" min="0" step="0.5" value={value.horasNecessarias} readOnly={readonly} onChange={e=>setValue({...value,horasNecessarias:e.target.value})} placeholder="0"/><small>horas</small></div></label>
+          <div className="hf-section-title"><span>02</span><div><strong>Estimativa e classificação</strong><small>{readonly?'Consulte as estimativas e ajuste somente a prioridade.':'Defina horas, prioridade e status.'}</small></div></div>          <div className="hf-form-grid">
+
+            <label>
+              <span>Horas de análise</span>
+              <div className="hf-input-suffix">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={value.horasAnalise}
+                  readOnly={readonly}
+                  onChange={e=>setValue({...value,horasAnalise:e.target.value})}
+                  placeholder="0"
+                />
+                <small>horas</small>
+              </div>
+            </label>
+
+            <label>
+              <span>Mês de análise</span>
+              <input
+                type="month"
+                value={value.analysisMonth||''}
+                readOnly={readonly}
+                onChange={e=>setValue({...value,analysisMonth:e.target.value})}
+              />
+            </label>
+
           </div>
-                    <div className="hf-form-grid">
-            <label><span>Mês de análise</span><input type="month" value={value.analysisMonth||''} readOnly={readonly} onChange={e=>setValue({...value,analysisMonth:e.target.value})}/></label>
-            <label><span>Data de solicitação</span><input type="date" value={value.requestDate||''} readOnly={readonly} onChange={e=>setValue({...value,requestDate:e.target.value})}/></label>
-          </div>
+
           <div className="hf-form-grid">
-            <label><span>Data de entrega</span><input type="date" value={value.deliveryDate||''} readOnly={readonly} onChange={e=>setValue({...value,deliveryDate:e.target.value})}/></label>
+
+            <label>
+              <span>Horas necessárias</span>
+              <div className="hf-input-suffix">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={value.horasNecessarias}
+                  readOnly={readonly}
+                  onChange={e=>setValue({...value,horasNecessarias:e.target.value})}
+                  placeholder="0"
+                />
+                <small>horas</small>
+              </div>
+            </label>
+
+            <label>
+              <span>Data de entrega</span>
+              <input
+                type="date"
+                value={value.deliveryDate||''}
+                readOnly={readonly}
+                onChange={e=>setValue({...value,deliveryDate:e.target.value})}
+              />
+            </label>
+
           </div>
+
           <div className="hf-form-grid">
-            <label><span>Prioridade {readonly&&<small className="hf-muted"> · editável</small>}</span><select value={value.prioridade} onChange={e=>setValue({...value,prioridade:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
+
+            <label>
+              <span>Prioridade {readonly&&<small className="hf-muted"> · editável</small>}</span><select value={value.prioridade} onChange={e=>setValue({...value,prioridade:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
             <label><span>Status</span><select value={value.status} onChange={e=>setValue({...value,status:e.target.value})} disabled={readonly}>{statuses.map(s=><option key={s}>{s}</option>)}</select></label>
           </div>
           <label>
@@ -2884,7 +2934,7 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
 
 function ApprovalModal({demand,month,setMonth,reason,setReason,saving,close,confirm,type}:{demand:Demand;month:string;setMonth:(v:string)=>void;reason:string;setReason:(v:string)=>void;saving:boolean;close:()=>void;confirm:()=>void;type:'approve'|'reject'}){
   const approving=type==='approve';
-  return <div className="hf-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  return <div className="hf-modal-backdrop">
     <div className="hf-modal hf-decision-modal">
       <div className="hf-modal-head">
         <div><span className="hf-eyebrow">{approving?'Aprovação':'Reprovação'}</span><h2>{approving?'Aprovar demanda':'Reprovar demanda'}</h2><p>Demanda #{String(demand.numero).padStart(3,'0')}</p></div>
@@ -2909,7 +2959,7 @@ function ApprovalModal({demand,month,setMonth,reason,setReason,saving,close,conf
 }
 
 function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loading:boolean}){
-  return <div className="hf-modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><div className="hf-modal hf-history-modal">
+  return <div className="hf-modal-backdrop"><div className="hf-modal hf-history-modal">
     <div className="hf-modal-head"><div><span className="hf-eyebrow">Demanda #{String(demand.numero).padStart(3,'0')}</span><h2>Histórico de alterações</h2><p>Registro de todas as modificações realizadas nesta demanda.</p></div><button onClick={close} aria-label="Fechar"><X size={20}/></button></div>
     {loading?<div className="hf-history-loading"><RefreshCw size={22}/><span>Carregando histórico...</span></div>:!demand.history.length?<div className="hf-history-empty"><History size={30}/><strong>Nenhuma alteração registrada</strong><span>As próximas edições aparecerão aqui.</span></div>:<div className="hf-history">{demand.history.map(h=><div className="hf-history-row" key={h.id}><div className="hf-history-line"/><div className="hf-history-content"><div className="hf-history-top"><strong>{h.field}</strong><span>{h.user}</span></div><p><span>{h.oldValue||'—'}</span><b>→</b><strong>{h.newValue||'—'}</strong></p><small>{formatApprovalDate(h.date)}</small></div></div>)}</div>}
   </div></div>
@@ -3182,7 +3232,210 @@ const styles = `
 
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#172033}button,input,select,textarea{font-family:Poppins,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.55}
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
-.hf-brand-logo{padding:8px 10px 28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:88px;line-height:.92}.hf-brand-logo strong{color:#fff;font-size:24px;font-weight:800;letter-spacing:-.8px}.hf-brand-logo span{color:#5f82ff;font-size:21px;font-weight:500;letter-spacing:1.2px;margin-left:2px}.hf-execution{font-weight:700;color:#315efb}.hf-number-badge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:28px;padding:0 8px;border-radius:9px;background:#f1f5ff;color:#315efb;font-weight:800;font-size:11px}.hf-demand-text{max-width:220px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#344158}.hf-hours-cell{display:grid;grid-template-columns:auto 8px auto;align-items:center;gap:3px;white-space:nowrap}.hf-hours-cell b{font-size:12px}.hf-hours-cell span{color:#a2acbb}.hf-hours-cell small{grid-column:1/-1;color:#9aa4b3;font-size:9px}.hf-priority-pill,.hf-status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}.hf-priority-pill:before,.hf-status-pill:before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}.priority-baixa{background:#eef8f2;color:#258153}.priority-media{background:#f3f5f8;color:#667286}.priority-alta{background:#fff5e7;color:#b66a00}.priority-urgente{background:#fff0f1;color:#c83d4b}.status-aguardando-analise,.status-pendente{background:#fff8e9;color:#a56b00}.status-em-analise{background:#eef4ff;color:#315efb}.status-aguardando-aprovacao{background:#f4efff;color:#7b55c7}.status-em-desenvolvimento{background:#edf8f8;color:#15818a}.status-em-homologacao{background:#f1efff;color:#6b59c9}.status-concluida{background:#edf8f2;color:#258153}.status-reprovada{background:#fff0f1;color:#c83d4b}.hf-paid-dot{display:inline-flex;align-items:center;gap:6px;color:#7d899b;font-size:11px}.hf-paid-dot i{width:7px;height:7px;border-radius:50%;background:#c7ced8}.hf-paid-dot.on{color:#258153;font-weight:700}.hf-paid-dot.on i{background:#2fa66e}.hf-row-actions{display:flex;align-items:center;gap:5px;min-width:220px}.hf-action-btn{height:32px;border:1px solid #e0e6ef;background:#fff;color:#68758a;border-radius:8px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:600;transition:.18s}.hf-action-btn:hover{border-color:#c9d3e2;background:#f8fafc;transform:translateY(-1px)}.hf-action-btn.primary{color:#315efb;border-color:#d8e1ff;background:#f5f7ff}.hf-action-btn.primary:hover{background:#edf2ff}.hf-action-btn.danger{color:#c83d4b;border-color:#f0d5d9;background:#fff8f8}.hf-action-btn.danger:hover{background:#fff0f1}.actions-head{min-width:220px}.hf-pill.pending{background:#f3f5f8;color:#68758a}.hf-history-modal{width:min(720px,100%)}.hf-history-loading,.hf-history-empty{min-height:220px;display:grid;place-items:center;align-content:center;gap:10px;color:#8793a5;text-align:center}.hf-history-loading svg{animation:spin 1s linear infinite;color:#315efb}.hf-history-empty svg{color:#b7c0ce}.hf-history-empty strong{color:#354259}.hf-history-empty span{font-size:12px}@keyframes spin{to{transform:rotate(360deg)}}.hf-history-content{flex:1;background:#f8fafc;border:1px solid #e7ebf1;border-radius:12px;padding:12px 14px}.hf-history-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.hf-history-top span{font-size:10px;color:#8a95a6;background:#fff;border:1px solid #e4e9f0;border-radius:999px;padding:4px 7px}.hf-history-content p{display:flex;gap:8px;align-items:center;margin:9px 0 5px;font-size:12px;flex-wrap:wrap}.hf-history-content p span{color:#7d899b}.hf-history-content p b{color:#b0b8c5}.hf-history-content p strong{color:#315efb}.hf-history-content small{color:#9aa4b3;font-size:10px}.hf-history-row{align-items:flex-start}.hf-history-line{margin-top:18px;box-shadow:0 0 0 4px #315efb12}.hf-table-wrap table tbody tr:hover{background:#fbfcfe}.hf-table-wrap table td{vertical-align:middle}.hf-demand-modal{width:min(700px,100%)}
+.hf-brand-logo{padding:8px 10px 28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:88px;line-height:.92}.hf-brand-logo strong{color:#fff;font-size:24px;font-weight:800;letter-spacing:-.8px}.hf-brand-logo span{color:#5f82ff;font-size:21px;font-weight:500;letter-spacing:1.2px;margin-left:2px}.hf-execution{font-weight:700;color:#315efb}.hf-number-badge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:28px;padding:0 8px;border-radius:9px;background:#f1f5ff;color:#315efb;font-weight:800;font-size:11px}.hf-demand-text{max-width:220px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#344158}.hf-hours-cell{display:grid;grid-template-columns:auto 8px auto;align-items:center;gap:3px;white-space:nowrap}.hf-hours-cell b{font-size:12px}.hf-hours-cell span{color:#a2acbb}.hf-hours-cell small{grid-column:1/-1;color:#9aa4b3;font-size:9px}.hf-priority-pill,.hf-status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}.hf-priority-pill:before,.hf-status-pill:before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}.priority-baixa{background:#eef8f2;color:#258153}.priority-media{background:#f3f5f8;color:#667286}.priority-alta{background:#fff5e7;color:#b66a00}.priority-urgente{background:#fff0f1;color:#c83d4b}.status-aguardando-analise,.status-pendente{background:#fff8e9;color:#a56b00}.status-em-analise{background:#eef4ff;color:#315efb}.status-aguardando-aprovacao{background:#f4efff;color:#7b55c7}.status-em-desenvolvimento{background:#edf8f8;color:#15818a}.status-em-homologacao{background:#f1efff;color:#6b59c9}.status-concluida{background:#edf8f2;color:#258153}.status-reprovada{background:#fff0f1;color:#c83d4b}.hf-paid-dot{display:inline-flex;align-items:center;gap:6px;color:#7d899b;font-size:11px}.hf-paid-dot i{width:7px;height:7px;border-radius:50%;background:#c7ced8}.hf-paid-dot.on{color:#258153;font-weight:700}.hf-paid-dot.on i{background:#2fa66e}.hf-row-actions{display:flex;align-items:center;gap:5px;min-width:220px}.hf-action-btn{height:32px;border:1px solid #e0e6ef;background:#fff;color:#68758a;border-radius:8px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:600;transition:.18s}.hf-action-btn:hover{border-color:#c9d3e2;background:#f8fafc;transform:translateY(-1px)}.hf-action-btn.primary{color:#315efb;border-color:#d8e1ff;background:#f5f7ff}.hf-action-btn.primary:hover{background:#edf2ff}.hf-action-btn.danger{color:#c83d4b;border-color:#f0d5d9;background:#fff8f8}.hf-action-btn.danger:hover{background:#fff0f1}.actions-head{min-width:220px}.hf-pill.pending{background:#f3f5f8;color:#68758a}.hf-history-modal{width:min(720px,100%)}.hf-history-loading,.hf-history-empty{min-height:220px;display:grid;place-items:center;align-content:center;gap:10px;color:#8793a5;text-align:center}.hf-history-loading svg{animation:spin 1s linear infinite;color:#315efb}.hf-history-empty svg{color:#b7c0ce}.hf-history-empty strong{color:#354259}.hf-history-empty span{font-size:12px}@keyframes spin{to{transform:rotate(360deg)}}.hf-history-content{flex:1;background:#f8fafc;border:1px solid #e7ebf1;border-radius:12px;padding:12px 14px}.hf-history-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.hf-history-top span{font-size:10px;color:#8a95a6;background:#fff;border:1px solid #e4e9f0;border-radius:999px;padding:4px 7px}.hf-history-content p{display:flex;gap:8px;align-items:center;margin:9px 0 5px;font-size:12px;flex-wrap:wrap}.hf-history-content p span{color:#7d899b}.hf-history-content p b{color:#b0b8c5}.hf-history-content p strong{color:#315efb}.hf-history-content small{color:#9aa4b3;font-size:10px}.hf-history-row{align-items:flex-start}.hf-history-line{margin-top:18px;box-shadow:0 0 0 4px #315efb12}.hf-table-wrap table tbody tr:hover{background:#fbfcfe}.hf-table-wrap table td{vertical-align:middle}/* =========================================================
+   SAPPHIRE — MODAL DE DEMANDA MODERNO
+   ========================================================= */
+
+.hf-demand-modal{
+  width:min(820px,calc(100vw - 32px));
+  max-height:calc(100vh - 32px);
+  overflow-y:auto;
+  padding:0;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 28px 90px rgba(7,16,29,.22);
+}
+
+.hf-demand-modal .hf-modal-head{
+  padding:24px 26px 20px;
+  margin:0;
+  border-bottom:1px solid #edf0f5;
+  background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%);
+}
+
+.hf-demand-modal .hf-modal-head h2{
+  margin:4px 0 5px;
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:-.4px;
+  color:#172033;
+}
+
+.hf-demand-modal .hf-modal-head p{
+  font-size:12px;
+  color:#8793a5;
+}
+
+.hf-demand-form{
+  padding:0 26px 26px;
+  gap:0;
+}
+
+.hf-form-section{
+  padding:24px 0;
+  border-bottom:1px solid #edf0f5;
+}
+
+.hf-form-section:first-child{
+  padding-top:22px;
+}
+
+.hf-form-section:last-of-type{
+  border-bottom:0;
+}
+
+.hf-section-title{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.hf-section-title>span{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  background:#eef3ff;
+  color:#315efb;
+  font-size:11px;
+  font-weight:800;
+  box-shadow:inset 0 0 0 1px #dfe7ff;
+}
+
+.hf-section-title strong{
+  font-size:14px;
+  font-weight:800;
+  color:#202b3f;
+}
+
+.hf-section-title small{
+  color:#8994a7;
+  font-size:11px;
+}
+
+.hf-demand-form .hf-form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.hf-demand-form label{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  margin-bottom:15px;
+}
+
+.hf-demand-form label>span{
+  font-size:11px;
+  font-weight:800;
+  color:#566176;
+}
+
+.hf-demand-form input,
+.hf-demand-form select,
+.hf-demand-form textarea{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid #dfe5ee;
+  background:#fbfcfe;
+  border-radius:12px;
+  padding:11px 13px;
+  color:#172033;
+  font-size:13px;
+  outline:none;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+
+.hf-demand-form input,
+.hf-demand-form select{
+  height:46px;
+}
+
+.hf-demand-form textarea{
+  min-height:92px;
+  line-height:1.5;
+  resize:vertical;
+}
+
+.hf-demand-form input:hover,
+.hf-demand-form select:hover,
+.hf-demand-form textarea:hover{
+  border-color:#cbd5e4;
+  background:#fff;
+}
+
+.hf-demand-form input:focus,
+.hf-demand-form select:focus,
+.hf-demand-form textarea:focus{
+  border-color:#315efb;
+  background:#fff;
+  box-shadow:0 0 0 4px rgba(49,94,251,.09);
+}
+
+.hf-demand-form .hf-input-suffix{
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+
+.hf-demand-form .hf-input-suffix input{
+  padding-right:58px;
+}
+
+.hf-demand-form .hf-input-suffix small{
+  position:absolute;
+  right:13px;
+  color:#8a95a6;
+  font-size:11px;
+  font-weight:700;
+  pointer-events:none;
+}
+
+.hf-form-actions{
+  padding-top:22px;
+  margin-top:0;
+  border-top:1px solid #edf0f5;
+}
+
+.hf-form-actions .hf-secondary,
+.hf-form-actions .hf-primary{
+  height:42px;
+  padding:0 17px;
+  border-radius:11px;
+}
+
+.hf-form-actions .hf-primary{
+  box-shadow:0 7px 18px rgba(49,94,251,.20);
+}
+
+@media(max-width:650px){
+  .hf-demand-modal{
+    width:calc(100vw - 20px);
+    max-height:calc(100vh - 20px);
+    border-radius:18px;
+  }
+
+  .hf-demand-modal .hf-modal-head{
+    padding:20px;
+  }
+
+  .hf-demand-form{
+    padding:0 20px 20px;
+  }
+
+  .hf-demand-form .hf-form-grid{
+    grid-template-columns:1fr;
+    gap:0;
+  }
+
+  .hf-form-section{
+    padding:20px 0;
+  }
+}
+.hf-demand-modal{width:min(700px,100%)}
 .hf-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 2px 2px;color:#7d899b;font-size:12px}.hf-pagination>div{display:flex;gap:5px;align-items:center}.hf-page-btn{border:1px solid #dfe5ee;background:#fff;color:#566176;border-radius:8px;min-width:34px;height:34px;padding:0 10px}.hf-page-btn:hover:not(:disabled),.hf-page-btn.active{background:#315efb;border-color:#315efb;color:#fff}.hf-page-btn:disabled{opacity:.45}.hf-login-brand{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:.92;margin-bottom:6px}.hf-login-brand strong{display:block;color:#14233c;font-size:40px;font-weight:800;letter-spacing:-1.5px}.hf-login-brand span{display:block;color:#315efb;font-size:28px;font-weight:500;letter-spacing:2px;margin-top:3px}.hf-login{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#081426 0%,#102442 55%,#eaf0f8 55%,#f4f7fb 100%);position:relative;overflow:hidden;padding:24px}.hf-login-decoration{position:absolute;border-radius:50%;filter:blur(2px)}.hf-login-decoration.one{width:420px;height:420px;background:#2e6bff22;top:-180px;right:-100px}.hf-login-decoration.two{width:300px;height:300px;background:#ffffff10;bottom:-150px;left:-80px}.hf-login-card{width:min(440px,100%);background:#fff;border:1px solid #e5eaf2;border-radius:24px;padding:36px;box-shadow:0 28px 70px #06132733;position:relative;z-index:2}.hf-login-brand,.hf-brand{display:flex;align-items:center;gap:12px}.hf-logo{width:40px;height:40px;border-radius:12px;background:#14233c;color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px}.hf-logo.large{width:52px;height:52px;border-radius:16px;font-size:24px}.hf-brand strong{display:block;font-size:22px}.hf-brand span{display:block;color:#8390a6;font-size:12px;margin-top:2px}.hf-login-copy{margin:34px 0 24px}.hf-login-copy h1{font-size:29px;margin:0 0 8px;letter-spacing:-.7px}.hf-login-copy p{margin:0;color:#7b879b;line-height:1.5}.hf-login-card form label,.hf-form label{display:block;font-size:13px;font-weight:700;color:#38445a;margin-bottom:16px}.hf-input{height:48px;margin-top:7px;border:1px solid #d9e0ea;border-radius:12px;display:flex;align-items:center;gap:10px;padding:0 13px;color:#8b96a8;background:#fbfcfe}.hf-input:focus-within{border-color:#315efb;box-shadow:0 0 0 4px #315efb14}.hf-input input{border:0;outline:0;background:transparent;width:100%;color:#172033}.hf-input button{border:0;background:transparent;color:#7d899b;display:grid;place-items:center}.hf-login-button{height:50px;width:100%;border:0;border-radius:12px;background:#14233c;color:#fff;font-weight:750;display:flex;align-items:center;justify-content:space-between;padding:0 17px;margin-top:6px;box-shadow:0 10px 22px #14233c22}.hf-login-button span{font-size:20px}.hf-login-error,.hf-alert{display:flex;align-items:center;gap:8px;background:#fff0f0;color:#c73a3a;border:1px solid #ffd2d2;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px}.hf-login-footer{text-align:center;color:#9aa5b6;font-size:11px;margin-top:24px}
 .hf-app{min-height:100vh;display:flex}.hf-sidebar{width:240px;background:#0d1a2d;color:#cbd4e3;display:flex;flex-direction:column;padding:22px 14px;position:fixed;inset:0 auto 0 0;z-index:20}.hf-brand{padding:4px 10px 28px}.hf-brand strong{display:block;color:#fff;font-size:18px}.hf-sidebar nav{display:grid;gap:6px}.hf-nav{border:0;background:transparent;color:#aeb9ca;display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:11px;text-align:left}.hf-nav:hover,.hf-nav.active{background:#ffffff0e;color:#fff}.hf-nav.active{box-shadow:inset 3px 0 #4d79ff}.hf-nav.disabled{color:#56647a}.hf-sidebar-bottom{margin-top:auto;border-top:1px solid #ffffff10;padding-top:16px}.hf-user-mini{display:flex;gap:10px;align-items:center;margin:0 6px 12px}.hf-avatar{width:34px;height:34px;border-radius:50%;background:#315efb;color:#fff;display:grid;place-items:center;font-weight:800}.hf-avatar.big{width:48px;height:48px}.hf-user-mini strong{display:block;color:#fff;font-size:13px;max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hf-user-mini span{font-size:11px;color:#7f8da4}.hf-logout{width:100%;border:0;background:transparent;color:#9aa7bb;padding:10px;border-radius:9px;text-align:left;display:flex;gap:9px;align-items:center}.hf-logout:hover{background:#ffffff09;color:#fff}.hf-main{margin-left:240px;width:calc(100% - 240px);padding:30px 34px 50px}.hf-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:25px}.hf-topbar h1{margin:3px 0 2px;font-size:27px;letter-spacing:-.5px}.hf-topbar p{margin:0;color:#8591a5;font-size:13px}.hf-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6681c8}.hf-top-actions,.hf-actions{display:flex;align-items:center;gap:10px}.hf-top-avatar{width:38px;height:38px;border-radius:50%;background:#14233c;color:#fff;display:grid;place-items:center;font-weight:800}.hf-menu{display:none}.hf-primary,.hf-secondary{border:0;border-radius:10px;height:40px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700}.hf-primary{background:#315efb;color:#fff;box-shadow:0 7px 16px #315efb22}.hf-primary.compact{height:36px}.hf-secondary{background:#fff;color:#344158;border:1px solid #dfe5ee}.hf-alert{justify-content:flex-start}.hf-alert button{margin-left:auto;border:0;background:transparent;color:inherit}.hf-filters{background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:11px;display:flex;gap:9px;align-items:center;margin-bottom:18px}.hf-search{height:38px;display:flex;align-items:center;gap:8px;border:1px solid #e0e6ef;border-radius:9px;padding:0 10px;flex:1;color:#8793a5}.hf-search input{border:0;outline:0;width:100%;color:#172033}.hf-filters select{height:38px;border:1px solid #e0e6ef;border-radius:9px;background:#fff;padding:0 10px;color:#566176}.hf-filter-count{color:#8793a5;font-size:12px;white-space:nowrap;display:flex;gap:6px;align-items:center}.hf-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}.hf-card{background:#fff;border:1px solid #e4e9f0;border-radius:15px;padding:18px;position:relative;min-height:118px}.hf-card-icon{width:34px;height:34px;border-radius:10px;background:#eef3ff;color:#315efb;display:grid;place-items:center;margin-bottom:12px}.hf-card span{display:block;color:#7d899b;font-size:12px}.hf-card strong{display:block;font-size:25px;margin-top:4px}.hf-cards.small .hf-card{min-height:96px}.hf-cards.small .hf-card-icon{display:none}.hf-grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-bottom:14px}.hf-panel{background:#fff;border:1px solid #e3e8f0;border-radius:15px;padding:19px;margin-bottom:14px}.hf-panel-title{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:17px}.hf-panel-title h2{font-size:16px;margin:0}.hf-muted{color:#8793a5;font-size:12px;margin:4px 0 0}.hf-link{border:0;background:transparent;color:#315efb;font-weight:700}.hf-status-list{display:grid;gap:14px}.hf-status-row{display:grid;grid-template-columns:10px 1fr 28px 1.2fr;gap:9px;align-items:center;font-size:12px}.hf-status-row strong{text-align:right}.hf-status-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}.dot-em-desenvolvimento{background:#315efb}.dot-em-homologacao{background:#7c4dff}.dot-concluida{background:#22a06b}.dot-reprovada{background:#e44b4b}.dot-aguardando-aprovacao{background:#f1a52b}.hf-bar{height:6px;background:#edf0f5;border-radius:9px;overflow:hidden}.hf-bar i{display:block;height:100%;background:#315efb;border-radius:9px}.hf-big-number{font-size:42px;font-weight:800;letter-spacing:-1px}.hf-mini-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:25px;border-top:1px solid #edf0f4;padding-top:17px}.hf-mini-stats span{display:block;color:#8a95a6;font-size:11px}.hf-mini-stats b{font-size:17px}.hf-table-wrap{overflow:auto}.hf-table-wrap table{width:100%;border-collapse:collapse;min-width:1120px}.hf-table-wrap th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8b96a8;text-align:left;padding:10px 8px;border-bottom:1px solid #e8ecf2;white-space:nowrap}.hf-table-wrap td{padding:8px;border-bottom:1px solid #eef1f5;font-size:12px}.hf-table-wrap input,.hf-table-wrap select{border:1px solid #e3e7ee;border-radius:7px;height:34px;padding:0 8px;min-width:130px;background:#fff}.hf-table-wrap input.hours{width:72px;min-width:72px}.hf-table-wrap .number{font-weight:800;color:#315efb}.hf-pill{padding:5px 8px;border-radius:20px;font-size:11px;font-weight:700}.hf-pill.approved{background:#eaf8f1;color:#21865a}.hf-approve{border:0;background:#eef3ff;color:#315efb;border-radius:7px;padding:7px 9px;font-size:11px;font-weight:700}.hf-toggle{border:1px solid #e0e5ed;background:#fff;border-radius:20px;padding:6px 10px;font-size:11px;color:#7d899b}.hf-toggle.on{background:#eaf8f1;border-color:#cceedd;color:#21865a}.hf-icon-btn{width:30px;height:30px;border:0;background:#f2f5f9;color:#657188;border-radius:8px;display:grid;place-items:center}.hf-icon-btn.danger:hover{background:#fff0f0;color:#d13d3d}.hf-empty{padding:40px;display:flex;flex-direction:column;align-items:center;gap:7px;color:#8994a5}.hf-totals{display:flex;gap:20px;justify-content:flex-end;padding-top:15px;color:#788497;font-size:12px}.hf-totals strong{color:#27344b}.hf-user-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.hf-user-card{border:1px solid #e4e9f0;border-radius:14px;padding:17px}.hf-user-card-top{display:flex;justify-content:space-between;align-items:center}.hf-user-card h3{margin:15px 0 4px;font-size:15px}.hf-user-card p{margin:0;color:#8490a2;font-size:12px}.hf-role{font-size:10px;font-weight:800;border-radius:20px;padding:5px 8px}.role-admin{background:#eeeaff;color:#6744cc}.role-interno{background:#eef3ff;color:#315efb}.role-cliente{background:#fff5df;color:#a56b00}.hf-client-tag{display:flex;gap:5px;align-items:center;color:#69758a;font-size:11px;background:#f6f8fb;padding:8px;border-radius:8px;margin-top:12px}.hf-user-status{display:flex;gap:7px;align-items:center;color:#7c8799;font-size:11px;margin-top:15px}.hf-user-status span{width:7px;height:7px;border-radius:50%;background:#d2d8e1}.hf-user-status span.active{background:#27a56c}.hf-loading{text-align:center;padding:45px;color:#8793a5}.hf-empty-page{text-align:center;padding:60px;color:#8490a2}.hf-empty-page h2,.hf-empty-page h3{color:#28364c;margin:12px 0 5px}.hf-empty-page p{margin:0 0 20px}.hf-modal-backdrop{position:fixed;inset:0;background:#07101d99;display:grid;place-items:center;padding:20px;z-index:100;backdrop-filter:blur(3px)}.hf-modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 25px 70px #07101d44}.hf-modal.user-modal{width:min(500px,100%)}.hf-modal-head{display:flex;justify-content:space-between;gap:15px;margin-bottom:22px}.hf-modal-head h2{margin:4px 0;font-size:21px}.hf-modal-head p{margin:0;color:#8793a5;font-size:12px}.hf-modal-head>button{border:0;background:#f2f5f8;width:34px;height:34px;border-radius:9px;color:#647188;display:grid;place-items:center}.hf-form{display:grid;gap:3px}.hf-form input,.hf-form select{height:44px;margin-top:7px;border:1px solid #dce2eb;border-radius:10px;padding:0 12px;outline:0;background:#fff}.hf-form input:focus,.hf-form select:focus{border-color:#315efb;box-shadow:0 0 0 4px #315efb12}.hf-password-field{position:relative;margin-top:7px}.hf-password-field input{width:100%;margin-top:0;padding-right:45px}.hf-password-toggle{position:absolute;right:5px;top:5px;width:34px;height:34px;border:0;background:transparent;color:#7d899b;border-radius:8px;display:grid;place-items:center}.hf-password-toggle:hover{background:#f2f5f9;color:#315efb}.hf-form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:10px}.hf-history{display:grid;gap:17px}.hf-history-row{display:flex;gap:12px;position:relative}.hf-history-line{width:8px;height:8px;border-radius:50%;background:#315efb;margin-top:5px;flex:none}.hf-history-row strong{font-size:12px}.hf-history-row p{font-size:12px;color:#677388;margin:5px 0}.hf-history-row span{font-size:10px;color:#9aa4b3}.hf-overlay{display:none}
 /* =====================================================
@@ -3484,6 +3737,209 @@ const styles = `
 /* =====================================================
    MODAIS - NOVA DEMANDA / APROVAÇÃO / REPROVAÇÃO
    ===================================================== */
+/* =========================================================
+   SAPPHIRE — MODAL DE DEMANDA MODERNO
+   ========================================================= */
+
+.hf-demand-modal{
+  width:min(820px,calc(100vw - 32px));
+  max-height:calc(100vh - 32px);
+  overflow-y:auto;
+  padding:0;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 28px 90px rgba(7,16,29,.22);
+}
+
+.hf-demand-modal .hf-modal-head{
+  padding:24px 26px 20px;
+  margin:0;
+  border-bottom:1px solid #edf0f5;
+  background:linear-gradient(180deg,#fff 0%,#fbfcfe 100%);
+}
+
+.hf-demand-modal .hf-modal-head h2{
+  margin:4px 0 5px;
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:-.4px;
+  color:#172033;
+}
+
+.hf-demand-modal .hf-modal-head p{
+  font-size:12px;
+  color:#8793a5;
+}
+
+.hf-demand-form{
+  padding:0 26px 26px;
+  gap:0;
+}
+
+.hf-form-section{
+  padding:24px 0;
+  border-bottom:1px solid #edf0f5;
+}
+
+.hf-form-section:first-child{
+  padding-top:22px;
+}
+
+.hf-form-section:last-of-type{
+  border-bottom:0;
+}
+
+.hf-section-title{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.hf-section-title>span{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  background:#eef3ff;
+  color:#315efb;
+  font-size:11px;
+  font-weight:800;
+  box-shadow:inset 0 0 0 1px #dfe7ff;
+}
+
+.hf-section-title strong{
+  font-size:14px;
+  font-weight:800;
+  color:#202b3f;
+}
+
+.hf-section-title small{
+  color:#8994a7;
+  font-size:11px;
+}
+
+.hf-demand-form .hf-form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.hf-demand-form label{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  margin-bottom:15px;
+}
+
+.hf-demand-form label>span{
+  font-size:11px;
+  font-weight:800;
+  color:#566176;
+}
+
+.hf-demand-form input,
+.hf-demand-form select,
+.hf-demand-form textarea{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid #dfe5ee;
+  background:#fbfcfe;
+  border-radius:12px;
+  padding:11px 13px;
+  color:#172033;
+  font-size:13px;
+  outline:none;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+
+.hf-demand-form input,
+.hf-demand-form select{
+  height:46px;
+}
+
+.hf-demand-form textarea{
+  min-height:92px;
+  line-height:1.5;
+  resize:vertical;
+}
+
+.hf-demand-form input:hover,
+.hf-demand-form select:hover,
+.hf-demand-form textarea:hover{
+  border-color:#cbd5e4;
+  background:#fff;
+}
+
+.hf-demand-form input:focus,
+.hf-demand-form select:focus,
+.hf-demand-form textarea:focus{
+  border-color:#315efb;
+  background:#fff;
+  box-shadow:0 0 0 4px rgba(49,94,251,.09);
+}
+
+.hf-demand-form .hf-input-suffix{
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+
+.hf-demand-form .hf-input-suffix input{
+  padding-right:58px;
+}
+
+.hf-demand-form .hf-input-suffix small{
+  position:absolute;
+  right:13px;
+  color:#8a95a6;
+  font-size:11px;
+  font-weight:700;
+  pointer-events:none;
+}
+
+.hf-form-actions{
+  padding-top:22px;
+  margin-top:0;
+  border-top:1px solid #edf0f5;
+}
+
+.hf-form-actions .hf-secondary,
+.hf-form-actions .hf-primary{
+  height:42px;
+  padding:0 17px;
+  border-radius:11px;
+}
+
+.hf-form-actions .hf-primary{
+  box-shadow:0 7px 18px rgba(49,94,251,.20);
+}
+
+@media(max-width:650px){
+  .hf-demand-modal{
+    width:calc(100vw - 20px);
+    max-height:calc(100vh - 20px);
+    border-radius:18px;
+  }
+
+  .hf-demand-modal .hf-modal-head{
+    padding:20px;
+  }
+
+  .hf-demand-form{
+    padding:0 20px 20px;
+  }
+
+  .hf-demand-form .hf-form-grid{
+    grid-template-columns:1fr;
+    gap:0;
+  }
+
+  .hf-form-section{
+    padding:20px 0;
+  }
+}
 .hf-demand-modal{width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow-y:auto}
 .hf-demand-form{gap:0}
 .hf-form-section{padding:20px 0;border-bottom:1px solid #edf0f5}
@@ -3531,6 +3987,214 @@ const styles = `
 .hf-reject-confirm:hover{background:#c93f3f!important;border-color:#c93f3f!important}
 @media(max-width:650px){.hf-form-grid{grid-template-columns:1fr}.hf-demand-modal,.hf-decision-modal{width:calc(100vw - 20px)}.hf-modal-head{padding:18px}.hf-demand-form,.hf-decision-modal .hf-form{padding:0 18px 18px}.hf-decision-demand{margin-left:18px;margin-right:18px}}
 
+
+
+/* =========================================================
+   SAPPHIRE — MODAL DE DEMANDA MODERNO
+   ========================================================= */
+
+.hf-demand-modal{
+  width:min(760px,calc(100vw - 32px)) !important;
+  max-height:calc(100vh - 32px) !important;
+  padding:0 !important;
+  border-radius:22px !important;
+  overflow-y:auto !important;
+  background:#fff !important;
+  box-shadow:0 28px 80px rgba(15,23,42,.22) !important;
+}
+
+.hf-demand-modal .hf-modal-head{
+  padding:24px 28px 20px !important;
+  background:#fff !important;
+  border-bottom:1px solid #edf0f5 !important;
+}
+
+.hf-demand-modal .hf-modal-head h2{
+  margin:0 !important;
+  font-size:23px !important;
+  font-weight:800 !important;
+  letter-spacing:-.5px !important;
+  color:#172033 !important;
+}
+
+.hf-demand-modal .hf-modal-head p{
+  margin-top:5px !important;
+  color:#8995a8 !important;
+  font-size:12px !important;
+}
+
+.hf-demand-form{
+  padding:0 28px 24px !important;
+}
+
+.hf-demand-form .hf-form-section{
+  padding:24px 0 !important;
+  border-bottom:1px solid #edf0f5 !important;
+}
+
+.hf-demand-form .hf-section-title{
+  display:flex !important;
+  align-items:center !important;
+  gap:12px !important;
+  margin-bottom:18px !important;
+}
+
+.hf-demand-form .hf-section-title>span{
+  width:34px !important;
+  height:34px !important;
+  min-width:34px !important;
+  display:grid !important;
+  place-items:center !important;
+  border-radius:10px !important;
+  background:#eef3ff !important;
+  color:#315efb !important;
+  font-size:11px !important;
+  font-weight:800 !important;
+}
+
+.hf-demand-form .hf-section-title strong{
+  display:block !important;
+  font-size:14px !important;
+  font-weight:800 !important;
+  color:#202b3f !important;
+}
+
+.hf-demand-form .hf-section-title small{
+  display:block !important;
+  margin-top:3px !important;
+  font-size:11px !important;
+  color:#8994a7 !important;
+}
+
+.hf-demand-form .hf-form-grid{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:14px !important;
+}
+
+.hf-demand-form label{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:7px !important;
+  margin-bottom:15px !important;
+}
+
+.hf-demand-form label>span{
+  font-size:11px !important;
+  font-weight:800 !important;
+  color:#465268 !important;
+}
+
+.hf-demand-form input,
+.hf-demand-form select,
+.hf-demand-form textarea{
+  width:100% !important;
+  box-sizing:border-box !important;
+  border:1px solid #dce3ec !important;
+  border-radius:11px !important;
+  background:#fbfcfe !important;
+  color:#172033 !important;
+  font-size:13px !important;
+  outline:none !important;
+}
+
+.hf-demand-form input,
+.hf-demand-form select{
+  height:46px !important;
+  padding:0 13px !important;
+}
+
+.hf-demand-form textarea{
+  min-height:88px !important;
+  padding:12px 13px !important;
+  resize:vertical !important;
+  line-height:1.5 !important;
+}
+
+.hf-demand-form input:hover,
+.hf-demand-form select:hover,
+.hf-demand-form textarea:hover{
+  background:#fff !important;
+  border-color:#c8d2e0 !important;
+}
+
+.hf-demand-form input:focus,
+.hf-demand-form select:focus,
+.hf-demand-form textarea:focus{
+  background:#fff !important;
+  border-color:#315efb !important;
+  box-shadow:0 0 0 4px rgba(49,94,251,.09) !important;
+}
+
+.hf-demand-form .hf-input-suffix{
+  position:relative !important;
+}
+
+.hf-demand-form .hf-input-suffix input{
+  padding-right:62px !important;
+}
+
+.hf-demand-form .hf-input-suffix small{
+  right:13px !important;
+  color:#8793a5 !important;
+  font-size:10px !important;
+  font-weight:700 !important;
+}
+
+/* bloco de estimativas */
+.hf-demand-form .hf-form-section:nth-child(2) .hf-form-grid{
+  margin-bottom:14px !important;
+}
+
+/* responsável */
+.hf-demand-form .hf-form-section:nth-child(2)>label:last-child{
+  margin-top:2px !important;
+}
+
+.hf-demand-modal .hf-form-actions{
+  display:flex !important;
+  justify-content:flex-end !important;
+  align-items:center !important;
+  gap:9px !important;
+  padding-top:20px !important;
+  border-top:1px solid #edf0f5 !important;
+}
+
+.hf-demand-modal .hf-form-actions button{
+  height:43px !important;
+  padding:0 18px !important;
+  border-radius:11px !important;
+  font-weight:750 !important;
+}
+
+.hf-demand-modal .hf-form-actions .hf-primary{
+  box-shadow:0 8px 20px rgba(49,94,251,.20) !important;
+}
+
+.hf-demand-modal .hf-form-actions .hf-primary:hover{
+  transform:translateY(-1px) !important;
+  box-shadow:0 11px 25px rgba(49,94,251,.25) !important;
+}
+
+@media(max-width:650px){
+  .hf-demand-modal{
+    width:calc(100vw - 20px) !important;
+    max-height:calc(100vh - 20px) !important;
+    border-radius:18px !important;
+  }
+
+  .hf-demand-modal .hf-modal-head{
+    padding:20px !important;
+  }
+
+  .hf-demand-form{
+    padding:0 20px 20px !important;
+  }
+
+  .hf-demand-form .hf-form-grid{
+    grid-template-columns:1fr !important;
+  }
+}
 
 /* =========================================================
    SAPPHIRE — FILTROS CLEAN
@@ -4871,6 +5535,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
