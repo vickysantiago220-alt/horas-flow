@@ -118,21 +118,17 @@ const availablePeriods = useMemo(() => {
   const periods = new Set<string>();
 
   demands.forEach(d => {
-    const created = String(d.criadoEm || '').slice(0,7);
-    const execution = String(d.deliveryDate || (d as any).delivery_date || '').slice(0,7);
+    const month = getDeliveryMonthKey(
+      d.deliveryDate || (d as any).delivery_date
+    );
 
-    if (created) periods.add(created);
-    if (execution) periods.add(execution);
+    if(month){
+      periods.add(month);
+    }
   });
-
-  const current = new Date();
-  periods.add(
-    `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}`
-  );
 
   return Array.from(periods).sort().reverse();
 }, [demands]);
-
 const formatPeriod = (period:string) => {
   if (!period || period === 'Todos') return 'Todos os períodos';
 
@@ -1006,7 +1002,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
-        (demandPeriod==='Todos'||d.criadoEm.startsWith(demandPeriod))
+        (demandPeriod==='Todos'||getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date)===demandPeriod)
     });
 
     // Mais recente primeiro: número maior = demanda mais nova.
@@ -4875,6 +4871,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
