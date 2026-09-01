@@ -216,13 +216,11 @@ const notificationProfile =
       ? 'client'
       : 'internal';
 
+const notificationUserIdentity =
+  String((user as any)?.id ?? 'usuario');
+
 const notificationUserKey =
-  `${notificationProfile}-${String(
-    (user as any)?.id ??
-    (user as any)?.email ??
-    (user as any)?.name ??
-    'usuario'
-  )}`;
+  `${notificationProfile}-${notificationUserIdentity}`;
 
 const notificationStorageKey =
   `sapphire-notifications-${notificationUserKey}`;
@@ -245,6 +243,25 @@ const [notificationReadIds,setNotificationReadIds] =
 
   });
 
+const [notificationClearedIds,setNotificationClearedIds] =
+  useState<string[]>(() => {
+
+    try{
+
+      const saved =
+        localStorage.getItem(
+          `${notificationStorageKey}-cleared`
+        );
+
+      return saved
+        ? JSON.parse(saved)
+        : [];
+
+    }catch{
+      return [];
+    }
+
+  });
 const [notificationInitialized,setNotificationInitialized] =
   useState(() => {
 
@@ -258,6 +275,52 @@ const [notificationInitialized,setNotificationInitialized] =
 
   });
 
+useEffect(() => {
+
+  setNotificationReadIds([]);
+  setNotificationClearedIds([]);
+  setNotificationInitialized(false);
+
+  try{
+
+    const savedRead =
+      localStorage.getItem(notificationStorageKey);
+
+    const savedCleared =
+      localStorage.getItem(
+        `${notificationStorageKey}-cleared`
+      );
+
+    const savedInitialized =
+      localStorage.getItem(
+        `${notificationStorageKey}-initialized`
+      ) === 'true';
+
+    setNotificationReadIds(
+      savedRead
+        ? JSON.parse(savedRead)
+        : []
+    );
+
+    setNotificationClearedIds(
+      savedCleared
+        ? JSON.parse(savedCleared)
+        : []
+    );
+
+    setNotificationInitialized(
+      savedInitialized
+    );
+
+  }catch{
+
+    setNotificationReadIds([]);
+    setNotificationClearedIds([]);
+    setNotificationInitialized(false);
+
+  }
+
+},[notificationStorageKey])
 const notifications = useMemo(() => {
 
   const result: Array<{
@@ -495,7 +558,9 @@ useEffect(() => {
 const unreadNotifications =
   notificationInitialized
     ? notifications.filter(
-        n=>!notificationReadIds.includes(n.id)
+        n =>
+          !notificationReadIds.includes(n.id) &&
+          !notificationClearedIds.includes(n.id)
       )
     : [];
 
@@ -2810,6 +2875,9 @@ const proximas = minhasDemandas
       markAsRead={markNotificationAsRead}
       readIds={notificationReadIds}
       setReadIds={setNotificationReadIds}
+      clearedIds={notificationClearedIds}
+      setClearedIds={setNotificationClearedIds}
+      notificationStorageKey={notificationStorageKey}
     />}
     {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
   </div>;
@@ -3130,7 +3198,10 @@ function NotificationsModal({
   openDemand,
   markAsRead,
   readIds,
-  setReadIds
+  setReadIds,
+  clearedIds,
+  setClearedIds,
+  notificationStorageKey
 }:{
   notifications:any[];
   close:()=>void;
@@ -3138,13 +3209,22 @@ function NotificationsModal({
   markAsRead:(id:string)=>void;
   readIds:string[];
   setReadIds:(ids:string[])=>void;
+  clearedIds:string[];
+  setClearedIds:(ids:string[])=>void;
+  notificationStorageKey:string;
 }){
 
   const [filter,setFilter] =
     useState<'todas'|'nao-lidas'|'lidas'>('todas');
 
+  const activeNotifications =
+    notifications.filter(
+      (notification:any)=>
+        !clearedIds.includes(notification.id)
+    );
+
   const filteredNotifications =
-    notifications.filter((notification:any)=>{
+    activeNotifications.filter((notification:any)=>{
 
       const isRead =
         readIds.includes(notification.id);
@@ -3162,7 +3242,7 @@ function NotificationsModal({
     });
 
   const unreadCount =
-    notifications.filter(
+    activeNotifications.filter(
       (notification:any)=>
         !readIds.includes(notification.id)
     ).length;
@@ -3180,15 +3260,20 @@ function NotificationsModal({
         (notification:any)=>notification.id
       );
 
-    const updated =
+    const updatedCleared =
       Array.from(
         new Set([
-          ...readIds,
+          ...clearedIds,
           ...allIds
         ])
       );
 
-    setReadIds(updated);
+    localStorage.setItem(
+      `${notificationStorageKey}-cleared`,
+      JSON.stringify(updatedCleared)
+    );
+
+    setClearedIds(updatedCleared);
 
   };
 
@@ -6653,6 +6738,19 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
