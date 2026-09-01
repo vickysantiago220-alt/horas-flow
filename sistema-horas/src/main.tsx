@@ -199,6 +199,7 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [approvalSaving,setApprovalSaving]=useState(false);
   const [approvalType,setApprovalType]=useState<'approve'|'reject'>('approve');
   const [demandSaving,setDemandSaving]=useState(false);
+  const [demandSuccess,setDemandSuccess]=useState('');
   const [demandError,setDemandError]=useState('');
   const [editingDemand,setEditingDemand]=useState<Demand|null>(null);
   const [demandForm,setDemandForm]=useState<any>({
@@ -1319,9 +1320,45 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
         clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||''
       };
-      if(editingDemand)await request(`/demands/${editingDemand.id}`,{method:'PUT',body:JSON.stringify(payload)});
-      else await request('/demands',{method:'POST',body:JSON.stringify(payload)});
-      setDemandModal(false);setDemandForm(emptyDemand());await loadDemands();
+      const creatingDemand = !editingDemand;
+
+      if(editingDemand){
+
+        await request(
+          `/demands/${editingDemand.id}`,
+          {
+            method:'PUT',
+            body:JSON.stringify(payload)
+          }
+        );
+
+      }else{
+
+        await request(
+          '/demands',
+          {
+            method:'POST',
+            body:JSON.stringify(payload)
+          }
+        );
+
+      }
+
+      setDemandSuccess(
+        creatingDemand
+          ? 'Demanda criada com sucesso!'
+          : 'Demanda atualizada com sucesso!'
+      );
+
+      await loadDemands();
+
+      setTimeout(()=>{
+
+        setDemandModal(false);
+        setDemandForm(emptyDemand());
+        setDemandSuccess('');
+
+      },1100);
     }catch(error:any){setDemandError(error.message||'Não foi possível salvar a demanda.')}
     finally{setDemandSaving(false)}
   };
@@ -2879,7 +2916,7 @@ const proximas = minhasDemandas
       setClearedIds={setNotificationClearedIds}
       notificationStorageKey={notificationStorageKey}
     />}
-    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
+    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
   </div>;
 }
 
@@ -3463,12 +3500,29 @@ function NotificationsModal({
   </div>;
 }
 
-function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,close,save,approve}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void}){
+function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void}){
   const readonly=isClient;
   const demandForApproval=editing;
 
   return <div className="hf-modal-backdrop">
     <div className="hf-modal hf-demand-modal">
+
+      {success && (
+        <div className="hf-action-success">
+
+          <div className="hf-action-success-icon">
+            <CheckCircle2 size={30}/>
+          </div>
+
+          <strong>{success}</strong>
+
+          <span>
+            A operação foi registrada com sucesso.
+          </span>
+
+        </div>
+      )}
+
       <div className="hf-modal-head">
         <div>
           <span className="hf-eyebrow">{isClient?'Visualização da demanda':editing?'Edição de demanda':'Nova demanda'}</span>
@@ -5403,6 +5457,90 @@ const styles = `
 
 }
 
+.hf-action-success{
+  position:absolute !important;
+  z-index:20 !important;
+
+  top:50% !important;
+  left:50% !important;
+
+  transform:translate(-50%,-50%) !important;
+
+  width:320px !important;
+  min-height:210px !important;
+
+  box-sizing:border-box !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  gap:9px !important;
+
+  padding:28px !important;
+
+  background:#ffffff !important;
+
+  border:1px solid #e7ebf1 !important;
+
+  border-radius:18px !important;
+
+  box-shadow:0 18px 50px rgba(30,45,70,.16) !important;
+
+  animation:hfSuccessIn .22s ease-out !important;
+}
+
+.hf-action-success-icon{
+  width:58px !important;
+  height:58px !important;
+
+  display:grid !important;
+  place-items:center !important;
+
+  border-radius:50% !important;
+
+  background:#eaf8ef !important;
+  color:#199653 !important;
+
+  animation:hfSuccessIcon .35s ease-out !important;
+}
+
+.hf-action-success strong{
+  color:#202b3f !important;
+  font-size:16px !important;
+  font-weight:750 !important;
+  text-align:center !important;
+}
+
+.hf-action-success span{
+  color:#8994a7 !important;
+  font-size:12px !important;
+  line-height:1.5 !important;
+  text-align:center !important;
+}
+@keyframes hfSuccessIn{
+  from{
+    opacity:0;
+  }
+
+  to{
+    opacity:1;
+  }
+}
+
+@keyframes hfSuccessIcon{
+  from{
+    transform:scale(.65);
+    opacity:0;
+  }
+
+  to{
+    transform:scale(1);
+    opacity:1;
+  }
+}
+
 .hf-filters-clean {
   display: flex !important;
   align-items: center !important;
@@ -6738,6 +6876,13 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
 
 
 
