@@ -6,7 +6,7 @@ import {
   BarChart3, CheckCircle2, Clock3, Filter, History, LayoutDashboard,
   Plus, Search, Trash2, Users, X, Clipboard, CalendarDays, LogOut,
   UserPlus, ShieldCheck, Building2, Menu, LockKeyhole, Mail, Eye, EyeOff,
-  AlertCircle, RefreshCw
+  AlertCircle, RefreshCw, Bell
 } from 'lucide-react';
 
 type Role = 'ADMIN' | 'INTERNO' | 'CLIENTE';
@@ -158,6 +158,7 @@ const formatPeriod = (period:string) => {
   const [copied,setCopied]=useState(false);
   const [mobileMenu,setMobileMenu]=useState(false);
   const [commandCenterOpen,setCommandCenterOpen]=useState(false);
+const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [commandSearch,setCommandSearch]=useState('');
   useEffect(()=>{
     const handleCommandShortcut=(e:KeyboardEvent)=>{
@@ -208,6 +209,315 @@ const formatPeriod = (period:string) => {
   const isAdmin=user?.role==='ADMIN';
   const isInternal=user?.role==='INTERNO'||isAdmin;
   const isClient=user?.role==='CLIENTE';
+const notificationProfile =
+  isAdmin
+    ? 'admin'
+    : isClient
+      ? 'client'
+      : 'internal';
+
+const notificationUserKey =
+  `${notificationProfile}-${String(
+    (user as any)?.id ??
+    (user as any)?.email ??
+    (user as any)?.name ??
+    'usuario'
+  )}`;
+
+const notificationStorageKey =
+  `sapphire-notifications-${notificationUserKey}`;
+
+const [notificationReadIds,setNotificationReadIds] =
+  useState<string[]>(() => {
+
+    try{
+
+      const saved =
+        localStorage.getItem(notificationStorageKey);
+
+      return saved
+        ? JSON.parse(saved)
+        : [];
+
+    }catch{
+      return [];
+    }
+
+  });
+
+const [notificationInitialized,setNotificationInitialized] =
+  useState(() => {
+
+    try{
+      return localStorage.getItem(
+        `${notificationStorageKey}-initialized`
+      ) === 'true';
+    }catch{
+      return false;
+    }
+
+  });
+
+const notifications = useMemo(() => {
+
+  const result: Array<{
+    id:string;
+    type:'approval'|'assigned'|'deadline'|'info';
+    title:string;
+    description:string;
+    demand:Demand;
+  }> = [];
+
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+
+  demands.forEach(d => {
+
+    const demandClientId =
+      (d as any).clientId ??
+      (d as any).client_id ??
+      '';
+
+    const userClientId =
+      (user as any)?.clientId ??
+      (user as any)?.client_id ??
+      '';
+
+        /*
+     * CLIENTE
+     * Notificações exclusivas das demandas do próprio cliente.
+     */
+    if(
+      isClient &&
+      String(demandClientId) === String(userClientId)
+    ){
+
+      /*
+       * DEMANDA AGUARDANDO APROVAÇÃO
+       */
+      if(normalizeApproval(d.aprovacao) === 'Pendente'){
+
+        result.push({
+          id:`approval-${d.id}`,
+          type:'approval',
+          title:
+            `Demanda #${String(d.numero).padStart(3,'0')} aguarda aprovação`,
+          description:
+            'Essa demanda precisa da sua aprovação.',
+          demand:d
+        });
+
+      }
+
+      /*
+       * DEMANDA CONCLUÍDA
+       */
+      if(d.status === 'Concluída'){
+
+        result.push({
+          id:`completed-${d.id}`,
+          type:'info',
+          title:
+            `Demanda #${String(d.numero).padStart(3,'0')} concluída`,
+          description:
+            'A demanda foi concluída.',
+          demand:d
+        });
+
+      }
+
+    }
+/*
+     * USUÁRIO INTERNO / RESPONSÁVEL
+     */
+    if(isInternal){
+
+      const responsavel =
+        String(d.responsavel || '').trim().toLowerCase();
+
+      const nomeUsuario =
+        String(user?.name || '').trim().toLowerCase();
+
+      if(
+        responsavel &&
+        responsavel === nomeUsuario &&
+        d.status !== 'Concluída'
+      ){
+
+        /*
+         * DEMANDA ATRIBUÍDA
+         */
+        result.push({
+          id:`assigned-${d.id}`,
+          type:'assigned',
+          title:`Demanda #${String(d.numero).padStart(3,'0')} atribuída a você`,
+          description:
+            `Mês de análise: ${
+              d.analysisMonth || 'Não definido'
+            } • Entrega: ${
+              d.deliveryDate
+                ? formatDate(d.deliveryDate)
+                : 'Não definida'
+            }`,
+          demand:d
+        });
+
+        /*
+         * PRAZO DE ENTREGA
+         */
+        if(d.deliveryDate){
+
+          const entrega =
+            new Date(`${d.deliveryDate}T00:00:00`);
+
+          const diff = Math.ceil(
+            (entrega.getTime()-hoje.getTime()) /
+            (1000*60*60*24)
+          );
+
+          if(diff < 0){
+
+            result.push({
+              id:`overdue-${d.id}`,
+              type:'deadline',
+              title:`Demanda #${String(d.numero).padStart(3,'0')} está atrasada`,
+              description:
+                `A data de entrega era ${formatDate(d.deliveryDate)}.`,
+              demand:d
+            });
+
+          }
+          else if(diff <= 3){
+
+            result.push({
+              id:`deadline-${d.id}`,
+              type:'deadline',
+              title:
+                `Entrega próxima — demanda #${String(d.numero).padStart(3,'0')}`,
+              description:
+                diff === 0
+                  ? 'A entrega é hoje.'
+                  : `Faltam ${diff} dia${diff===1?'':'s'} para a entrega.`,
+              demand:d
+            });
+
+          }
+
+        }
+
+      }
+
+    }
+
+    /*
+     * ADMIN
+     */
+    if(isAdmin){
+
+      if(d.status === 'Aguardando análise'){
+
+        result.push({
+          id:`analysis-${d.id}`,
+          type:'info',
+          title:
+            `Demanda #${String(d.numero).padStart(3,'0')} aguardando análise`,
+          description:
+            'Existe uma demanda aguardando análise.',
+          demand:d
+        });
+
+      }
+
+      if(d.aprovacao === 'Aprovada'){
+
+        result.push({
+          id:`approved-${d.id}`,
+          type:'info',
+          title:
+            `Demanda #${String(d.numero).padStart(3,'0')} aprovada`,
+          description:
+            'A demanda foi aprovada.',
+          demand:d
+        });
+
+      }
+
+    }
+
+  });
+
+  return result;
+
+},[demands,user,isClient,isInternal,isAdmin]);
+
+useEffect(() => {
+
+  if(notificationInitialized) return;
+
+  if(!notifications.length){
+
+    localStorage.setItem(
+      `${notificationStorageKey}-initialized`,
+      'true'
+    );
+
+    setNotificationInitialized(true);
+
+    return;
+  }
+
+  /*
+   * Na primeira inicialização, todas as notificações
+   * existentes são consideradas já conhecidas.
+   */
+  const existingIds =
+    notifications.map(n=>n.id);
+
+  localStorage.setItem(
+    notificationStorageKey,
+    JSON.stringify(existingIds)
+  );
+
+  localStorage.setItem(
+    `${notificationStorageKey}-initialized`,
+    'true'
+  );
+
+  setNotificationReadIds(existingIds);
+  setNotificationInitialized(true);
+
+},[
+  notifications,
+  notificationInitialized,
+  notificationStorageKey
+]);
+
+const unreadNotifications =
+  notificationInitialized
+    ? notifications.filter(
+        n=>!notificationReadIds.includes(n.id)
+      )
+    : [];
+
+const markNotificationAsRead = (id:string) => {
+
+  setNotificationReadIds(previous => {
+
+    const updated = previous.includes(id)
+      ? previous
+      : [...previous,id];
+
+    localStorage.setItem(
+      notificationStorageKey,
+      JSON.stringify(updated)
+    );
+
+    return updated;
+  });
+
+};
+
+
 
   const exportStatusReport = () => {
     const doc = new jsPDF();
@@ -1347,7 +1657,21 @@ const dashboardDemands=useMemo(()=>{
   <Search size={16}/>
   <span>Busca rápida</span>
   <kbd>Ctrl K</kbd>
-</button><div className="hf-top-avatar">{user.name.slice(0,1).toUpperCase()}</div></div>
+</button><button
+  type="button"
+  className="hf-notification-trigger"
+  onClick={()=>setNotificationsOpen(true)}
+  title="Notificações"
+  aria-label="Notificações"
+>
+  <Bell size={19}/>
+  {unreadNotifications.length > 0 && (
+    <span className="hf-notification-badge">
+      {unreadNotifications.length > 99 ? '99+' : unreadNotifications.length}
+    </span>
+  )}
+</button>
+<div className="hf-top-avatar">{user.name.slice(0,1).toUpperCase()}</div></div>
       </header>
 
       {apiError&&<div className="hf-alert"><AlertCircle size={18}/><span>{apiError}</span><button onClick={()=>{setApiError('');loadDemands();loadClients()}}><RefreshCw size={16}/></button></div>}
@@ -2479,6 +2803,14 @@ const proximas = minhasDemandas
     {historyDemand&&<HistoryModal demand={historyDemand} loading={historyLoading} close={()=>setHistoryDemand(null)}/>}
     {userModal&&<UserModal value={newUser} setValue={setNewUser} clients={clients} error={userError} saving={userSaving} close={closeUserModal} save={saveUser}/>}
     {clientModal&&<ClientModal value={clientForm} setValue={setClientForm} editing={editingClient} error={clientError} saving={clientSaving} close={()=>setClientModal(false)} save={saveClient}/>}
+    {notificationsOpen&&<NotificationsModal
+      notifications={notifications}
+      close={()=>setNotificationsOpen(false)}
+      openDemand={openEditDemand}
+      markAsRead={markNotificationAsRead}
+      readIds={notificationReadIds}
+      setReadIds={setNotificationReadIds}
+    />}
     {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
   </div>;
 }
@@ -2789,6 +3121,261 @@ function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{na
     <form onSubmit={save} className="hf-form"><label>Nome da empresa<input value={value.name} onChange={e=>setValue({...value,name:e.target.value})} placeholder="Ex.: ABHO" autoComplete="off"/></label><label>E-mail<input type="email" value={value.email} onChange={e=>setValue({...value,email:e.target.value})} placeholder="contato@empresa.com.br" autoComplete="off"/></label>
     {error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}<div className="hf-form-actions"><button type="button" className="hf-secondary" onClick={close}>Cancelar</button><button className="hf-primary" disabled={saving}>{saving?'Salvando...':editing?'Salvar alterações':'Cadastrar empresa'}</button></div></form>
   </div></div>
+}
+
+
+function NotificationsModal({
+  notifications,
+  close,
+  openDemand,
+  markAsRead,
+  readIds,
+  setReadIds
+}:{
+  notifications:any[];
+  close:()=>void;
+  openDemand:(d:Demand)=>void;
+  markAsRead:(id:string)=>void;
+  readIds:string[];
+  setReadIds:(ids:string[])=>void;
+}){
+
+  const [filter,setFilter] =
+    useState<'todas'|'nao-lidas'|'lidas'>('todas');
+
+  const filteredNotifications =
+    notifications.filter((notification:any)=>{
+
+      const isRead =
+        readIds.includes(notification.id);
+
+      if(filter==='nao-lidas'){
+        return !isRead;
+      }
+
+      if(filter==='lidas'){
+        return isRead;
+      }
+
+      return true;
+
+    });
+
+  const unreadCount =
+    notifications.filter(
+      (notification:any)=>
+        !readIds.includes(notification.id)
+    ).length;
+
+  const clearNotifications = ()=>{
+
+    if(!window.confirm(
+      'Deseja limpar todas as notificações?'
+    )){
+      return;
+    }
+
+    const allIds =
+      notifications.map(
+        (notification:any)=>notification.id
+      );
+
+    const updated =
+      Array.from(
+        new Set([
+          ...readIds,
+          ...allIds
+        ])
+      );
+
+    setReadIds(updated);
+
+  };
+
+  return <div className="hf-modal-backdrop">
+
+    <div className="hf-notifications-modal">
+
+      <div className="hf-notifications-head">
+
+        <div>
+
+          <div className="hf-notifications-title">
+            <Bell size={19}/>
+            <strong>Notificações</strong>
+          </div>
+
+          <span>
+            {unreadCount === 0
+              ? 'Tudo em dia'
+              : `${unreadCount} não lida${unreadCount===1?'':'s'}`
+            }
+          </span>
+
+        </div>
+
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Fechar notificações"
+        >
+          <X size={19}/>
+        </button>
+
+      </div>
+
+      <div className="hf-notifications-toolbar">
+
+        <div className="hf-notification-tabs">
+
+          <button
+            type="button"
+            className={filter==='todas'?'active':''}
+            onClick={()=>setFilter('todas')}
+          >
+            Todas
+          </button>
+
+          <button
+            type="button"
+            className={filter==='nao-lidas'?'active':''}
+            onClick={()=>setFilter('nao-lidas')}
+          >
+            Não lidas
+            {unreadCount > 0 &&
+              <span>{unreadCount}</span>
+            }
+          </button>
+
+          <button
+            type="button"
+            className={filter==='lidas'?'active':''}
+            onClick={()=>setFilter('lidas')}
+          >
+            Lidas
+          </button>
+
+        </div>
+
+        {notifications.length > 0 && (
+
+          <button
+            type="button"
+            className="hf-notifications-clear"
+            onClick={clearNotifications}
+          >
+            Limpar notificações
+          </button>
+
+        )}
+
+      </div>
+
+      <div className="hf-notifications-list">
+
+        {filteredNotifications.length === 0 ? (
+
+          <div className="hf-notifications-empty">
+
+            <Bell size={28}/>
+
+            <strong>
+              {filter==='nao-lidas'
+                ? 'Nenhuma notificação não lida'
+                : filter==='lidas'
+                  ? 'Nenhuma notificação lida'
+                  : 'Nenhuma notificação'
+              }
+            </strong>
+
+            <span>
+              {filter==='nao-lidas'
+                ? 'Você está em dia.'
+                : 'Não há notificações para exibir.'
+              }
+            </span>
+
+          </div>
+
+        ) : (
+
+          filteredNotifications.map(
+            (notification:any)=>{
+
+              const isRead =
+                readIds.includes(notification.id);
+
+              return (
+
+                <button
+                  type="button"
+                  className={`hf-notification-item ${notification.type} ${isRead?'read':'unread'}`}
+                  key={notification.id}
+                  onClick={()=>{
+
+                    markAsRead(notification.id);
+
+                    close();
+
+                    openDemand(notification.demand);
+
+                  }}
+                >
+
+                  <div className="hf-notification-item-icon">
+
+                    {notification.type==='approval' &&
+                      <AlertCircle size={18}/>
+                    }
+
+                    {notification.type==='assigned' &&
+                      <Users size={18}/>
+                    }
+
+                    {notification.type==='deadline' &&
+                      <CalendarDays size={18}/>
+                    }
+
+                    {notification.type==='info' &&
+                      <Bell size={18}/>
+                    }
+
+                  </div>
+
+                  <div className="hf-notification-item-content">
+
+                    <strong>
+                      {notification.title}
+                    </strong>
+
+                    <span>
+                      {notification.description}
+                    </span>
+
+                  </div>
+
+                  {!isRead &&
+                    <span className="hf-notification-unread-dot"/>
+                  }
+
+                  <span className="hf-notification-arrow">
+                    →
+                  </span>
+
+                </button>
+
+              );
+
+            }
+          )
+
+        )}
+
+      </div>
+
+    </div>
+
+  </div>;
 }
 
 function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,close,save,approve}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void}){
@@ -3731,6 +4318,86 @@ const styles = `
 .hf-approval-actions{display:flex;gap:5px}.hf-reject{border:0;background:#fff0f0;color:#c73a3a;border-radius:7px;padding:7px 8px;font-size:11px;font-weight:700}
 .hf-pill.rejected{background:#fff0f0;color:#c73a3a}.hf-rejection-reason{display:inline-block;max-width:220px;color:#a33a3a;background:#fff5f5;border:1px solid #ffd7d7;border-radius:8px;padding:6px 8px;line-height:1.35;font-size:11px;white-space:normal}.hf-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
+
+/* =========================================================
+   SAPPHIRE — CENTRAL DE NOTIFICAÇÕES
+   ========================================================= */
+
+.hf-notification-trigger{
+  position:relative !important;
+  width:40px !important;
+  height:40px !important;
+  flex:none !important;
+
+  display:grid !important;
+  place-items:center !important;
+
+  border:1px solid #e2e7ef !important;
+  border-radius:11px !important;
+
+  background:#fff !important;
+  color:#657188 !important;
+
+  cursor:pointer !important;
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    color .18s ease,
+    transform .18s ease,
+    box-shadow .18s ease !important;
+}
+
+.hf-notification-trigger:hover{
+  background:#f7f9fc !important;
+  border-color:#d5dce7 !important;
+  color:#315efb !important;
+  transform:translateY(-1px) !important;
+  box-shadow:0 5px 14px rgba(31,45,67,.08) !important;
+}
+
+.hf-notification-trigger:active{
+  transform:scale(.96) !important;
+}
+
+.hf-notification-trigger:focus-visible{
+  outline:3px solid rgba(49,94,251,.15) !important;
+  outline-offset:2px !important;
+}
+
+.hf-notification-badge{
+  position:absolute !important;
+  top:-5px !important;
+  right:-5px !important;
+
+  min-width:18px !important;
+  height:18px !important;
+
+  padding:0 4px !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  border:2px solid #fff !important;
+  border-radius:20px !important;
+
+  background:#e5484d !important;
+  color:#fff !important;
+
+  font-size:9px !important;
+  line-height:1 !important;
+  font-weight:800 !important;
+
+  box-shadow:0 2px 6px rgba(229,72,77,.25) !important;
+}
+
+@media(max-width:600px){
+  .hf-notification-trigger{
+    width:38px !important;
+    height:38px !important;
+  }
+}
+
 @media(max-width:1000px){.hf-sidebar{transform:translateX(-100%);transition:.2s}.hf-sidebar.open{transform:translateX(0)}.hf-overlay{display:block;position:fixed;inset:0;background:#07101d66;z-index:15}.hf-main{margin-left:0;width:100%;padding:22px}.hf-menu{display:grid;border:1px solid #e1e6ee;background:#fff;width:38px;height:38px;border-radius:10px;place-items:center;color:#344158}.hf-topbar{align-items:flex-start}.hf-topbar>div:nth-child(2){flex:1}.hf-cards{grid-template-columns:repeat(2,1fr)}.hf-grid2{grid-template-columns:1fr}.hf-user-grid{grid-template-columns:repeat(2,1fr)}.hf-client-grid{grid-template-columns:repeat(2,1fr)}.hf-filters{flex-wrap:wrap}.hf-search{min-width:100%}}
 @media(max-width:600px){.hf-login{background:#f4f7fb;padding:14px}.hf-login-card{padding:25px 20px;border-radius:18px}.hf-topbar h1{font-size:23px}.hf-top-actions .hf-primary{display:none}.hf-cards{grid-template-columns:1fr}.hf-cards.small{grid-template-columns:1fr 1fr}.hf-user-grid{grid-template-columns:1fr}.hf-client-grid{grid-template-columns:1fr}.hf-form-grid{grid-template-columns:1fr}.hf-filters select{flex:1}.hf-filter-count{width:100%}.hf-totals{flex-wrap:wrap;justify-content:flex-start}.hf-main{padding:16px}.hf-panel{padding:14px}}
 
@@ -4199,6 +4866,457 @@ const styles = `
 /* =========================================================
    SAPPHIRE — FILTROS CLEAN
    ========================================================= */
+
+
+/* =========================================================
+   SAPPHIRE — MODAL DE NOTIFICAÇÕES
+   ========================================================= */
+
+.hf-notifications-modal{
+  width:min(560px,calc(100vw - 32px)) !important;
+  max-height:min(680px,calc(100vh - 48px)) !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+
+  background:#fff !important;
+  border:1px solid #e5e9f0 !important;
+  border-radius:18px !important;
+
+  overflow:hidden !important;
+
+  box-shadow:
+    0 24px 70px rgba(20,31,52,.20),
+    0 6px 22px rgba(20,31,52,.08) !important;
+}
+
+.hf-notifications-head{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+
+  padding:20px 22px !important;
+
+  border-bottom:1px solid #edf0f5 !important;
+  background:#fff !important;
+}
+
+.hf-notifications-head>div:first-child{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:4px !important;
+}
+
+.hf-notifications-title{
+  display:flex !important;
+  align-items:center !important;
+  gap:9px !important;
+
+  color:#172033 !important;
+}
+
+.hf-notifications-title svg{
+  color:#315efb !important;
+}
+
+.hf-notifications-title strong{
+  font-size:16px !important;
+  font-weight:800 !important;
+}
+
+.hf-notifications-head>div:first-child>span{
+  color:#8a94a6 !important;
+  font-size:11px !important;
+}
+
+.hf-notifications-head>button{
+  width:36px !important;
+  height:36px !important;
+
+  display:grid !important;
+  place-items:center !important;
+
+  border:0 !important;
+  border-radius:10px !important;
+
+  background:#f5f7fa !important;
+  color:#657188 !important;
+
+  cursor:pointer !important;
+
+  transition:.18s ease !important;
+}
+
+.hf-notifications-head>button:hover{
+  background:#edf1f6 !important;
+  color:#172033 !important;
+}
+
+.hf-notifications-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 14px;
+  border-bottom:1px solid #edf0f4;
+  background:#fff;
+}
+
+.hf-notification-tabs{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.hf-notification-tabs button{
+  border:0;
+  background:transparent;
+  color:#8994a7;
+  padding:7px 10px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.hf-notification-tabs button:hover{
+  background:#f5f7fb;
+  color:#465268;
+}
+
+.hf-notification-tabs button.active{
+  background:#eef3ff;
+  color:#315efb;
+}
+
+.hf-notification-tabs button span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:17px;
+  height:17px;
+  margin-left:5px;
+  padding:0 4px;
+  border-radius:9px;
+  background:#315efb;
+  color:#fff;
+  font-size:9px;
+}
+
+.hf-notifications-clear{
+  border:0;
+  background:transparent;
+  color:#a04b4b;
+  font-size:10px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.hf-notifications-clear:hover{
+  color:#d74747;
+  text-decoration:underline;
+}
+
+.hf-notification-item.read{
+  opacity:.72;
+}
+
+.hf-notification-item.unread{
+  background:#fbfcff !important;
+}
+
+.hf-notification-unread-dot{
+  width:7px;
+  height:7px;
+  min-width:7px;
+  border-radius:50%;
+  background:#315efb;
+}
+
+@media(max-width:600px){
+
+  .hf-notifications-toolbar{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .hf-notification-tabs{
+    width:100%;
+  }
+
+  .hf-notification-tabs button{
+    flex:1;
+  }
+
+  .hf-notifications-clear{
+    align-self:flex-end;
+  }
+
+}
+.hf-notifications-list{
+  flex:1 !important;
+  overflow-y:auto !important;
+
+  padding:8px !important;
+
+  background:#fbfcfe !important;
+}
+
+.hf-notification-item{
+  width:100% !important;
+
+  display:flex !important;
+  align-items:center !important;
+  gap:12px !important;
+
+  padding:14px !important;
+  margin:0 !important;
+
+  border:0 !important;
+  border-bottom:1px solid #edf0f4 !important;
+
+  background:#fff !important;
+
+  text-align:left !important;
+  cursor:pointer !important;
+
+  transition:.16s ease !important;
+}
+
+.hf-notification-item:first-child{
+  border-radius:12px 12px 0 0 !important;
+}
+
+.hf-notification-item:last-child{
+  border-bottom:0 !important;
+  border-radius:0 0 12px 12px !important;
+}
+
+.hf-notification-item:hover{
+  background:#f7f9fc !important;
+}
+
+.hf-notification-item-icon{
+  width:38px !important;
+  height:38px !important;
+  min-width:38px !important;
+
+  display:grid !important;
+  place-items:center !important;
+
+  border-radius:11px !important;
+
+  background:#eef3ff !important;
+  color:#315efb !important;
+}
+
+.hf-notification-item.approval .hf-notification-item-icon{
+  background:#fff6df !important;
+  color:#c58a00 !important;
+}
+
+.hf-notification-item.assigned .hf-notification-item-icon{
+  background:#eef3ff !important;
+  color:#315efb !important;
+}
+
+.hf-notification-item.deadline .hf-notification-item-icon{
+  background:#fff0f0 !important;
+  color:#d74747 !important;
+}
+
+.hf-notification-item.info .hf-notification-item-icon{
+  background:#edf8f2 !important;
+  color:#199653 !important;
+}
+
+.hf-notification-item-content{
+  min-width:0 !important;
+  flex:1 !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  gap:4px !important;
+}
+
+.hf-notification-item-content strong{
+  color:#202b3f !important;
+  font-size:12px !important;
+  font-weight:750 !important;
+  line-height:1.35 !important;
+}
+
+.hf-notification-item-content span{
+  color:#8994a7 !important;
+  font-size:11px !important;
+  line-height:1.4 !important;
+}
+
+.hf-notification-arrow{
+  flex:none !important;
+
+  color:#a1aabb !important;
+  font-size:17px !important;
+
+  transition:.16s ease !important;
+}
+
+.hf-notification-item:hover .hf-notification-arrow{
+  color:#315efb !important;
+  transform:translateX(2px) !important;
+}
+
+.hf-notifications-empty{
+  min-height:260px !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  gap:8px !important;
+
+  color:#8994a7 !important;
+}
+
+.hf-notifications-empty svg{
+  color:#b1bac8 !important;
+  margin-bottom:4px !important;
+}
+
+.hf-notifications-empty strong{
+  color:#465268 !important;
+  font-size:13px !important;
+}
+
+.hf-notifications-empty span{
+  font-size:11px !important;
+}
+
+@media(max-width:600px){
+
+  .hf-notifications-modal{
+    width:calc(100vw - 20px) !important;
+    max-height:calc(100vh - 20px) !important;
+    border-radius:16px !important;
+  }
+
+  .hf-notifications-head{
+    padding:17px !important;
+  }
+
+  .hf-notifications-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 14px;
+  border-bottom:1px solid #edf0f4;
+  background:#fff;
+}
+
+.hf-notification-tabs{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.hf-notification-tabs button{
+  border:0;
+  background:transparent;
+  color:#8994a7;
+  padding:7px 10px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.hf-notification-tabs button:hover{
+  background:#f5f7fb;
+  color:#465268;
+}
+
+.hf-notification-tabs button.active{
+  background:#eef3ff;
+  color:#315efb;
+}
+
+.hf-notification-tabs button span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:17px;
+  height:17px;
+  margin-left:5px;
+  padding:0 4px;
+  border-radius:9px;
+  background:#315efb;
+  color:#fff;
+  font-size:9px;
+}
+
+.hf-notifications-clear{
+  border:0;
+  background:transparent;
+  color:#a04b4b;
+  font-size:10px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.hf-notifications-clear:hover{
+  color:#d74747;
+  text-decoration:underline;
+}
+
+.hf-notification-item.read{
+  opacity:.72;
+}
+
+.hf-notification-item.unread{
+  background:#fbfcff !important;
+}
+
+.hf-notification-unread-dot{
+  width:7px;
+  height:7px;
+  min-width:7px;
+  border-radius:50%;
+  background:#315efb;
+}
+
+@media(max-width:600px){
+
+  .hf-notifications-toolbar{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .hf-notification-tabs{
+    width:100%;
+  }
+
+  .hf-notification-tabs button{
+    flex:1;
+  }
+
+  .hf-notifications-clear{
+    align-self:flex-end;
+  }
+
+}
+.hf-notifications-list{
+    padding:6px !important;
+  }
+
+  .hf-notification-item{
+    padding:12px !important;
+  }
+
+}
 
 .hf-filters-clean {
   display: flex !important;
@@ -5535,6 +6653,30 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
