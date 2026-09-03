@@ -682,6 +682,9 @@ Responda diretamente à pergunta do usuário.
         isSuccess: false,
         message:
           'Não foi possível analisar os dados do Saphire Sheet no momento.',
+        error: error?.message || 'Erro desconhecido.',
+        code: error?.code || null,
+        sqlMessage: error?.sqlMessage || null,
       });
     }
   }
