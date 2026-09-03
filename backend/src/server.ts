@@ -171,8 +171,18 @@ app.post(
 
             COALESCE(
               SUM(
-                COALESCE(d.analysis_hours, 0) +
-                COALESCE(d.required_hours, 0)
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
               ),
               0
             ) AS totalHours,
@@ -265,8 +275,18 @@ app.post(
 
             COALESCE(
               SUM(
-                COALESCE(d.analysis_hours, 0) +
-                COALESCE(d.required_hours, 0)
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
               ),
               0
             ) AS totalHours,
