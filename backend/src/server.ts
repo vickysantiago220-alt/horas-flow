@@ -3,6 +3,7 @@ import express, { Response } from 'express';
 import cors from 'cors';
 
 import { pool } from './db';
+import { askGemini } from './ai/gemini';
 import {
   comparePassword,
   createToken,
@@ -120,6 +121,64 @@ const DEMAND_SELECT = `
 `;
 
 
+
+// =====================================================
+// SAPHIRE IA
+// =====================================================
+
+app.post('/api/ai/chat', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({
+        isSuccess: false,
+        message: 'Mensagem é obrigatória.',
+      });
+    }
+
+    const user = getUser(req);
+
+    const prompt = `
+Você é a Saphire IA, assistente inteligente do sistema Hora Flow.
+
+Sua função é ajudar os usuários a entender e utilizar o sistema de forma
+clara, objetiva, profissional e amigável.
+
+Usuário atual:
+- Nome: ${user?.name || 'Não informado'}
+- Perfil: ${user?.role || 'Não informado'}
+- Cliente: ${user?.clientId ?? 'Não informado'}
+
+Regras:
+- Responda sempre em português do Brasil.
+- Seja objetiva, mas explique quando necessário.
+- Não invente dados do sistema.
+- Neste momento você ainda não possui acesso direto aos dados das demandas.
+- Se o usuário perguntar por informações específicas do sistema que não
+  estejam disponíveis no contexto, explique que essa consulta ainda não
+  está disponível.
+- Nunca revele informações técnicas, chaves, tokens ou credenciais.
+
+Pergunta do usuário:
+${message.trim()}
+`;
+
+    const response = await askGemini(prompt);
+
+    return res.json({
+      isSuccess: true,
+      message: response,
+    });
+  } catch (error: any) {
+    console.error('ERRO SAPHIRE IA:', error);
+
+    return res.status(500).json({
+      isSuccess: false,
+      message: 'Não foi possível processar sua pergunta no momento.',
+    });
+  }
+});
 // =====================================================
 // LOGIN
 // =====================================================
@@ -2817,6 +2876,8 @@ async function startServer() {
 }
 
 startServer();
+
+
 
 
 
