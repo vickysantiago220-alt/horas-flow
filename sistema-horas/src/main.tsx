@@ -1762,17 +1762,6 @@ const dashboardDemands=useMemo(()=>{
   <kbd>Ctrl K</kbd>
 </button><button
   type="button"
-  className="hf-saphire-ia-trigger" style={{position:"fixed",left:24,bottom:105,width:62,height:62,minWidth:62,maxWidth:62,padding:4,borderRadius:"50%",display:"grid",placeItems:"center",overflow:"visible",color:"transparent",fontSize:0}}
-  onClick={()=>setSaphireIaOpen(true)}
-  title="Saphire IA"
-  aria-label="Abrir Saphire IA"
->
-  <span className="hf-saphire-ia-trigger-gem">
-    <SaphireGem size={21}/>
-  </span>
-  
-</button><button
-  type="button"
   className="hf-notification-trigger"
   onClick={()=>setNotificationsOpen(true)}
   title="Notificações"
@@ -1787,6 +1776,17 @@ const dashboardDemands=useMemo(()=>{
 </button>
 <div className="hf-top-avatar">{user.name.slice(0,1).toUpperCase()}</div></div>
       </header>
+      <button
+        type="button"
+        className="hf-saphire-ia-trigger" style={{position:"fixed",left:"auto",right:28,bottom:24,width:68,height:68,minWidth:68,maxWidth:68,padding:4,borderRadius:"50%",display:"grid",placeItems:"center",overflow:"visible",color:"transparent",fontSize:0}}
+        onClick={()=>setSaphireIaOpen(true)}
+        title="Saphire IA"
+        aria-label="Abrir Saphire IA"
+      >
+        <span className="hf-saphire-ia-trigger-gem">
+          <SaphireGem size={21}/>
+        </span>
+      </button>
 
       {apiError&&<div className="hf-alert"><AlertCircle size={18}/><span>{apiError}</span><button onClick={()=>{setApiError('');loadDemands();loadClients()}}><RefreshCw size={16}/></button></div>}
 
@@ -8202,6 +8202,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
