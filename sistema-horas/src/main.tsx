@@ -159,6 +159,7 @@ const formatPeriod = (period:string) => {
   const [mobileMenu,setMobileMenu]=useState(false);
   const [commandCenterOpen,setCommandCenterOpen]=useState(false);
 const [notificationsOpen,setNotificationsOpen]=useState(false);
+  const [saphireIaOpen,setSaphireIaOpen]=useState(false);
   const [commandSearch,setCommandSearch]=useState('');
   useEffect(()=>{
     const handleCommandShortcut=(e:KeyboardEvent)=>{
@@ -1761,6 +1762,17 @@ const dashboardDemands=useMemo(()=>{
   <kbd>Ctrl K</kbd>
 </button><button
   type="button"
+  className="hf-saphire-ia-trigger"
+  onClick={()=>setSaphireIaOpen(true)}
+  title="Saphire IA"
+  aria-label="Abrir Saphire IA"
+>
+  <span className="hf-saphire-ia-trigger-gem">
+    <SaphireGem size={21}/>
+  </span>
+  <span className="hf-saphire-ia-label">Saphire IA</span>
+</button><button
+  type="button"
   className="hf-notification-trigger"
   onClick={()=>setNotificationsOpen(true)}
   title="Notificações"
@@ -2905,7 +2917,10 @@ const proximas = minhasDemandas
     {historyDemand&&<HistoryModal demand={historyDemand} loading={historyLoading} close={()=>setHistoryDemand(null)}/>}
     {userModal&&<UserModal value={newUser} setValue={setNewUser} clients={clients} error={userError} saving={userSaving} close={closeUserModal} save={saveUser}/>}
     {clientModal&&<ClientModal value={clientForm} setValue={setClientForm} editing={editingClient} error={clientError} saving={clientSaving} close={()=>setClientModal(false)} save={saveClient}/>}
-    {notificationsOpen&&<NotificationsModal
+    {saphireIaOpen&&<SaphireIAModal
+      user={user}
+      close={()=>setSaphireIaOpen(false)}
+    />}    {notificationsOpen&&<NotificationsModal
       notifications={notifications}
       close={()=>setNotificationsOpen(false)}
       openDemand={openEditDemand}
@@ -3691,7 +3706,680 @@ function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loadi
   </div></div>
 }
 
+function SaphireGem({size=52}:{size?:number}){
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="saphireGemMain" x1="12" y1="8" x2="52" y2="58" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8FB4FF"/>
+          <stop offset=".38" stopColor="#315EFB"/>
+          <stop offset="1" stopColor="#102F91"/>
+        </linearGradient>
+        <linearGradient id="saphireGemLight" x1="17" y1="11" x2="37" y2="38" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#DDE9FF"/>
+          <stop offset="1" stopColor="#6F98FF"/>
+        </linearGradient>
+      </defs>
+
+      <path
+        d="M16 9h32l11 14-27 33L5 23 16 9Z"
+        fill="url(#saphireGemMain)"
+      />
+
+      <path
+        d="M16 9 5 23h16l6-14H16Z"
+        fill="url(#saphireGemLight)"
+        opacity=".9"
+      />
+
+      <path
+        d="m27 9-6 14h20L37 9H27Z"
+        fill="#4F7CFF"
+        opacity=".72"
+      />
+
+      <path
+        d="M16 9 5 23l16 0M48 9l11 14-16 0M27 9l-6 14h20L37 9"
+        stroke="rgba(255,255,255,.55)"
+        strokeWidth="1"
+      />
+
+      <path
+        d="M21 23 32 56 43 23H21Z"
+        fill="#173C9E"
+        opacity=".32"
+      />
+
+      <path
+        d="M5 23h54L32 56 5 23Z"
+        stroke="rgba(255,255,255,.35)"
+        strokeWidth="1"
+      />
+    </svg>
+  );
+}
+
+function renderSaphireText(text:string){
+  const lines=text.split(/\r?\n/);
+
+  return lines.map((line,index)=>{
+    const trimmed=line.trim();
+
+    if(!trimmed){
+      return <div key={index} style={{height:8}} />;
+    }
+
+    const renderInline=(value:string)=>{
+      const parts=value.split(/(\*\*[^*]+\*\*)/g);
+
+      return parts.map((part,partIndex)=>{
+        if(part.startsWith('**') && part.endsWith('**')){
+          return (
+            <strong key={partIndex}>
+              {part.slice(2,-2)}
+            </strong>
+          );
+        }
+
+        return <span key={partIndex}>{part}</span>;
+      });
+    };
+
+    if(trimmed.startsWith('## ')){
+      return (
+        <div
+          key={index}
+          style={{
+            fontWeight:700,
+            fontSize:14,
+            marginTop:index===0 ? 0 : 10,
+            marginBottom:5
+          }}
+        >
+          {renderInline(trimmed.slice(3))}
+        </div>
+      );
+    }
+
+    if(trimmed.startsWith('- ')){
+      return (
+        <div
+          key={index}
+          style={{
+            display:'flex',
+            gap:7,
+            marginBottom:4
+          }}
+        >
+          <span>•</span>
+          <span>{renderInline(trimmed.slice(2))}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div key={index} style={{marginBottom:4}}>
+        {renderInline(line)}
+      </div>
+    );
+  });
+}
+function SaphireIAModal({
+  user,
+  close
+}:{
+  user:any;
+  close:()=>void;
+}){
+  const [message,setMessage]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [messages,setMessages]=useState<Array<{role:'assistant'|'user';text:string}>>([]);
+
+  const firstName=String(user?.name||'usuário').split(' ')[0];
+
+  const suggestions=[
+    'O que está atrasado?',
+    'O que vence essa semana?',
+    'O que precisa da minha atenção?',
+    'Como está a operação?'
+  ];
+
+  const sendMessage=async(text?:string)=>{
+    const value=(text ?? message).trim();
+
+    if(!value || loading) return;
+
+    setMessage('');
+    setMessages(prev=>[
+      ...prev,
+      {role:'user',text:value}
+    ]);
+
+    setLoading(true);
+
+    try{
+      const token=localStorage.getItem('horaflow-token');
+
+      if(!token){
+        throw new Error('Sua sessão expirou. Faça login novamente.');
+      }
+
+      const response=await fetch(`${API}/ai/chat`,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':`Bearer ${token}`
+        },
+        body:JSON.stringify({
+          message:value
+        })
+      });
+
+      const data=await response.json().catch(()=>({
+        isSuccess:false,
+        message:'Resposta inválida do servidor.'
+      }));
+
+      if(!response.ok || data.isSuccess===false){
+        throw new Error(data.message || 'Não foi possível obter uma resposta da Saphire IA.');
+      }
+
+      setMessages(prev=>[
+        ...prev,
+        {
+          role:'assistant',
+          text:data.message || 'Não consegui gerar uma resposta no momento.'
+        }
+      ]);
+    }catch(error:any){
+      setMessages(prev=>[
+        ...prev,
+        {
+          role:'assistant',
+          text:error?.message || 'Não foi possível conectar à Saphire IA. Tente novamente.'
+        }
+      ]);
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="hf-saphire-ia-overlay" onMouseDown={e=>{
+      if(e.target===e.currentTarget) close();
+    }}>
+      <aside className="hf-saphire-ia-panel">
+        <div className="hf-saphire-ia-head">
+          <div className="hf-saphire-ia-brand">
+            <div className="hf-saphire-ia-gem">
+              <SaphireGem size={34}/>
+            </div>
+
+            <div>
+              <strong>Saphire IA</strong>
+              <span>Seu assistente de gestão</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="hf-saphire-ia-close"
+            onClick={close}
+            aria-label="Fechar Saphire IA"
+          >
+            <X size={18}/>
+          </button>
+        </div>
+
+        <div className="hf-saphire-ia-body">
+          {messages.length===0 ? (
+            <>
+              <div className="hf-saphire-ia-welcome">
+                <div className="hf-saphire-ia-welcome-gem">
+                  <SaphireGem size={58}/>
+                </div>
+
+                <h2>Olá, {firstName}! 👋</h2>
+
+                <p>
+                  Eu sou a Saphire IA. Posso ajudar você a
+                  entender a operação e decidir o próximo passo.
+                </p>
+              </div>
+
+              <div className="hf-saphire-ia-question">
+                <span>O que você precisa resolver?</span>
+              </div>
+
+              <div className="hf-saphire-ia-suggestions">
+                {suggestions.map(item=>(
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={()=>sendMessage(item)}
+                  >
+                    {item}
+                    <span>→</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="hf-saphire-ia-messages">
+              <div className="hf-saphire-ia-welcome-mini">
+                <SaphireGem size={30}/>
+                <span>Saphire IA</span>
+              </div>
+
+              {messages.map((item,index)=>(
+                <div
+                  key={index}
+                  className={`hf-saphire-ia-message ${item.role}`}
+                >
+                  {renderSaphireText(item.text)}
+                </div>
+              ))}
+
+              {loading && (
+                <div className="hf-saphire-ia-message assistant loading">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="hf-saphire-ia-footer">
+          <div className="hf-saphire-ia-input">
+            <input
+              value={message}
+              onChange={e=>setMessage(e.target.value)}
+              onKeyDown={e=>{
+                if(e.key==='Enter') sendMessage();
+              }}
+              placeholder="Digite uma pergunta..."
+              aria-label="Pergunte à Saphire IA"
+            />
+
+            <button
+              type="button"
+              onClick={()=>sendMessage()}
+              disabled={!message.trim() || loading}
+              aria-label="Enviar pergunta"
+            >
+              →
+            </button>
+          </div>
+
+          <small>
+            Saphire IA • assistente inteligente
+          </small>
+        </div>
+      </aside>
+    </div>
+  );
+}
 const styles = `
+/* =====================================================
+   SAPHIRE IA — ASSISTENTE
+   ===================================================== */
+
+.hf-saphire-ia-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(7,16,29,.28);
+  z-index:300;
+  animation:hfSaphireOverlayIn .18s ease;
+}
+
+.hf-saphire-ia-panel{
+  position:absolute;
+  top:0;
+  right:0;
+  width:min(440px,100vw);
+  height:100%;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  box-shadow:-18px 0 55px rgba(7,16,29,.16);
+  animation:hfSaphirePanelIn .24s cubic-bezier(.22,.8,.28,1);
+}
+
+.hf-saphire-ia-head{
+  min-height:76px;
+  padding:0 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  border-bottom:1px solid #edf0f5;
+  background:linear-gradient(180deg,#fff 0%,#fbfcff 100%);
+}
+
+.hf-saphire-ia-brand{
+  display:flex;
+  align-items:center;
+  gap:11px;
+}
+
+.hf-saphire-ia-gem{
+  width:42px;
+  height:42px;
+  border-radius:13px;
+  display:grid;
+  place-items:center;
+  background:#eef3ff;
+  box-shadow:inset 0 0 0 1px #dfe7ff;
+}
+
+.hf-saphire-ia-brand strong{
+  display:block;
+  color:#172033;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:-.2px;
+}
+
+.hf-saphire-ia-brand span{
+  display:block;
+  margin-top:3px;
+  color:#8994a7;
+  font-size:10px;
+}
+
+.hf-saphire-ia-close{
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:9px;
+  background:#f3f5f8;
+  color:#68758a;
+  display:grid;
+  place-items:center;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-close:hover{
+  background:#edf2ff;
+  color:#315efb;
+  transform:rotate(3deg);
+}
+
+.hf-saphire-ia-body{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding:28px 22px;
+}
+
+.hf-saphire-ia-welcome{
+  text-align:center;
+  padding:12px 20px 28px;
+}
+
+.hf-saphire-ia-welcome-gem{
+  width:86px;
+  height:86px;
+  margin:0 auto 17px;
+  border-radius:25px;
+  display:grid;
+  place-items:center;
+  background:radial-gradient(circle at 35% 25%,#fff 0%,#edf3ff 35%,#dce7ff 100%);
+  box-shadow:
+    0 12px 30px rgba(49,94,251,.12),
+    inset 0 0 0 1px #e0e8ff;
+  animation:hfSaphireGemPulse 3.2s ease-in-out infinite;
+}
+
+.hf-saphire-ia-welcome h2{
+  margin:0 0 8px;
+  color:#1c2940;
+  font-size:20px;
+  letter-spacing:-.35px;
+}
+
+.hf-saphire-ia-welcome p{
+  max-width:330px;
+  margin:0 auto;
+  color:#7d899b;
+  font-size:12px;
+  line-height:1.65;
+}
+
+.hf-saphire-ia-question{
+  margin-bottom:10px;
+  color:#566176;
+  font-size:11px;
+  font-weight:800;
+}
+
+.hf-saphire-ia-suggestions{
+  display:grid;
+  gap:8px;
+}
+
+.hf-saphire-ia-suggestions button{
+  width:100%;
+  min-height:48px;
+  padding:0 13px;
+  border:1px solid #e2e7ef;
+  border-radius:11px;
+  background:#fff;
+  color:#344158;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  text-align:left;
+  font-size:11px;
+  font-weight:700;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-suggestions button span{
+  color:#9aa5b6;
+  font-size:16px;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-suggestions button:hover{
+  border-color:#cbd8ff;
+  background:#f8faff;
+  color:#315efb;
+  transform:translateX(-2px);
+  box-shadow:0 5px 16px rgba(49,94,251,.07);
+}
+
+.hf-saphire-ia-suggestions button:hover span{
+  color:#315efb;
+  transform:translateX(3px);
+}
+
+.hf-saphire-ia-footer{
+  padding:14px 18px 17px;
+  border-top:1px solid #edf0f5;
+  background:#fff;
+}
+
+.hf-saphire-ia-input{
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:4px 5px 4px 13px;
+  border:1px solid #dfe5ee;
+  border-radius:13px;
+  background:#fbfcfe;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-input:focus-within{
+  border-color:#9eb4ff;
+  background:#fff;
+  box-shadow:0 0 0 4px rgba(49,94,251,.08);
+}
+
+.hf-saphire-ia-input input{
+  flex:1;
+  min-width:0;
+  height:36px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#172033;
+  font-size:12px;
+}
+
+.hf-saphire-ia-input input::placeholder{
+  color:#a0a9b7;
+}
+
+.hf-saphire-ia-input button{
+  width:36px;
+  height:36px;
+  flex:none;
+  border:0;
+  border-radius:10px;
+  background:#315efb;
+  color:#fff;
+  font-size:18px;
+  display:grid;
+  place-items:center;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-input button:hover:not(:disabled){
+  background:#244bd7;
+  transform:translateY(-1px);
+}
+
+.hf-saphire-ia-input button:disabled{
+  background:#dfe5ee;
+  color:#9aa5b6;
+}
+
+.hf-saphire-ia-footer small{
+  display:block;
+  margin-top:8px;
+  color:#a0a9b7;
+  font-size:9px;
+  text-align:center;
+}
+
+.hf-saphire-ia-messages{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.hf-saphire-ia-welcome-mini{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#536077;
+  font-size:11px;
+  font-weight:800;
+  margin-bottom:8px;
+}
+
+.hf-saphire-ia-message{
+  max-width:88%;
+  padding:11px 13px;
+  border-radius:13px;
+  font-size:11px;
+  line-height:1.55;
+}
+
+.hf-saphire-ia-message.user{
+  align-self:flex-end;
+  background:#315efb;
+  color:#fff;
+  border-bottom-right-radius:4px;
+}
+
+.hf-saphire-ia-message.assistant{
+  align-self:flex-start;
+  background:#f3f6fa;
+  color:#46536a;
+  border-bottom-left-radius:4px;
+}
+
+.hf-saphire-ia-message.loading{
+  display:flex;
+  gap:4px;
+  align-items:center;
+  min-width:46px;
+}
+
+.hf-saphire-ia-message.loading span{
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:#7f91b5;
+  animation:hfSaphireTyping 1s infinite ease-in-out;
+}
+
+.hf-saphire-ia-message.loading span:nth-child(2){
+  animation-delay:.15s;
+}
+
+.hf-saphire-ia-message.loading span:nth-child(3){
+  animation-delay:.3s;
+}
+
+@keyframes hfSaphireOverlayIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+@keyframes hfSaphirePanelIn{
+  from{
+    transform:translateX(100%);
+  }
+  to{
+    transform:translateX(0);
+  }
+}
+
+@keyframes hfSaphireGemPulse{
+  0%,100%{
+    transform:translateY(0);
+    box-shadow:0 12px 30px rgba(49,94,251,.12),inset 0 0 0 1px #e0e8ff;
+  }
+  50%{
+    transform:translateY(-3px);
+    box-shadow:0 17px 34px rgba(49,94,251,.18),inset 0 0 0 1px #d2deff;
+  }
+}
+
+@keyframes hfSaphireTyping{
+  0%,60%,100%{transform:translateY(0);opacity:.45}
+  30%{transform:translateY(-3px);opacity:1}
+}
+
+@media(max-width:600px){
+  .hf-saphire-ia-panel{
+    width:100vw;
+  }
+
+  .hf-saphire-ia-body{
+    padding:24px 18px;
+  }
+
+  .hf-saphire-ia-welcome{
+    padding-left:10px;
+    padding-right:10px;
+  }
+}
+
 /* SAPHIRE VIEW SWITCHER MODERN */
 .hf-view-switcher{display:inline-flex!important;align-items:center!important;gap:3px!important;padding:4px!important;margin:0!important;background:#f5f7fb!important;border:1px solid #e4e9f1!important;border-radius:12px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 2px 8px rgba(15,23,42,.04)!important}.hf-view-switcher button{appearance:none!important;-webkit-appearance:none!important;height:34px!important;min-width:82px!important;padding:0 12px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#7b8799!important;font-family:inherit!important;font-size:11px!important;font-weight:700!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;cursor:pointer!important;outline:none!important;box-shadow:none!important;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .15s ease!important}.hf-view-switcher button span{font-size:13px!important;line-height:1!important;opacity:.85!important}.hf-view-switcher button:hover{background:#edf2ff!important;color:#315efb!important;transform:translateY(-1px)!important}.hf-view-switcher button.active{background:#fff!important;color:#315efb!important;box-shadow:0 2px 7px rgba(15,23,42,.10),0 1px 2px rgba(15,23,42,.04)!important}.hf-view-switcher button.active span{opacity:1!important}.hf-view-switcher button:active{transform:scale(.97)!important}.hf-view-switcher button:focus-visible{box-shadow:0 0 0 3px rgba(49,94,251,.14)!important}@media(max-width:650px){.hf-view-switcher{width:100%!important}.hf-view-switcher button{flex:1!important;min-width:0!important}}
 
@@ -4168,6 +4856,89 @@ const styles = `
    COMMAND CENTER - BOTÃO DE BUSCA RÁPIDA
    ===================================================== */
 
+.hf-saphire-ia-trigger{
+  height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:0 13px 0 9px;
+  border:1px solid #d9e2f7;
+  border-radius:11px;
+  background:linear-gradient(180deg,#ffffff 0%,#f7f9ff 100%);
+  color:#263858;
+  font-family:inherit;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:-.1px;
+  cursor:pointer;
+  box-shadow:
+    0 2px 7px rgba(49,94,251,.06),
+    inset 0 1px 0 rgba(255,255,255,.9);
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    background .18s ease,
+    box-shadow .18s ease;
+}
+
+.hf-saphire-ia-trigger-gem{
+  width:27px;
+  height:27px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  background:linear-gradient(145deg,#eef3ff,#e2ebff);
+  box-shadow:
+    inset 0 0 0 1px #d6e1ff,
+    0 2px 7px rgba(49,94,251,.08);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+
+.hf-saphire-ia-trigger:hover{
+  transform:translateY(-1px);
+  border-color:#b9c9f2;
+  background:linear-gradient(180deg,#ffffff 0%,#f1f5ff 100%);
+  color:#315efb;
+  box-shadow:
+    0 6px 16px rgba(49,94,251,.10),
+    inset 0 1px 0 rgba(255,255,255,.95);
+}
+
+.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
+  transform:translateY(-1px) rotate(-2deg);
+  box-shadow:
+    inset 0 0 0 1px #cbd9ff,
+    0 5px 12px rgba(49,94,251,.14);
+}
+
+.hf-saphire-ia-trigger:active{
+  transform:scale(.97);
+}
+
+.hf-saphire-ia-trigger:focus-visible{
+  outline:none;
+  border-color:#315efb;
+  box-shadow:
+    0 0 0 3px rgba(49,94,251,.12),
+    0 4px 12px rgba(49,94,251,.08);
+}
+
+.hf-saphire-ia-label{
+  white-space:nowrap;
+}
+
+@media(max-width:600px){
+  .hf-saphire-ia-trigger{
+    width:40px;
+    padding:0;
+    gap:0;
+  }
+
+  .hf-saphire-ia-label{
+    display:none;
+  }
+}
 .hf-command-trigger{
   height:40px;
   display:inline-flex;
@@ -4232,7 +5003,90 @@ const styles = `
 }
 
 @media(max-width:600px){
-  .hf-command-trigger{
+  .hf-saphire-ia-trigger{
+  height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:0 13px 0 9px;
+  border:1px solid #d9e2f7;
+  border-radius:11px;
+  background:linear-gradient(180deg,#ffffff 0%,#f7f9ff 100%);
+  color:#263858;
+  font-family:inherit;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:-.1px;
+  cursor:pointer;
+  box-shadow:
+    0 2px 7px rgba(49,94,251,.06),
+    inset 0 1px 0 rgba(255,255,255,.9);
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    background .18s ease,
+    box-shadow .18s ease;
+}
+
+.hf-saphire-ia-trigger-gem{
+  width:27px;
+  height:27px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  background:linear-gradient(145deg,#eef3ff,#e2ebff);
+  box-shadow:
+    inset 0 0 0 1px #d6e1ff,
+    0 2px 7px rgba(49,94,251,.08);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+
+.hf-saphire-ia-trigger:hover{
+  transform:translateY(-1px);
+  border-color:#b9c9f2;
+  background:linear-gradient(180deg,#ffffff 0%,#f1f5ff 100%);
+  color:#315efb;
+  box-shadow:
+    0 6px 16px rgba(49,94,251,.10),
+    inset 0 1px 0 rgba(255,255,255,.95);
+}
+
+.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
+  transform:translateY(-1px) rotate(-2deg);
+  box-shadow:
+    inset 0 0 0 1px #cbd9ff,
+    0 5px 12px rgba(49,94,251,.14);
+}
+
+.hf-saphire-ia-trigger:active{
+  transform:scale(.97);
+}
+
+.hf-saphire-ia-trigger:focus-visible{
+  outline:none;
+  border-color:#315efb;
+  box-shadow:
+    0 0 0 3px rgba(49,94,251,.12),
+    0 4px 12px rgba(49,94,251,.08);
+}
+
+.hf-saphire-ia-label{
+  white-space:nowrap;
+}
+
+@media(max-width:600px){
+  .hf-saphire-ia-trigger{
+    width:40px;
+    padding:0;
+    gap:0;
+  }
+
+  .hf-saphire-ia-label{
+    display:none;
+  }
+}
+.hf-command-trigger{
     width:40px;
     padding:0;
     justify-content:center;
@@ -6876,6 +7730,16 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
 
 
 
