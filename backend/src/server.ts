@@ -263,11 +263,15 @@ app.post(
           `
           SELECT
             DATE_FORMAT(
-              COALESCE(
-                d.analysis_month,
-                d.request_date,
-                d.delivery_date
-              ),
+              CASE
+                WHEN d.status = 'Analisada'
+                  THEN d.analysis_month
+
+                WHEN d.status = 'Concluída'
+                  THEN d.delivery_date
+
+                ELSE d.request_date
+              END,
               '%Y-%m'
             ) AS month,
 
@@ -319,19 +323,27 @@ app.post(
           ${
             scopeWhere ? 'AND' : 'WHERE'
           }
-          COALESCE(
-            d.analysis_month,
-            d.request_date,
-            d.delivery_date
-          ) IS NOT NULL
+          CASE
+                WHEN d.status = 'Analisada'
+                  THEN d.analysis_month
+
+                WHEN d.status = 'Concluída'
+                  THEN d.delivery_date
+
+                ELSE d.request_date
+              END IS NOT NULL
 
           GROUP BY
             DATE_FORMAT(
-              COALESCE(
-                d.analysis_month,
-                d.request_date,
-                d.delivery_date
-              ),
+              CASE
+                WHEN d.status = 'Analisada'
+                  THEN d.analysis_month
+
+                WHEN d.status = 'Concluída'
+                  THEN d.delivery_date
+
+                ELSE d.request_date
+              END,
               '%Y-%m'
             )
 
@@ -357,8 +369,18 @@ app.post(
 
             COALESCE(
               SUM(
-                COALESCE(d.analysis_hours, 0) +
-                COALESCE(d.required_hours, 0)
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
               ),
               0
             ) AS totalHours
@@ -396,8 +418,18 @@ app.post(
 
             COALESCE(
               SUM(
-                COALESCE(d.analysis_hours, 0) +
-                COALESCE(d.required_hours, 0)
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
               ),
               0
             ) AS totalHours
@@ -432,8 +464,18 @@ app.post(
 
             COALESCE(
               SUM(
-                COALESCE(d.analysis_hours, 0) +
-                COALESCE(d.required_hours, 0)
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
               ),
               0
             ) AS totalHours
@@ -648,10 +690,22 @@ REGRAS:
 
 INTERPRETAÇÃO DAS HORAS:
 
-analysisHours = horas de análise.
-requiredHours = horas necessárias.
-totalHours = analysisHours + requiredHours.
-finishedHours = horas de demandas concluídas.
+- Para uma demanda com status "Analisada":
+  totalHours considera somente analysis_hours.
+
+- Para uma demanda com status "Concluída":
+  totalHours considera analysis_hours + required_hours.
+
+- Para qualquer outro status:
+  totalHours considera 0 horas.
+
+- O total geral é a soma das horas das demandas "Analisada" e "Concluída".
+
+- Uma demanda "Analisada" pertence ao período definido por analysis_month.
+
+- Uma demanda "Concluída" pertence ao período definido por delivery_date.
+
+- Nunca considere required_hours de demandas que não estejam com status "Concluída".
 
 DADOS REAIS:
 
@@ -682,9 +736,7 @@ Responda diretamente à pergunta do usuário.
         isSuccess: false,
         message:
           'Não foi possível analisar os dados do Saphire Sheet no momento.',
-        error: error?.message || 'Erro desconhecido.',
-        code: error?.code || null,
-        sqlMessage: error?.sqlMessage || null,
+
       });
     }
   }
@@ -3385,26 +3437,3 @@ async function startServer() {
 }
 
 startServer();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
