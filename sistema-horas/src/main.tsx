@@ -2920,6 +2920,8 @@ const proximas = minhasDemandas
     {saphireIaOpen&&<SaphireIAModal
       user={user}
       close={()=>setSaphireIaOpen(false)}
+      clientId={dashboardClientFilter}
+      period={dashboardPeriod}
     />}    {notificationsOpen&&<NotificationsModal
       notifications={notifications}
       close={()=>setNotificationsOpen(false)}
@@ -3832,10 +3834,14 @@ function renderSaphireText(text:string){
 }
 function SaphireIAModal({
   user,
-  close
+  close,
+  clientId,
+  period
 }:{
   user:any;
   close:()=>void;
+  clientId:string;
+  period:string;
 }){
   const [message,setMessage]=useState('');
   const [loading,setLoading]=useState(false);
@@ -3877,7 +3883,9 @@ function SaphireIAModal({
           'Authorization':`Bearer ${token}`
         },
         body:JSON.stringify({
-          message:value
+          message:value,
+          clientId:clientId !== 'Todos' ? clientId : null,
+          period:period !== 'Todos' ? period : null
         })
       });
 
@@ -7730,6 +7738,7 @@ const styles = `
   }
 }
 `
+
 
 
 

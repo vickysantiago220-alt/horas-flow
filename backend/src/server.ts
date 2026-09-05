@@ -134,7 +134,7 @@ app.post(
     res: Response
   ) => {
     try {
-      const { message } = req.body;
+      const { message, clientId: requestedClientId, period: requestedPeriod } = req.body;
 
       if (
         !message ||
@@ -149,15 +149,34 @@ app.post(
 
       const user = getUser(req);
 
-      const scopeWhere =
-        user?.role === 'CLIENTE'
-          ? 'WHERE d.client_id = ?'
-          : '';
+      const whereParts: string[] = [];
+      const scopeParams: any[] = [];
 
-      const scopeParams =
-        user?.role === 'CLIENTE'
-          ? [user.clientId]
-          : [];
+      if (user?.role === 'CLIENTE') {
+        whereParts.push('d.client_id = ?');
+        scopeParams.push(user.clientId);
+      } else if (
+        requestedClientId &&
+        String(requestedClientId) !== 'Todos'
+      ) {
+        whereParts.push('d.client_id = ?');
+        scopeParams.push(Number(requestedClientId));
+      }
+
+      if (
+        requestedPeriod &&
+        String(requestedPeriod) !== 'Todos'
+      ) {
+        whereParts.push(
+          "DATE_FORMAT(CASE WHEN d.status = 'Analisada' THEN d.analysis_month WHEN d.status = 'Concluída' THEN d.delivery_date ELSE d.request_date END, '%Y-%m') = ?"
+        );
+        scopeParams.push(String(requestedPeriod));
+      }
+
+      const scopeWhere =
+        whereParts.length > 0
+          ? 'WHERE ' + whereParts.join(' AND ')
+          : '';
 
       // =================================================
       // RESUMO GERAL
@@ -3460,4 +3479,5 @@ async function startServer() {
 }
 
 startServer();
+
 
