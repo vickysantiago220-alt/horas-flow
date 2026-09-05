@@ -4,6 +4,9 @@ import cors from 'cors';
 
 import { pool } from './db';
 import { askGemini } from './ai/gemini';
+import { resolveSaphireScope } from './ai/saphire-permissions';
+import { getSaphireContext } from './ai/saphire-context';
+import { calculateSaphireMetrics } from './ai/saphire-metrics';
 import {
   comparePassword,
   createToken,
@@ -122,10 +125,6 @@ const DEMAND_SELECT = `
 
 
 
-// =====================================================
-// SAPHIRE IA
-// =====================================================
-
 app.post(
   '/api/ai/chat',
   authenticate,
@@ -134,7 +133,11 @@ app.post(
     res: Response
   ) => {
     try {
-      const { message, clientId: requestedClientId, period: requestedPeriod } = req.body;
+      const {
+        message,
+        clientId: requestedClientId,
+        period: requestedPeriod,
+      } = req.body;
 
       if (
         !message ||
@@ -147,613 +150,89 @@ app.post(
         });
       }
 
-      const user = getUser(req);
+      const scope = resolveSaphireScope(
+        req,
+        requestedClientId,
+        requestedPeriod
+      );
 
-      const whereParts: string[] = [];
-      const scopeParams: any[] = [];
+      const saphireContext =
+        await getSaphireContext(scope);
 
-      if (user?.role === 'CLIENTE') {
-        whereParts.push('d.client_id = ?');
-        scopeParams.push(user.clientId);
-      } else if (
-        requestedClientId &&
-        String(requestedClientId) !== 'Todos'
-      ) {
-        whereParts.push('d.client_id = ?');
-        scopeParams.push(Number(requestedClientId));
-      }
-
-      if (
-        requestedPeriod &&
-        String(requestedPeriod) !== 'Todos'
-      ) {
-        whereParts.push(
-          "DATE_FORMAT(CASE WHEN d.status = 'Analisada' THEN d.analysis_month WHEN d.status = 'Concluída' THEN d.delivery_date ELSE d.request_date END, '%Y-%m') = ?"
+      const metrics =
+        calculateSaphireMetrics(
+          saphireContext.summary as Record<string, unknown>
         );
-        scopeParams.push(String(requestedPeriod));
-      }
-
-      const scopeWhere =
-        whereParts.length > 0
-          ? 'WHERE ' + whereParts.join(' AND ')
-          : '';
-
-      // =================================================
-      // RESUMO GERAL
-      // =================================================
-
-      const [summaryRows] =
-        await pool.query(
-          `
-          SELECT
-            COUNT(*) AS totalDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-
-                  WHEN d.status = 'Analisada'
-                  THEN
-                    COALESCE(d.analysis_hours, 0)
-
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS totalHours,
-
-            COALESCE(
-              SUM(d.analysis_hours),
-              0
-            ) AS analysisHours,
-
-            COALESCE(
-              SUM(d.required_hours),
-              0
-            ) AS requiredHours,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS finishedHours,
-
-            SUM(
-              CASE
-                WHEN d.status = 'Concluída'
-                THEN 1
-                ELSE 0
-              END
-            ) AS finishedDemands,
-
-            SUM(
-              CASE
-                WHEN d.approval = 'Pendente'
-                THEN 1
-                ELSE 0
-              END
-            ) AS pendingApprovalDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.approval = 'Pendente'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS pendingApprovalHours,
-
-            SUM(
-              CASE
-                WHEN d.delivery_date < CURDATE()
-                  AND d.status <> 'Concluída'
-                THEN 1
-                ELSE 0
-              END
-            ) AS overdueDemands
-
-          FROM demands d
-          ${scopeWhere}
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // ANÁLISE MENSAL
-      // =================================================
-
-      const [monthlyRows] =
-        await pool.query(
-          `
-          SELECT
-            DATE_FORMAT(
-              CASE
-                WHEN d.status = 'Analisada'
-                  THEN d.analysis_month
-
-                WHEN d.status = 'Concluída'
-                  THEN d.delivery_date
-
-                ELSE d.request_date
-              END,
-              '%Y-%m'
-            ) AS month,
-
-            COUNT(*) AS totalDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-
-                  WHEN d.status = 'Analisada'
-                  THEN
-                    COALESCE(d.analysis_hours, 0)
-
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS totalHours,
-
-            COALESCE(
-              SUM(d.analysis_hours),
-              0
-            ) AS analysisHours,
-
-            COALESCE(
-              SUM(d.required_hours),
-              0
-            ) AS requiredHours,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS finishedHours
-
-          FROM demands d
-          ${scopeWhere}
-          ${
-            scopeWhere ? 'AND' : 'WHERE'
-          }
-          CASE
-                WHEN d.status = 'Analisada'
-                  THEN d.analysis_month
-
-                WHEN d.status = 'Concluída'
-                  THEN d.delivery_date
-
-                ELSE d.request_date
-              END IS NOT NULL
-
-          GROUP BY
-            DATE_FORMAT(
-              CASE
-                WHEN d.status = 'Analisada'
-                  THEN d.analysis_month
-
-                WHEN d.status = 'Concluída'
-                  THEN d.delivery_date
-
-                ELSE d.request_date
-              END,
-              '%Y-%m'
-            )
-
-          ORDER BY month ASC
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // POR RESPONSÁVEL
-      // =================================================
-
-      const [responsibleRows] =
-        await pool.query(
-          `
-          SELECT
-            COALESCE(
-              NULLIF(TRIM(d.responsible), ''),
-              'Sem responsável'
-            ) AS responsible,
-
-            COUNT(*) AS totalDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-
-                  WHEN d.status = 'Analisada'
-                  THEN
-                    COALESCE(d.analysis_hours, 0)
-
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS totalHours
-
-          FROM demands d
-          ${scopeWhere}
-
-          GROUP BY
-            COALESCE(
-              NULLIF(TRIM(d.responsible), ''),
-              'Sem responsável'
-            )
-
-          ORDER BY totalHours DESC
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // POR CLIENTE
-      // =================================================
-
-      const [clientRows] =
-        await pool.query(
-          `
-          SELECT
-            d.client_id AS clientId,
-
-            COALESCE(
-              c.name,
-              CONCAT('Cliente #', d.client_id)
-            ) AS clientName,
-
-            COUNT(*) AS totalDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-
-                  WHEN d.status = 'Analisada'
-                  THEN
-                    COALESCE(d.analysis_hours, 0)
-
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS totalHours
-
-          FROM demands d
-
-          LEFT JOIN clients c
-            ON c.id = d.client_id
-
-          ${scopeWhere}
-
-          GROUP BY
-            d.client_id,
-            c.name
-
-          ORDER BY totalHours DESC
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // POR STATUS
-      // =================================================
-
-      const [statusRows] =
-        await pool.query(
-          `
-          SELECT
-            d.status,
-
-            COUNT(*) AS totalDemands,
-
-            COALESCE(
-              SUM(
-                CASE
-                  WHEN d.status = 'Concluída'
-                  THEN
-                    COALESCE(d.analysis_hours, 0) +
-                    COALESCE(d.required_hours, 0)
-
-                  WHEN d.status = 'Analisada'
-                  THEN
-                    COALESCE(d.analysis_hours, 0)
-
-                  ELSE 0
-                END
-              ),
-              0
-            ) AS totalHours
-
-          FROM demands d
-          ${scopeWhere}
-
-          GROUP BY d.status
-
-          ORDER BY totalDemands DESC
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // DEMANDAS ATRASADAS
-      // =================================================
-
-      const [overdueRows] =
-        await pool.query(
-          `
-          SELECT
-            d.number,
-            d.problem,
-            d.status,
-            d.priority,
-            d.responsible,
-            d.delivery_date AS deliveryDate,
-
-            COALESCE(
-              c.name,
-              CONCAT('Cliente #', d.client_id)
-            ) AS clientName,
-
-            DATEDIFF(
-              CURDATE(),
-              d.delivery_date
-            ) AS daysOverdue
-
-          FROM demands d
-
-          LEFT JOIN clients c
-            ON c.id = d.client_id
-
-          ${scopeWhere}
-
-          ${
-            scopeWhere ? 'AND' : 'WHERE'
-          }
-
-          d.delivery_date IS NOT NULL
-          AND d.delivery_date < CURDATE()
-          AND d.status <> 'Concluída'
-
-          ORDER BY daysOverdue DESC
-
-          LIMIT 20
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // PRÓXIMOS 7 DIAS
-      // =================================================
-
-      const [upcomingRows] =
-        await pool.query(
-          `
-          SELECT
-            d.number,
-            d.problem,
-            d.status,
-            d.priority,
-            d.responsible,
-            d.delivery_date AS deliveryDate,
-
-            COALESCE(
-              c.name,
-              CONCAT('Cliente #', d.client_id)
-            ) AS clientName,
-
-            DATEDIFF(
-              d.delivery_date,
-              CURDATE()
-            ) AS daysUntilDelivery
-
-          FROM demands d
-
-          LEFT JOIN clients c
-            ON c.id = d.client_id
-
-          ${scopeWhere}
-
-          ${
-            scopeWhere ? 'AND' : 'WHERE'
-          }
-
-          d.delivery_date IS NOT NULL
-          AND d.delivery_date >= CURDATE()
-          AND d.delivery_date <= DATE_ADD(
-            CURDATE(),
-            INTERVAL 7 DAY
-          )
-          AND d.status <> 'Concluída'
-
-          ORDER BY d.delivery_date ASC
-
-          LIMIT 20
-          `,
-          scopeParams
-        );
-
-      // =================================================
-      // CONTEXTO DA SAPHIRE
-      // =================================================
 
       const analyticsContext = {
-        user: {
-          name: user?.name || null,
-          role: user?.role || null,
-          clientId: user?.clientId ?? null,
-        },
-
-        summary:
-          (summaryRows as any[])[0] || {},
-
-        monthly:
-          (monthlyRows as any[]).map(row => ({
-            month: row.month,
-            totalDemands: Number(row.totalDemands || 0),
-            totalHours: Number(row.totalHours || 0),
-            analysisHours: Number(row.analysisHours || 0),
-            requiredHours: Number(row.requiredHours || 0),
-            finishedHours: Number(row.finishedHours || 0),
-          })),
-
-        byResponsible:
-          (responsibleRows as any[]).map(row => ({
-            responsible: row.responsible,
-            totalDemands: Number(row.totalDemands || 0),
-            totalHours: Number(row.totalHours || 0),
-          })),
-
-        byClient:
-          (clientRows as any[]).map(row => ({
-            clientId: Number(row.clientId || 0),
-            clientName: row.clientName,
-            totalDemands: Number(row.totalDemands || 0),
-            totalHours: Number(row.totalHours || 0),
-          })),
-
-        byStatus:
-          (statusRows as any[]).map(row => ({
-            status: row.status,
-            totalDemands: Number(row.totalDemands || 0),
-            totalHours: Number(row.totalHours || 0),
-          })),
-
-        overdue:
-          (overdueRows as any[]).map(row => ({
-            number: row.number,
-            problem: row.problem,
-            status: row.status,
-            priority: row.priority,
-            responsible: row.responsible,
-            clientName: row.clientName,
-            deliveryDate: row.deliveryDate,
-            daysOverdue: Number(row.daysOverdue || 0),
-          })),
-
-        upcoming7Days:
-          (upcomingRows as any[]).map(row => ({
-            number: row.number,
-            problem: row.problem,
-            status: row.status,
-            priority: row.priority,
-            responsible: row.responsible,
-            clientName: row.clientName,
-            deliveryDate: row.deliveryDate,
-            daysUntilDelivery: Number(
-              row.daysUntilDelivery || 0
-            ),
-          })),
+        scope: saphireContext.scope,
+        metrics,
+        summary: saphireContext.summary,
+        byStatus: saphireContext.byStatus,
+        byResponsible: saphireContext.byResponsible,
+        byClient: saphireContext.byClient,
+        overdueDemands: saphireContext.overdueDemands,
+        upcomingDemands: saphireContext.upcomingDemands,
       };
-
-      // =================================================
-      // PROMPT DA SAPHIRE
-      // =================================================
 
       const prompt = `
 Você é a Saphire IA, assistente inteligente do Saphire Sheet.
 
-Sua função é analisar os dados reais do sistema e ajudar
-o usuário a entender demandas, horas, clientes,
-responsáveis, status, prazos e tendências.
+Sua função é analisar os dados reais e autorizados fornecidos pelo sistema e ajudar o usuário a entender demandas, horas, clientes, responsáveis, status, prazos, produtividade, pendências, atrasos, tendências e indicadores de gestão.
 
-REGRAS:
+REGRAS DE SEGURANÇA:
+
+- Utilize SOMENTE os dados fornecidos em DADOS AUTORIZADOS.
+- Nunca tente acessar banco de dados, APIs, endpoints ou sistemas externos.
+- Nunca invente informações, números, nomes ou datas.
+- Nunca revele senhas, tokens, chaves ou credenciais.
+- Nunca tente descobrir dados que não estejam no contexto recebido.
+- Respeite rigorosamente o escopo de cliente e período informado.
+- Não suponha que o usuário tenha acesso a outro cliente.
+- Não extrapole dados de um cliente para outro.
+- Se os dados disponíveis não forem suficientes, diga isso claramente.
+
+REGRAS DE LINGUAGEM:
 
 - Responda sempre em português do Brasil.
-- Fale com o usuário em linguagem simples, clara e profissional.
-- A Saphire é uma assistente de gestão, não uma assistente de programação.
-- Interprete perguntas feitas em linguagem natural. O usuário não precisa conhecer os termos técnicos do sistema.
-- Nunca exiba ao usuário nomes internos de campos, propriedades ou estruturas do sistema em uma resposta normal.
-- Nunca mencione espontaneamente: analysis_hours, required_hours, analysis_month, delivery_date, totalHours, analysisHours, finishedHours, pendingApprovalHours, SQL, query, banco de dados, JSON ou nomes técnicos de campos.
-- Quando precisar explicar esses conceitos, traduza para linguagem de negócio.
-- Use "horas de análise" em vez de analysis_hours.
-- Use "horas necessárias" em vez de required_hours.
-- Use "mês da análise" em vez de analysis_month.
-- Use "data de conclusão" em vez de delivery_date.
-- Use "horas totais" em vez de totalHours.
-- Use "horas concluídas" em vez de finishedHours.
-- Se o usuário não pedir detalhes técnicos, não apresente fórmulas, nomes de campos ou estrutura interna do sistema.
-- Quando explicar um cálculo, explique o resultado em linguagem de gestão.
-- Exemplo: em vez de "analysis_hours + required_hours", diga "horas de análise mais as horas necessárias para execução das demandas concluídas".
-- Responda primeiro a conclusão principal e depois apresente os detalhes necessários.
-- Para perguntas simples, seja objetiva.
-- Para análises mais complexas, organize a resposta com títulos e listas.
-- Destaque números e conclusões importantes.
-- Nunca invente informações ou números.
-- Utilize os dados calculados pelo sistema como fonte oficial.
-- Se os dados disponíveis não forem suficientes para responder, informe isso claramente.
-
-- Use somente os dados fornecidos abaixo.
-- Nunca invente números, nomes, datas ou indicadores.
-- Se não houver dados suficientes, diga isso claramente.
-- Faça cálculos apenas com os números disponíveis.
-- Em comparações, mostre claramente os períodos ou grupos comparados.
-- Seja objetiva, profissional e natural.
-- Evite respostas genéricas.
-- Destaque conclusões importantes.
+- Fale de forma simples, clara, profissional e natural.
+- A Saphire é uma assistente de gestão.
+- Não é uma assistente de programação.
 - Não mencione Gemini.
 - Não mencione Hora Flow.
 - O produto se chama Saphire Sheet.
-- Nunca revele senhas, tokens, chaves ou credenciais.
+- Não mencione SQL, query, JSON, banco de dados ou estruturas internas.
+- Não revele nomes técnicos de campos ao usuário.
+- Traduza informações técnicas para linguagem de negócio.
+- Responda primeiro a conclusão principal.
+- Para perguntas simples, seja objetiva.
+- Para análises complexas, organize com títulos e listas.
+- Destaque números e conclusões importantes.
 
-INTERPRETAÇÃO DAS HORAS:
+INTERPRETAÇÃO OFICIAL DAS HORAS:
 
-- Para uma demanda com status "Analisada":
-  totalHours considera somente analysis_hours.
+- Demandas com status "Analisada": considere somente as horas de análise.
+- Demandas com status "Concluída": considere horas de análise mais horas necessárias para execução.
+- Demandas com qualquer outro status: considere 0 horas no total produtivo.
+- Uma demanda "Analisada" pertence ao mês da análise.
+- Uma demanda "Concluída" pertence à data de conclusão.
+- Nunca considere horas necessárias de uma demanda que não esteja concluída.
+- Utilize as métricas calculadas pelo sistema como fonte oficial.
 
-- Para uma demanda com status "Concluída":
-  totalHours considera analysis_hours + required_hours.
+COMO RESPONDER:
 
-- Para qualquer outro status:
-  totalHours considera 0 horas.
+- Responda primeiro a conclusão principal.
+- Explique de forma simples.
+- Mostre os dados relevantes que sustentam a conclusão.
+- Em comparações, informe claramente os períodos ou grupos comparados.
+- Não invente dados ausentes.
+- Não crie fórmulas próprias quando o sistema já forneceu o indicador.
 
-- O total geral é a soma das horas das demandas "Analisada" e "Concluída".
-
-- Uma demanda "Analisada" pertence ao período definido por analysis_month.
-
-- Uma demanda "Concluída" pertence ao período definido por delivery_date.
-
-- Nunca considere required_hours de demandas que não estejam com status "Concluída".
-
-DADOS REAIS:
+DADOS AUTORIZADOS:
 
 ${JSON.stringify(analyticsContext, null, 2)}
 
-PERGUNTA:
+PERGUNTA DO USUÁRIO:
 
 ${message.trim()}
 
@@ -774,15 +253,31 @@ Responda diretamente à pergunta do usuário.
         error
       );
 
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : '';
+
+      if (
+        errorMessage.includes('sem permissão') ||
+        errorMessage.includes('Período inválido') ||
+        errorMessage.includes('Cliente inválido') ||
+        errorMessage.includes('Usuário cliente')
+      ) {
+        return res.status(403).json({
+          isSuccess: false,
+          message:
+            'Você não possui permissão para acessar esses dados.',
+        });
+      }
+
       return res.status(500).json({
         isSuccess: false,
         message:
           'Não foi possível analisar os dados do Saphire Sheet no momento.',
-
       });
     }
-  }
-);// =====================================================
+  });
 // LOGIN
 // =====================================================
 
@@ -793,7 +288,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'E-mail e senha são obrigatórios.',
+        message: 'E-mail e senha sÃ£o obrigatÃ³rios.',
       });
     }
 
@@ -819,14 +314,14 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'E-mail ou senha inválidos.',
+        message: 'E-mail ou senha invÃ¡lidos.',
       });
     }
 
     if (!user.active) {
       return res.status(403).json({
         success: false,
-        message: 'Usuário inativo.',
+        message: 'UsuÃ¡rio inativo.',
       });
     }
 
@@ -838,7 +333,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!validPassword) {
       return res.status(401).json({
         success: false,
-        message: 'E-mail ou senha inválidos.',
+        message: 'E-mail ou senha invÃ¡lidos.',
       });
     }
 
@@ -879,7 +374,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // =====================================================
-// USUÁRIO LOGADO
+// USUÃRIO LOGADO
 // =====================================================
 
 app.get(
@@ -892,7 +387,7 @@ app.get(
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Usuário não autenticado.',
+          message: 'UsuÃ¡rio nÃ£o autenticado.',
         });
       }
 
@@ -919,7 +414,7 @@ app.get(
       if (!currentUser) {
         return res.status(404).json({
           success: false,
-          message: 'Usuário não encontrado.',
+          message: 'UsuÃ¡rio nÃ£o encontrado.',
         });
       }
 
@@ -933,7 +428,7 @@ app.get(
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao buscar usuário.',
+        message: 'Erro ao buscar usuÃ¡rio.',
         error: error?.message,
         code: error?.code,
       });
@@ -973,12 +468,12 @@ app.get('/api/health', async (_req, res) => {
 
 
 // =====================================================
-// USUÁRIOS
+// USUÃRIOS
 // SOMENTE ADMIN
 // =====================================================
 
 
-// LISTAR USUÁRIOS
+// LISTAR USUÃRIOS
 
 app.get(
   '/api/users',
@@ -1011,11 +506,11 @@ app.get(
       });
 
     } catch (error: any) {
-      console.error('ERRO LISTAR USUÁRIOS:', error);
+      console.error('ERRO LISTAR USUÃRIOS:', error);
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao listar usuários.',
+        message: 'Erro ao listar usuÃ¡rios.',
         error: error?.message,
         code: error?.code,
       });
@@ -1024,7 +519,7 @@ app.get(
 );
 
 
-// CADASTRAR USUÁRIO
+// CADASTRAR USUÃRIO
 
 app.post(
   '/api/users',
@@ -1049,7 +544,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'Nome, e-mail e senha são obrigatórios.',
+            'Nome, e-mail e senha sÃ£o obrigatÃ³rios.',
         });
       }
 
@@ -1062,7 +557,7 @@ app.post(
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           success: false,
-          message: 'Perfil de usuário inválido.',
+          message: 'Perfil de usuÃ¡rio invÃ¡lido.',
         });
       }
 
@@ -1073,7 +568,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'Usuário CLIENTE precisa estar vinculado a um cliente.',
+            'UsuÃ¡rio CLIENTE precisa estar vinculado a um cliente.',
         });
       }
 
@@ -1091,7 +586,7 @@ app.post(
         return res.status(409).json({
           success: false,
           message:
-            'Já existe um usuário cadastrado com este e-mail.',
+            'JÃ¡ existe um usuÃ¡rio cadastrado com este e-mail.',
         });
       }
 
@@ -1142,16 +637,16 @@ app.post(
 
       return res.status(201).json({
         success: true,
-        message: 'Usuário cadastrado com sucesso.',
+        message: 'UsuÃ¡rio cadastrado com sucesso.',
         data: (rows as any[])[0],
       });
 
     } catch (error: any) {
-      console.error('ERRO CADASTRAR USUÁRIO:', error);
+      console.error('ERRO CADASTRAR USUÃRIO:', error);
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao cadastrar usuário.',
+        message: 'Erro ao cadastrar usuÃ¡rio.',
         error: error?.message,
         code: error?.code,
         sqlMessage: error?.sqlMessage,
@@ -1161,7 +656,7 @@ app.post(
 );
 
 
-// EDITAR USUÁRIO
+// EDITAR USUÃRIO
 
 app.put(
   '/api/users/:id',
@@ -1174,7 +669,7 @@ app.put(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID do usuário inválido.',
+          message: 'ID do usuÃ¡rio invÃ¡lido.',
         });
       }
 
@@ -1195,7 +690,7 @@ app.put(
         return res.status(400).json({
           success: false,
           message:
-            'Nome, e-mail e perfil são obrigatórios.',
+            'Nome, e-mail e perfil sÃ£o obrigatÃ³rios.',
         });
       }
 
@@ -1208,7 +703,7 @@ app.put(
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           success: false,
-          message: 'Perfil inválido.',
+          message: 'Perfil invÃ¡lido.',
         });
       }
 
@@ -1219,7 +714,7 @@ app.put(
         return res.status(400).json({
           success: false,
           message:
-            'Usuário CLIENTE precisa estar vinculado a um cliente.',
+            'UsuÃ¡rio CLIENTE precisa estar vinculado a um cliente.',
         });
       }
 
@@ -1298,22 +793,22 @@ app.put(
       if ((rows as any[]).length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Usuário não encontrado.',
+          message: 'UsuÃ¡rio nÃ£o encontrado.',
         });
       }
 
       return res.json({
         success: true,
-        message: 'Usuário atualizado com sucesso.',
+        message: 'UsuÃ¡rio atualizado com sucesso.',
         data: (rows as any[])[0],
       });
 
     } catch (error: any) {
-      console.error('ERRO EDITAR USUÁRIO:', error);
+      console.error('ERRO EDITAR USUÃRIO:', error);
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao editar usuário.',
+        message: 'Erro ao editar usuÃ¡rio.',
         error: error?.message,
         code: error?.code,
       });
@@ -1322,7 +817,7 @@ app.put(
 );
 
 
-// ATIVAR / INATIVAR USUÁRIO
+// ATIVAR / INATIVAR USUÃRIO
 
 app.patch(
   '/api/users/:id/status',
@@ -1336,7 +831,7 @@ app.patch(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID do usuário inválido.',
+          message: 'ID do usuÃ¡rio invÃ¡lido.',
         });
       }
 
@@ -1371,27 +866,27 @@ app.patch(
       ) {
         return res.status(404).json({
           success: false,
-          message: 'Usuário não encontrado.',
+          message: 'UsuÃ¡rio nÃ£o encontrado.',
         });
       }
 
       return res.json({
         success: true,
         message: active
-          ? 'Usuário ativado com sucesso.'
-          : 'Usuário inativado com sucesso.',
+          ? 'UsuÃ¡rio ativado com sucesso.'
+          : 'UsuÃ¡rio inativado com sucesso.',
       });
 
     } catch (error: any) {
       console.error(
-        'ERRO STATUS USUÁRIO:',
+        'ERRO STATUS USUÃRIO:',
         error
       );
 
       return res.status(500).json({
         success: false,
         message:
-          'Erro ao alterar status do usuário.',
+          'Erro ao alterar status do usuÃ¡rio.',
         error: error?.message,
         code: error?.code,
       });
@@ -1467,7 +962,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'Nome do cliente é obrigatório.',
+            'Nome do cliente Ã© obrigatÃ³rio.',
         });
       }
 
@@ -1546,7 +1041,7 @@ app.get(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID do cliente inválido.',
+          message: 'ID do cliente invÃ¡lido.',
         });
       }
 
@@ -1578,7 +1073,7 @@ app.get(
       if (!client) {
         return res.status(404).json({
           success: false,
-          message: 'Cliente não encontrado.',
+          message: 'Cliente nÃ£o encontrado.',
         });
       }
 
@@ -1613,14 +1108,14 @@ app.put(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID do cliente inválido.',
+          message: 'ID do cliente invÃ¡lido.',
         });
       }
 
       if (!name?.trim()) {
         return res.status(400).json({
           success: false,
-          message: 'Nome do cliente é obrigatório.',
+          message: 'Nome do cliente Ã© obrigatÃ³rio.',
         });
       }
 
@@ -1647,7 +1142,7 @@ app.put(
       if (updateResult.affectedRows === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Cliente não encontrado.',
+          message: 'Cliente nÃ£o encontrado.',
         });
       }
 
@@ -1700,7 +1195,7 @@ app.patch(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID do cliente inválido.',
+          message: 'ID do cliente invÃ¡lido.',
         });
       }
 
@@ -1711,8 +1206,8 @@ app.patch(
         });
       }
 
-      // Não permite inativar cliente que ainda possui
-      // usuários CLIENTE ativos vinculados.
+      // NÃ£o permite inativar cliente que ainda possui
+      // usuÃ¡rios CLIENTE ativos vinculados.
       if (!active) {
         const [userRows] = await pool.query(
           `
@@ -1733,7 +1228,7 @@ app.patch(
           return res.status(409).json({
             success: false,
             message:
-              'Não é possível inativar o cliente enquanto houver usuários CLIENTE ativos vinculados.',
+              'NÃ£o Ã© possÃ­vel inativar o cliente enquanto houver usuÃ¡rios CLIENTE ativos vinculados.',
           });
         }
       }
@@ -1754,7 +1249,7 @@ app.patch(
       if (updateResult.affectedRows === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Cliente não encontrado.',
+          message: 'Cliente nÃ£o encontrado.',
         });
       }
 
@@ -1865,7 +1360,7 @@ app.get(
         return res.status(400).json({
           success: false,
           message:
-            'ID da demanda inválido.',
+            'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -1884,7 +1379,7 @@ app.get(
         return res.status(404).json({
           success: false,
           message:
-            'Demanda não encontrada.',
+            'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -1896,7 +1391,7 @@ app.get(
         return res.status(403).json({
           success: false,
           message:
-            'Você não possui acesso a esta demanda.',
+            'VocÃª nÃ£o possui acesso a esta demanda.',
         });
       }
 
@@ -1962,8 +1457,8 @@ app.post(
         treatment,
         analysisHours = 0,
         requiredHours = 0,
-        priority = 'Média',
-        status = 'Aguardando análise',
+        priority = 'MÃ©dia',
+        status = 'Aguardando anÃ¡lise',
         clientId = null,
         responsible = null,
       } = req.body;
@@ -1975,13 +1470,13 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'Problema e tratamento são obrigatórios.',
+            'Problema e tratamento sÃ£o obrigatÃ³rios.',
         });
       }
 
       const validPriorities = [
         'Baixa',
-        'Média',
+        'MÃ©dia',
         'Alta',
         'Urgente',
       ];
@@ -1992,7 +1487,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'Prioridade inválida.',
+            'Prioridade invÃ¡lida.',
         });
       }
 
@@ -2002,14 +1497,14 @@ app.post(
         if (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0) {
           return res.status(400).json({
             success: false,
-            message: 'Cliente inválido.',
+            message: 'Cliente invÃ¡lido.',
           });
         }
 
         if (!(await clientExists(normalizedClientId))) {
           return res.status(400).json({
             success: false,
-            message: 'Cliente não encontrado ou está inativo.',
+            message: 'Cliente nÃ£o encontrado ou estÃ¡ inativo.',
           });
         }
       }
@@ -2158,7 +1653,7 @@ app.put(
         return res.status(400).json({
           success: false,
           message:
-            'ID da demanda inválido.',
+            'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -2170,8 +1665,8 @@ app.put(
         requestDate = null,
         deliveryDate = null,
         requiredHours = 0,
-        priority = 'Média',
-        status = 'Aguardando análise',
+        priority = 'MÃ©dia',
+        status = 'Aguardando anÃ¡lise',
         clientId = null,
         responsible = null,
       } = req.body;
@@ -2183,7 +1678,7 @@ app.put(
         return res.status(400).json({
           success: false,
           message:
-            'Problema e tratamento são obrigatórios.',
+            'Problema e tratamento sÃ£o obrigatÃ³rios.',
         });
       }
 
@@ -2193,14 +1688,14 @@ app.put(
         if (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0) {
           return res.status(400).json({
             success: false,
-            message: 'Cliente inválido.',
+            message: 'Cliente invÃ¡lido.',
           });
         }
 
         if (!(await clientExists(normalizedClientId))) {
           return res.status(400).json({
             success: false,
-            message: 'Cliente não encontrado ou está inativo.',
+            message: 'Cliente nÃ£o encontrado ou estÃ¡ inativo.',
           });
         }
       }
@@ -2219,7 +1714,7 @@ app.put(
       if (!beforeDemand) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda não encontrada.',
+          message: 'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2282,14 +1777,14 @@ app.put(
       await recordDemandHistory(
         id,
         req,
-        'Horas de análise',
+        'Horas de anÃ¡lise',
         beforeDemand.analysisHours,
         Number(analysisHours) || 0
       );
       await recordDemandHistory(
         id,
         req,
-        'Horas necessárias',
+        'Horas necessÃ¡rias',
         beforeDemand.requiredHours,
         Number(requiredHours) || 0
       );
@@ -2317,7 +1812,7 @@ app.put(
       await recordDemandHistory(
         id,
         req,
-        'Responsável',
+        'ResponsÃ¡vel',
         beforeDemand.responsible,
         responsible?.trim() ? responsible.trim() : null
       );
@@ -2337,12 +1832,12 @@ app.put(
         return res.status(404).json({
           success: false,
           message:
-            'Demanda não encontrada.',
+            'Demanda nÃ£o encontrada.',
         });
       }
 
-      // Retorna também o histórico atualizado para o frontend
-      // não depender de uma segunda chamada após salvar.
+      // Retorna tambÃ©m o histÃ³rico atualizado para o frontend
+      // nÃ£o depender de uma segunda chamada apÃ³s salvar.
       const [historyRows] = await pool.query(
         `
           SELECT
@@ -2393,7 +1888,7 @@ app.put(
 // =====================================================
 // ALTERAR PRIORIDADE
 // ADMIN / INTERNO / CLIENTE
-// CLIENTE SÓ DA PRÓPRIA DEMANDA
+// CLIENTE SÃ“ DA PRÃ“PRIA DEMANDA
 // =====================================================
 
 app.patch(
@@ -2415,13 +1910,13 @@ app.patch(
         return res.status(400).json({
           success: false,
           message:
-            'ID da demanda inválido.',
+            'ID da demanda invÃ¡lido.',
         });
       }
 
       const validPriorities = [
         'Baixa',
-        'Média',
+        'MÃ©dia',
         'Alta',
         'Urgente',
       ];
@@ -2432,7 +1927,7 @@ app.patch(
         return res.status(400).json({
           success: false,
           message:
-            'Prioridade inválida.',
+            'Prioridade invÃ¡lida.',
         });
       }
 
@@ -2456,7 +1951,7 @@ app.patch(
         return res.status(404).json({
           success: false,
           message:
-            'Demanda não encontrada.',
+            'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2468,7 +1963,7 @@ app.patch(
         return res.status(403).json({
           success: false,
           message:
-            'Você não possui acesso a esta demanda.',
+            'VocÃª nÃ£o possui acesso a esta demanda.',
         });
       }
 
@@ -2517,9 +2012,9 @@ app.patch(
   }
 );
 // =====================================================
-// HISTÓRICO DA DEMANDA
+// HISTÃ“RICO DA DEMANDA
 // ADMIN / INTERNO / CLIENTE
-// CLIENTE SÓ DA PRÓPRIA DEMANDA
+// CLIENTE SÃ“ DA PRÃ“PRIA DEMANDA
 // =====================================================
 
 app.get(
@@ -2539,7 +2034,7 @@ app.get(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID da demanda inválido.',
+          message: 'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -2565,7 +2060,7 @@ app.get(
       if (!demand) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda não encontrada.',
+          message: 'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2575,7 +2070,7 @@ app.get(
       ) {
         return res.status(403).json({
           success: false,
-          message: 'Você não possui acesso a esta demanda.',
+          message: 'VocÃª nÃ£o possui acesso a esta demanda.',
         });
       }
 
@@ -2602,11 +2097,11 @@ app.get(
         data: historyRows,
       });
     } catch (error: any) {
-      console.error('ERRO HISTÓRICO DEMANDA:', error);
+      console.error('ERRO HISTÃ“RICO DEMANDA:', error);
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao carregar histórico da demanda.',
+        message: 'Erro ao carregar histÃ³rico da demanda.',
         error: error?.message,
         code: error?.code,
         sqlMessage: error?.sqlMessage,
@@ -2634,7 +2129,7 @@ app.delete(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID da demanda inválido.',
+          message: 'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -2653,7 +2148,7 @@ app.delete(
       if (!demand) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda não encontrada.',
+          message: 'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2667,7 +2162,7 @@ app.delete(
 
       return res.json({
         success: true,
-        message: 'Demanda excluída com sucesso.',
+        message: 'Demanda excluÃ­da com sucesso.',
       });
 
     } catch (error: any) {
@@ -2708,7 +2203,7 @@ app.post(
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: 'ID da demanda inválido.',
+          message: 'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -2730,7 +2225,7 @@ app.post(
       if (!demand) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda não encontrada.',
+          message: 'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2740,7 +2235,7 @@ app.post(
       ) {
         return res.status(403).json({
           success: false,
-          message: 'Você não possui acesso a esta demanda.',
+          message: 'VocÃª nÃ£o possui acesso a esta demanda.',
         });
       }
 
@@ -2766,7 +2261,7 @@ app.post(
       await recordDemandHistory(
         id,
         req,
-        'Aprovação',
+        'AprovaÃ§Ã£o',
         demand.approval,
         'Aprovada'
       );
@@ -2808,7 +2303,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'ID da demanda inválido.',
+            'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -2816,7 +2311,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'Informe o motivo da reprovação.',
+            'Informe o motivo da reprovaÃ§Ã£o.',
         });
       }
 
@@ -2839,7 +2334,7 @@ app.post(
         return res.status(404).json({
           success: false,
           message:
-            'Demanda não encontrada.',
+            'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2851,7 +2346,7 @@ app.post(
         return res.status(403).json({
           success: false,
           message:
-            'Você não possui acesso a esta demanda.',
+            'VocÃª nÃ£o possui acesso a esta demanda.',
         });
       }
 
@@ -2879,7 +2374,7 @@ app.post(
       await recordDemandHistory(
         id,
         req,
-        'Aprovação',
+        'AprovaÃ§Ã£o',
         demand.approval,
         'Reprovada'
       );
@@ -2893,7 +2388,7 @@ app.post(
       await recordDemandHistory(
         id,
         req,
-        'Motivo da reprovação',
+        'Motivo da reprovaÃ§Ã£o',
         demand.rejectionReason,
         reason.trim()
       );
@@ -2945,7 +2440,7 @@ app.post(
         return res.status(400).json({
           success: false,
           message:
-            'ID da demanda inválido.',
+            'ID da demanda invÃ¡lido.',
         });
       }
 
@@ -2964,7 +2459,7 @@ app.post(
       if (!beforePay) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda não encontrada.',
+          message: 'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2989,7 +2484,7 @@ app.post(
         return res.status(404).json({
           success: false,
           message:
-            'Demanda não encontrada.',
+            'Demanda nÃ£o encontrada.',
         });
       }
 
@@ -2997,7 +2492,7 @@ app.post(
         id,
         req,
         'Pagamento',
-        beforePay.paid ? 'Pago' : 'Não pago',
+        beforePay.paid ? 'Pago' : 'NÃ£o pago',
         'Pago'
       );
 
@@ -3100,7 +2595,7 @@ app.get(
             COALESCE(
               SUM(
                 CASE
-                  WHEN status = 'Concluída'
+                  WHEN status = 'ConcluÃ­da'
                     AND (
                       ? IS NULL
                       OR DATE_FORMAT(delivery_date,
@@ -3119,7 +2614,7 @@ app.get(
             COALESCE(
               SUM(
                 CASE
-                  WHEN status = 'Concluída'
+                  WHEN status = 'ConcluÃ­da'
                     AND (
                       ? IS NULL
                       OR DATE_FORMAT(delivery_date,
@@ -3221,7 +2716,7 @@ app.get(
 
       const summary =
         (rows as any[])[0];      
-      // Horas analisadas: usa o mês de análise quando um período é selecionado.
+      // Horas analisadas: usa o mÃªs de anÃ¡lise quando um perÃ­odo Ã© selecionado.
       const analyzedHoursConditions: string[] = [];
       const analyzedHoursParams: any[] = [];
 
@@ -3364,7 +2859,7 @@ app.use(
     return res.status(404).json({
       success: false,
       message:
-        'Rota não encontrada.',
+        'Rota nÃ£o encontrada.',
     });
   }
 );
@@ -3456,7 +2951,7 @@ async function startServer() {
       );
     } else {
       console.log(
-        'Coluna analysis_month já existe.'
+        'Coluna analysis_month jÃ¡ existe.'
       );
     }
 
@@ -3479,5 +2974,6 @@ async function startServer() {
 }
 
 startServer();
+
 
 
