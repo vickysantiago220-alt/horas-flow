@@ -1727,6 +1727,77 @@ const dashboardDemands=useMemo(()=>{
       <div className="hf-sidebar-bottom"><div className="hf-user-mini"><div className="hf-avatar">{user.name.slice(0,1).toUpperCase()}</div><div><strong>{user.name}</strong><span>{roleLabel(user.role)}</span></div></div><button className="hf-logout" onClick={logout}><LogOut size={17}/> Sair</button></div>
     </aside>
 
+    
+
+    <button
+  type="button"
+  onClick={()=>setSaphireIaOpen(true)}
+  title="Saphire IA"
+  aria-label="Abrir Saphire IA"
+  style={{
+    position:"fixed",
+    right:"28px",
+    bottom:"24px",
+    width:"68px",
+    height:"68px",
+    minWidth:"68px",
+    minHeight:"68px",
+    padding:0,
+    margin:0,
+    border:"2px solid rgba(255,255,255,.9)",
+    borderRadius:"50%",
+    background:"radial-gradient(circle at 32% 22%, #ffffff 0%, #d9e9ff 25%, #7ba8ff 55%, #3158c7 82%, #172b78 100%)",
+    display:"flex",
+    alignItems:"center",
+    justifyContent:"center",
+    cursor:"pointer",
+    zIndex:999999,
+    boxShadow:"0 0 0 6px rgba(66,126,255,.12), 0 0 25px rgba(66,126,255,.65), 0 10px 30px rgba(0,0,0,.25)",
+    overflow:"visible"
+  }}
+>
+  <span
+    style={{
+      position:"relative",
+      width:"52px",
+      height:"52px",
+      borderRadius:"50%",
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"center",
+      background:"radial-gradient(circle at 35% 25%, #ffffff 0%, #d9eaff 28%, #83adff 58%, #3965d5 82%, #20388f 100%)",
+      boxShadow:"inset 0 3px 6px rgba(255,255,255,.9), inset 0 -7px 12px rgba(22,45,120,.3), 0 0 20px rgba(89,145,255,.75)"
+    }}
+  >
+    <SaphireGem size={30}/>
+    <span
+      style={{
+        position:"absolute",
+        top:"-5px",
+        right:"-5px",
+        width:"13px",
+        height:"13px",
+        borderRadius:"50%",
+        background:"#22c55e",
+        border:"2px solid white",
+        boxShadow:"0 0 10px rgba(34,197,94,.8)"
+      }}
+    />
+    <span
+      style={{
+        position:"absolute",
+        top:"-10px",
+        right:"-11px",
+        color:"white",
+        fontSize:"17px",
+        textShadow:"0 0 8px white, 0 0 16px #4d8cff"
+      }}
+    >
+      ✦
+    </span>
+  </span>
+</button>
+
     <main className="hf-main">
       <header className="hf-topbar">
         <button className="hf-menu" onClick={()=>setMobileMenu(true)}><Menu size={20}/></button>
@@ -1760,17 +1831,6 @@ const dashboardDemands=useMemo(()=>{
   <Search size={16}/>
   <span>Busca rápida</span>
   <kbd>Ctrl K</kbd>
-</button><button
-  type="button"
-  className="hf-saphire-ia-trigger"
-  onClick={()=>setSaphireIaOpen(true)}
-  title="Saphire IA"
-  aria-label="Abrir Saphire IA"
->
-  <span className="hf-saphire-ia-trigger-gem">
-    <SaphireGem size={21}/>
-  </span>
-  <span className="hf-saphire-ia-label">Saphire IA</span>
 </button><button
   type="button"
   className="hf-notification-trigger"
@@ -4386,7 +4446,11 @@ const styles = `
     padding-left:10px;
     padding-right:10px;
   }
-}
+  /* SAPHIRE IA - JOIA MOBILE */
+
+  .hf-saphire-ia-label{
+    display:none !important;
+  }}
 
 /* SAPHIRE VIEW SWITCHER MODERN */
 .hf-view-switcher{display:inline-flex!important;align-items:center!important;gap:3px!important;padding:4px!important;margin:0!important;background:#f5f7fb!important;border:1px solid #e4e9f1!important;border-radius:12px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 2px 8px rgba(15,23,42,.04)!important}.hf-view-switcher button{appearance:none!important;-webkit-appearance:none!important;height:34px!important;min-width:82px!important;padding:0 12px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#7b8799!important;font-family:inherit!important;font-size:11px!important;font-weight:700!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;cursor:pointer!important;outline:none!important;box-shadow:none!important;transition:background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .15s ease!important}.hf-view-switcher button span{font-size:13px!important;line-height:1!important;opacity:.85!important}.hf-view-switcher button:hover{background:#edf2ff!important;color:#315efb!important;transform:translateY(-1px)!important}.hf-view-switcher button.active{background:#fff!important;color:#315efb!important;box-shadow:0 2px 7px rgba(15,23,42,.10),0 1px 2px rgba(15,23,42,.04)!important}.hf-view-switcher button.active span{opacity:1!important}.hf-view-switcher button:active{transform:scale(.97)!important}.hf-view-switcher button:focus-visible{box-shadow:0 0 0 3px rgba(49,94,251,.14)!important}@media(max-width:650px){.hf-view-switcher{width:100%!important}.hf-view-switcher button{flex:1!important;min-width:0!important}}
@@ -4864,84 +4928,47 @@ const styles = `
    COMMAND CENTER - BOTÃO DE BUSCA RÁPIDA
    ===================================================== */
 
-.hf-saphire-ia-trigger{
-  height:40px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  padding:0 13px 0 9px;
-  border:1px solid #d9e2f7;
-  border-radius:11px;
-  background:linear-gradient(180deg,#ffffff 0%,#f7f9ff 100%);
-  color:#263858;
-  font-family:inherit;
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:-.1px;
-  cursor:pointer;
-  box-shadow:
-    0 2px 7px rgba(49,94,251,.06),
-    inset 0 1px 0 rgba(255,255,255,.9);
-  transition:
-    transform .18s ease,
-    border-color .18s ease,
-    background .18s ease,
-    box-shadow .18s ease;
-}
-
-.hf-saphire-ia-trigger-gem{
-  width:27px;
-  height:27px;
-  display:grid;
-  place-items:center;
-  border-radius:8px;
-  background:linear-gradient(145deg,#eef3ff,#e2ebff);
-  box-shadow:
-    inset 0 0 0 1px #d6e1ff,
-    0 2px 7px rgba(49,94,251,.08);
-  transition:transform .18s ease,box-shadow .18s ease;
-}
-
-.hf-saphire-ia-trigger:hover{
-  transform:translateY(-1px);
-  border-color:#b9c9f2;
-  background:linear-gradient(180deg,#ffffff 0%,#f1f5ff 100%);
-  color:#315efb;
-  box-shadow:
-    0 6px 16px rgba(49,94,251,.10),
-    inset 0 1px 0 rgba(255,255,255,.95);
-}
-
-.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
-  transform:translateY(-1px) rotate(-2deg);
-  box-shadow:
-    inset 0 0 0 1px #cbd9ff,
-    0 5px 12px rgba(49,94,251,.14);
-}
-
-.hf-saphire-ia-trigger:active{
-  transform:scale(.97);
-}
-
-.hf-saphire-ia-trigger:focus-visible{
-  outline:none;
-  border-color:#315efb;
-  box-shadow:
-    0 0 0 3px rgba(49,94,251,.12),
-    0 4px 12px rgba(49,94,251,.08);
-}
-
 .hf-saphire-ia-label{
   white-space:nowrap;
+  line-height:1;
+}
+
+@keyframes hfSaphireFloat{
+  0%,100%{
+    transform:translateY(0);
+  }
+  50%{
+    transform:translateY(-5px);
+  }
+}
+
+@keyframes hfSaphireAura{
+  0%,100%{
+    transform:scale(.92);
+    opacity:.62;
+  }
+  50%{
+    transform:scale(1.08);
+    opacity:1;
+  }
+}
+
+@keyframes hfSaphireSparkle{
+  0%,100%{
+    opacity:.25;
+    transform:scale(.75) rotate(0deg);
+  }
+  45%{
+    opacity:1;
+    transform:scale(1.15) rotate(18deg);
+  }
+  70%{
+    opacity:.5;
+    transform:scale(.9) rotate(30deg);
+  }
 }
 
 @media(max-width:600px){
-  .hf-saphire-ia-trigger{
-    width:40px;
-    padding:0;
-    gap:0;
-  }
 
   .hf-saphire-ia-label{
     display:none;
@@ -5011,84 +5038,232 @@ const styles = `
 }
 
 @media(max-width:600px){
-  .hf-saphire-ia-trigger{
-  height:40px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  padding:0 13px 0 9px;
-  border:1px solid #d9e2f7;
-  border-radius:11px;
-  background:linear-gradient(180deg,#ffffff 0%,#f7f9ff 100%);
-  color:#263858;
-  font-family:inherit;
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:-.1px;
-  cursor:pointer;
-  box-shadow:
-    0 2px 7px rgba(49,94,251,.06),
-    inset 0 1px 0 rgba(255,255,255,.9);
-  transition:
-    transform .18s ease,
-    border-color .18s ease,
-    background .18s ease,
-    box-shadow .18s ease;
-}
-
-.hf-saphire-ia-trigger-gem{
-  width:27px;
-  height:27px;
-  display:grid;
-  place-items:center;
-  border-radius:8px;
-  background:linear-gradient(145deg,#eef3ff,#e2ebff);
-  box-shadow:
-    inset 0 0 0 1px #d6e1ff,
-    0 2px 7px rgba(49,94,251,.08);
-  transition:transform .18s ease,box-shadow .18s ease;
-}
-
-.hf-saphire-ia-trigger:hover{
-  transform:translateY(-1px);
-  border-color:#b9c9f2;
-  background:linear-gradient(180deg,#ffffff 0%,#f1f5ff 100%);
-  color:#315efb;
-  box-shadow:
-    0 6px 16px rgba(49,94,251,.10),
-    inset 0 1px 0 rgba(255,255,255,.95);
-}
-
-.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
-  transform:translateY(-1px) rotate(-2deg);
-  box-shadow:
-    inset 0 0 0 1px #cbd9ff,
-    0 5px 12px rgba(49,94,251,.14);
-}
-
-.hf-saphire-ia-trigger:active{
-  transform:scale(.97);
-}
-
-.hf-saphire-ia-trigger:focus-visible{
-  outline:none;
-  border-color:#315efb;
-  box-shadow:
-    0 0 0 3px rgba(49,94,251,.12),
-    0 4px 12px rgba(49,94,251,.08);
-}
 
 .hf-saphire-ia-label{
   white-space:nowrap;
+  line-height:1;
+}
+
+@keyframes hfSaphireFloat{
+  0%,100%{
+    transform:translateY(0);
+  }
+  50%{
+    transform:translateY(-5px);
+  }
+}
+
+@keyframes hfSaphireAura{
+  0%,100%{
+    transform:scale(.92);
+    opacity:.62;
+  }
+  50%{
+    transform:scale(1.08);
+    opacity:1;
+  }
+}
+
+
+/* =====================================================
+   SAPHIRE IA — BOTÃO JOIA FINAL
+   ===================================================== */
+
+.hf-saphire-ia-label{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+  overflow:hidden !important;
+}
+
+/* =====================================================
+   SAPHIRE IA — BOTÃO JOIA
+   ===================================================== */
+
+.hf-saphire-ia-trigger{
+  position:fixed !important;
+  right:28px !important;
+  bottom:105px !important;
+  width:62px !important;
+  min-width:62px !important;
+  max-width:62px !important;
+  height:62px !important;
+  min-height:62px !important;
+  max-height:62px !important;
+  padding:4px !important;
+  margin:0 !important;
+  display:grid !important;
+  place-items:center !important;
+  gap:0 !important;
+  border:1px solid rgba(157,190,255,.72) !important;
+  border-radius:50% !important;
+  background:radial-gradient(
+    circle at 35% 25%,
+    #ffffff 0%,
+    #edf4ff 35%,
+    #d8e6ff 70%,
+    #c2d5ff 100%
+  ) !important;
+  color:transparent !important;
+  font-size:0 !important;
+  line-height:0 !important;
+  cursor:pointer !important;
+  z-index:260 !important;
+  overflow:visible !important;
+  box-shadow:
+    0 12px 28px rgba(24,67,155,.24),
+    0 0 20px rgba(74,128,255,.28),
+    inset 0 2px 5px rgba(255,255,255,1),
+    inset 0 -4px 8px rgba(62,101,190,.14) !important;
+  animation:hfSaphireGemFloat 4s ease-in-out infinite !important;
+  transition:transform .25s ease,box-shadow .25s ease !important;
+}
+
+.hf-saphire-ia-trigger::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:-14px !important;
+  border-radius:50% !important;
+  background:radial-gradient(
+    circle,
+    rgba(67,126,255,.30) 0%,
+    rgba(67,126,255,.13) 42%,
+    rgba(67,126,255,0) 72%
+  ) !important;
+  filter:blur(7px) !important;
+  z-index:-1 !important;
+}
+
+.hf-saphire-ia-trigger::after{
+  content:"" !important;
+  position:absolute !important;
+  top:1px !important;
+  right:0 !important;
+  width:11px !important;
+  height:11px !important;
+  border-radius:50% !important;
+  background:#22c55e !important;
+  border:2px solid #fff !important;
+  box-shadow:
+    0 0 0 2px rgba(34,197,94,.14),
+    0 0 12px rgba(34,197,94,.70) !important;
+  z-index:5 !important;
+}
+
+.hf-saphire-ia-trigger-gem{
+  position:relative !important;
+  width:50px !important;
+  height:50px !important;
+  min-width:50px !important;
+  min-height:50px !important;
+  border-radius:50% !important;
+  display:grid !important;
+  place-items:center !important;
+  flex:none !important;
+  background:radial-gradient(
+    circle at 34% 22%,
+    #ffffff 0%,
+    #e2efff 23%,
+    #b8d3ff 48%,
+    #6897ff 73%,
+    #2d53be 100%
+  ) !important;
+  box-shadow:
+    inset 0 2px 5px rgba(255,255,255,1),
+    inset 0 -7px 12px rgba(37,73,168,.18),
+    0 5px 16px rgba(42,88,210,.30),
+    0 0 28px rgba(83,137,255,.38) !important;
+}
+
+.hf-saphire-ia-trigger-gem::before{
+  content:"" !important;
+  position:absolute !important;
+  width:15px !important;
+  height:7px !important;
+  top:7px !important;
+  left:10px !important;
+  border-radius:50% !important;
+  background:rgba(255,255,255,.95) !important;
+  filter:blur(2px) !important;
+  transform:rotate(-28deg) !important;
+}
+
+.hf-saphire-ia-trigger-gem::after{
+  content:"✦" !important;
+  position:absolute !important;
+  right:-7px !important;
+  top:-10px !important;
+  color:#fff !important;
+  font-size:14px !important;
+  line-height:1 !important;
+  text-shadow:
+    0 0 7px #fff,
+    0 0 16px rgba(72,132,255,.95) !important;
+}
+
+.hf-saphire-ia-trigger:hover{
+  transform:translateY(-5px) scale(1.07) !important;
+  box-shadow:
+    0 18px 38px rgba(20,65,160,.30),
+    0 0 34px rgba(73,126,255,.34),
+    inset 0 2px 5px rgba(255,255,255,1) !important;
+}
+
+.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
+  transform:scale(1.07) rotate(-4deg) !important;
+}
+
+.hf-saphire-ia-trigger:active{
+  transform:scale(.94) !important;
+}
+
+.hf-saphire-ia-trigger:focus-visible{
+  outline:3px solid rgba(74,128,255,.45) !important;
+  outline-offset:4px !important;
 }
 
 @media(max-width:600px){
   .hf-saphire-ia-trigger{
-    width:40px;
-    padding:0;
-    gap:0;
+    left:18px !important;
+    bottom:24px !important;
+    width:60px !important;
+    min-width:60px !important;
+    max-width:60px !important;
+    height:60px !important;
+    min-height:60px !important;
+    max-height:60px !important;
   }
+
+  .hf-saphire-ia-trigger-gem{
+    width:48px !important;
+    min-width:48px !important;
+    height:48px !important;
+    min-height:48px !important;
+  }
+}
+@keyframes hfSaphireGemFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-5px)}
+}
+
+@media(max-width:600px){
+}
+@keyframes hfSaphireSparkle{
+  0%,100%{
+    opacity:.25;
+    transform:scale(.75) rotate(0deg);
+  }
+  45%{
+    opacity:1;
+    transform:scale(1.15) rotate(18deg);
+  }
+  70%{
+    opacity:.5;
+    transform:scale(.9) rotate(30deg);
+  }
+}
+
+@media(max-width:600px){
 
   .hf-saphire-ia-label{
     display:none;
@@ -7738,6 +7913,20 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
