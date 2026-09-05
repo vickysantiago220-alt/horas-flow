@@ -1727,77 +1727,6 @@ const dashboardDemands=useMemo(()=>{
       <div className="hf-sidebar-bottom"><div className="hf-user-mini"><div className="hf-avatar">{user.name.slice(0,1).toUpperCase()}</div><div><strong>{user.name}</strong><span>{roleLabel(user.role)}</span></div></div><button className="hf-logout" onClick={logout}><LogOut size={17}/> Sair</button></div>
     </aside>
 
-    
-
-    <button
-  type="button"
-  onClick={()=>setSaphireIaOpen(true)}
-  title="Saphire IA"
-  aria-label="Abrir Saphire IA"
-  style={{
-    position:"fixed",
-    right:"28px",
-    bottom:"24px",
-    width:"68px",
-    height:"68px",
-    minWidth:"68px",
-    minHeight:"68px",
-    padding:0,
-    margin:0,
-    border:"2px solid rgba(255,255,255,.9)",
-    borderRadius:"50%",
-    background:"radial-gradient(circle at 32% 22%, #ffffff 0%, #d9e9ff 25%, #7ba8ff 55%, #3158c7 82%, #172b78 100%)",
-    display:"flex",
-    alignItems:"center",
-    justifyContent:"center",
-    cursor:"pointer",
-    zIndex:999999,
-    boxShadow:"0 0 0 6px rgba(66,126,255,.12), 0 0 25px rgba(66,126,255,.65), 0 10px 30px rgba(0,0,0,.25)",
-    overflow:"visible"
-  }}
->
-  <span
-    style={{
-      position:"relative",
-      width:"52px",
-      height:"52px",
-      borderRadius:"50%",
-      display:"flex",
-      alignItems:"center",
-      justifyContent:"center",
-      background:"radial-gradient(circle at 35% 25%, #ffffff 0%, #d9eaff 28%, #83adff 58%, #3965d5 82%, #20388f 100%)",
-      boxShadow:"inset 0 3px 6px rgba(255,255,255,.9), inset 0 -7px 12px rgba(22,45,120,.3), 0 0 20px rgba(89,145,255,.75)"
-    }}
-  >
-    <SaphireGem size={30}/>
-    <span
-      style={{
-        position:"absolute",
-        top:"-5px",
-        right:"-5px",
-        width:"13px",
-        height:"13px",
-        borderRadius:"50%",
-        background:"#22c55e",
-        border:"2px solid white",
-        boxShadow:"0 0 10px rgba(34,197,94,.8)"
-      }}
-    />
-    <span
-      style={{
-        position:"absolute",
-        top:"-10px",
-        right:"-11px",
-        color:"white",
-        fontSize:"17px",
-        textShadow:"0 0 8px white, 0 0 16px #4d8cff"
-      }}
-    >
-      ✦
-    </span>
-  </span>
-</button>
-
     <main className="hf-main">
       <header className="hf-topbar">
         <button className="hf-menu" onClick={()=>setMobileMenu(true)}><Menu size={20}/></button>
@@ -1831,6 +1760,17 @@ const dashboardDemands=useMemo(()=>{
   <Search size={16}/>
   <span>Busca rápida</span>
   <kbd>Ctrl K</kbd>
+</button><button
+  type="button"
+  className="hf-saphire-ia-trigger" style={{position:"fixed",left:24,bottom:105,width:62,height:62,minWidth:62,maxWidth:62,padding:4,borderRadius:"50%",display:"grid",placeItems:"center",overflow:"visible",color:"transparent",fontSize:0}}
+  onClick={()=>setSaphireIaOpen(true)}
+  title="Saphire IA"
+  aria-label="Abrir Saphire IA"
+>
+  <span className="hf-saphire-ia-trigger-gem">
+    <SaphireGem size={21}/>
+  </span>
+  
 </button><button
   type="button"
   className="hf-notification-trigger"
@@ -4447,6 +4387,43 @@ const styles = `
     padding-right:10px;
   }
   /* SAPHIRE IA - JOIA MOBILE */
+  .hf-saphire-ia-trigger{
+    left:18px !important;
+    bottom:24px !important;
+    width:60px !important;
+    min-width:60px !important;
+    max-width:60px !important;
+    height:60px !important;
+    padding:4px !important;
+    display:grid !important;
+    place-items:center !important;
+    gap:0 !important;
+    border-radius:50% !important;
+    background:radial-gradient(circle at 35% 25%,#fff 0%,#edf4ff 35%,#d8e6ff 70%,#c2d5ff 100%) !important;
+    color:transparent !important;
+    font-size:0 !important;
+    line-height:0 !important;
+  }
+
+  .hf-saphire-ia-trigger::before{
+    inset:-13px !important;
+    border-radius:50% !important;
+  }
+
+  .hf-saphire-ia-trigger::after{
+    top:1px !important;
+    left:auto !important;
+    right:0 !important;
+    width:10px !important;
+    height:10px !important;
+    border-radius:50% !important;
+  }
+
+  .hf-saphire-ia-trigger-gem{
+    width:48px !important;
+    height:48px !important;
+    border-radius:50% !important;
+  }
 
   .hf-saphire-ia-label{
     display:none !important;
@@ -4928,6 +4905,167 @@ const styles = `
    COMMAND CENTER - BOTÃO DE BUSCA RÁPIDA
    ===================================================== */
 
+.hf-saphire-ia-trigger{
+  position:fixed;
+  left:24px;
+  bottom:26px;
+  width:auto;
+  min-width:154px;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:5px 15px 5px 7px;
+  border:1px solid rgba(151,184,255,.55);
+  border-radius:999px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.98),rgba(241,246,255,.96));
+  color:#17356f;
+  font-family:Poppins,sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:-.15px;
+  cursor:pointer;
+  z-index:260;
+  overflow:visible;
+  box-shadow:
+    0 12px 30px rgba(20,65,160,.20),
+    0 3px 10px rgba(49,94,251,.12),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(116,151,225,.12);
+  transition:
+    transform .25s cubic-bezier(.2,.8,.2,1),
+    box-shadow .25s ease,
+    border-color .25s ease;
+  animation:hfSaphireFloat 4s ease-in-out infinite;
+}
+
+.hf-saphire-ia-trigger::before{
+  content:"";
+  position:absolute;
+  inset:-7px;
+  border-radius:999px;
+  background:
+    radial-gradient(
+      circle,
+      rgba(72,132,255,.24) 0%,
+      rgba(72,132,255,.10) 38%,
+      rgba(72,132,255,0) 72%
+    );
+  filter:blur(5px);
+  z-index:-1;
+  opacity:.85;
+  animation:hfSaphireAura 3s ease-in-out infinite;
+}
+
+.hf-saphire-ia-trigger::after{
+  content:"";
+  position:absolute;
+  top:5px;
+  left:48px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#22c55e;
+  border:2px solid #fff;
+  box-shadow:
+    0 0 0 2px rgba(34,197,94,.16),
+    0 0 12px rgba(34,197,94,.65);
+  z-index:4;
+}
+
+.hf-saphire-ia-trigger-gem{
+  position:relative;
+  width:48px;
+  height:48px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:
+    radial-gradient(
+      circle at 35% 25%,
+      rgba(255,255,255,.98) 0%,
+      rgba(224,237,255,.94) 22%,
+      rgba(184,207,255,.92) 48%,
+      rgba(108,149,255,.78) 72%,
+      rgba(62,101,211,.72) 100%
+    );
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,.95),
+    inset 0 -5px 10px rgba(39,75,170,.20),
+    0 4px 14px rgba(42,88,210,.25),
+    0 0 24px rgba(83,137,255,.28);
+  transition:
+    transform .3s cubic-bezier(.2,.8,.2,1),
+    box-shadow .3s ease;
+  overflow:visible;
+}
+
+.hf-saphire-ia-trigger-gem::before{
+  content:"";
+  position:absolute;
+  width:12px;
+  height:6px;
+  top:8px;
+  left:11px;
+  border-radius:50%;
+  background:rgba(255,255,255,.82);
+  filter:blur(2px);
+  transform:rotate(-28deg);
+  pointer-events:none;
+}
+
+.hf-saphire-ia-trigger-gem::after{
+  content:"✦";
+  position:absolute;
+  right:-8px;
+  top:-8px;
+  color:#fff;
+  font-size:13px;
+  text-shadow:
+    0 0 8px rgba(255,255,255,.95),
+    0 0 14px rgba(72,132,255,.85);
+  animation:hfSaphireSparkle 2.4s ease-in-out infinite;
+  pointer-events:none;
+}
+
+.hf-saphire-ia-trigger:hover{
+  transform:translateY(-4px) scale(1.025);
+  border-color:rgba(86,130,236,.72);
+  box-shadow:
+    0 18px 38px rgba(20,65,160,.25),
+    0 5px 18px rgba(49,94,251,.18),
+    0 0 28px rgba(73,126,255,.16),
+    inset 0 1px 0 rgba(255,255,255,1);
+  animation-play-state:paused;
+}
+
+.hf-saphire-ia-trigger:hover::before{
+  opacity:1;
+}
+
+.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
+  transform:translateY(-2px) rotate(-3deg) scale(1.05);
+  box-shadow:
+    inset 0 2px 5px rgba(255,255,255,.98),
+    inset 0 -6px 12px rgba(39,75,170,.18),
+    0 7px 20px rgba(42,88,210,.30),
+    0 0 34px rgba(83,137,255,.42);
+}
+
+.hf-saphire-ia-trigger:active{
+  transform:translateY(-1px) scale(.97);
+}
+
+.hf-saphire-ia-trigger:focus-visible{
+  outline:none;
+  box-shadow:
+    0 0 0 4px rgba(49,94,251,.18),
+    0 12px 30px rgba(20,65,160,.20);
+}
+
 .hf-saphire-ia-label{
   white-space:nowrap;
   line-height:1;
@@ -4969,6 +5107,20 @@ const styles = `
 }
 
 @media(max-width:600px){
+  .hf-saphire-ia-trigger{
+    left:18px;
+    bottom:18px;
+    width:58px;
+    min-width:58px;
+    height:58px;
+    padding:5px;
+    border-radius:50%;
+  }
+
+  .hf-saphire-ia-trigger-gem{
+    width:48px;
+    height:48px;
+  }
 
   .hf-saphire-ia-label{
     display:none;
@@ -5038,6 +5190,166 @@ const styles = `
 }
 
 @media(max-width:600px){
+  .hf-saphire-ia-trigger{
+  position:fixed;
+  left:24px;
+  bottom:26px;
+  width:auto;
+  min-width:154px;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:5px 15px 5px 7px;
+  border:1px solid rgba(151,184,255,.55);
+  border-radius:999px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.98),rgba(241,246,255,.96));
+  color:#17356f;
+  font-family:Poppins,sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:-.15px;
+  cursor:pointer;
+  z-index:260;
+  overflow:visible;
+  box-shadow:
+    0 12px 30px rgba(20,65,160,.20),
+    0 3px 10px rgba(49,94,251,.12),
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(116,151,225,.12);
+  transition:
+    transform .25s cubic-bezier(.2,.8,.2,1),
+    box-shadow .25s ease,
+    border-color .25s ease;
+  animation:hfSaphireFloat 4s ease-in-out infinite;
+}
+
+.hf-saphire-ia-trigger::before{
+  content:"";
+  position:absolute;
+  inset:-7px;
+  border-radius:999px;
+  background:
+    radial-gradient(
+      circle,
+      rgba(72,132,255,.24) 0%,
+      rgba(72,132,255,.10) 38%,
+      rgba(72,132,255,0) 72%
+    );
+  filter:blur(5px);
+  z-index:-1;
+  opacity:.85;
+  animation:hfSaphireAura 3s ease-in-out infinite;
+}
+
+.hf-saphire-ia-trigger::after{
+  content:"";
+  position:absolute;
+  top:5px;
+  left:48px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#22c55e;
+  border:2px solid #fff;
+  box-shadow:
+    0 0 0 2px rgba(34,197,94,.16),
+    0 0 12px rgba(34,197,94,.65);
+  z-index:4;
+}
+
+.hf-saphire-ia-trigger-gem{
+  position:relative;
+  width:48px;
+  height:48px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:
+    radial-gradient(
+      circle at 35% 25%,
+      rgba(255,255,255,.98) 0%,
+      rgba(224,237,255,.94) 22%,
+      rgba(184,207,255,.92) 48%,
+      rgba(108,149,255,.78) 72%,
+      rgba(62,101,211,.72) 100%
+    );
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,.95),
+    inset 0 -5px 10px rgba(39,75,170,.20),
+    0 4px 14px rgba(42,88,210,.25),
+    0 0 24px rgba(83,137,255,.28);
+  transition:
+    transform .3s cubic-bezier(.2,.8,.2,1),
+    box-shadow .3s ease;
+  overflow:visible;
+}
+
+.hf-saphire-ia-trigger-gem::before{
+  content:"";
+  position:absolute;
+  width:12px;
+  height:6px;
+  top:8px;
+  left:11px;
+  border-radius:50%;
+  background:rgba(255,255,255,.82);
+  filter:blur(2px);
+  transform:rotate(-28deg);
+  pointer-events:none;
+}
+
+.hf-saphire-ia-trigger-gem::after{
+  content:"✦";
+  position:absolute;
+  right:-8px;
+  top:-8px;
+  color:#fff;
+  font-size:13px;
+  text-shadow:
+    0 0 8px rgba(255,255,255,.95),
+    0 0 14px rgba(72,132,255,.85);
+  animation:hfSaphireSparkle 2.4s ease-in-out infinite;
+  pointer-events:none;
+}
+
+.hf-saphire-ia-trigger:hover{
+  transform:translateY(-4px) scale(1.025);
+  border-color:rgba(86,130,236,.72);
+  box-shadow:
+    0 18px 38px rgba(20,65,160,.25),
+    0 5px 18px rgba(49,94,251,.18),
+    0 0 28px rgba(73,126,255,.16),
+    inset 0 1px 0 rgba(255,255,255,1);
+  animation-play-state:paused;
+}
+
+.hf-saphire-ia-trigger:hover::before{
+  opacity:1;
+}
+
+.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
+  transform:translateY(-2px) rotate(-3deg) scale(1.05);
+  box-shadow:
+    inset 0 2px 5px rgba(255,255,255,.98),
+    inset 0 -6px 12px rgba(39,75,170,.18),
+    0 7px 20px rgba(42,88,210,.30),
+    0 0 34px rgba(83,137,255,.42);
+}
+
+.hf-saphire-ia-trigger:active{
+  transform:translateY(-1px) scale(.97);
+}
+
+.hf-saphire-ia-trigger:focus-visible{
+  outline:none;
+  box-shadow:
+    0 0 0 4px rgba(49,94,251,.18),
+    0 12px 30px rgba(20,65,160,.20);
+}
 
 .hf-saphire-ia-label{
   white-space:nowrap;
@@ -5069,27 +5381,14 @@ const styles = `
    SAPHIRE IA — BOTÃO JOIA FINAL
    ===================================================== */
 
-.hf-saphire-ia-label{
-  display:none !important;
-  width:0 !important;
-  height:0 !important;
-  overflow:hidden !important;
-}
-
-/* =====================================================
-   SAPHIRE IA — BOTÃO JOIA
-   ===================================================== */
-
 .hf-saphire-ia-trigger{
   position:fixed !important;
-  right:28px !important;
+  left:24px !important;
   bottom:105px !important;
   width:62px !important;
   min-width:62px !important;
   max-width:62px !important;
   height:62px !important;
-  min-height:62px !important;
-  max-height:62px !important;
   padding:4px !important;
   margin:0 !important;
   display:grid !important;
@@ -5097,13 +5396,7 @@ const styles = `
   gap:0 !important;
   border:1px solid rgba(157,190,255,.72) !important;
   border-radius:50% !important;
-  background:radial-gradient(
-    circle at 35% 25%,
-    #ffffff 0%,
-    #edf4ff 35%,
-    #d8e6ff 70%,
-    #c2d5ff 100%
-  ) !important;
+  background:radial-gradient(circle at 35% 25%,#fff 0%,#edf4ff 35%,#d8e6ff 70%,#c2d5ff 100%) !important;
   color:transparent !important;
   font-size:0 !important;
   line-height:0 !important;
@@ -5116,7 +5409,6 @@ const styles = `
     inset 0 2px 5px rgba(255,255,255,1),
     inset 0 -4px 8px rgba(62,101,190,.14) !important;
   animation:hfSaphireGemFloat 4s ease-in-out infinite !important;
-  transition:transform .25s ease,box-shadow .25s ease !important;
 }
 
 .hf-saphire-ia-trigger::before{
@@ -5139,6 +5431,7 @@ const styles = `
   position:absolute !important;
   top:1px !important;
   right:0 !important;
+  left:auto !important;
   width:11px !important;
   height:11px !important;
   border-radius:50% !important;
@@ -5155,14 +5448,13 @@ const styles = `
   width:50px !important;
   height:50px !important;
   min-width:50px !important;
-  min-height:50px !important;
   border-radius:50% !important;
   display:grid !important;
   place-items:center !important;
   flex:none !important;
   background:radial-gradient(
     circle at 34% 22%,
-    #ffffff 0%,
+    #fff 0%,
     #e2efff 23%,
     #b8d3ff 48%,
     #6897ff 73%,
@@ -5196,30 +5488,23 @@ const styles = `
   color:#fff !important;
   font-size:14px !important;
   line-height:1 !important;
-  text-shadow:
-    0 0 7px #fff,
-    0 0 16px rgba(72,132,255,.95) !important;
+  text-shadow:0 0 7px #fff,0 0 16px rgba(72,132,255,.95) !important;
+}
+
+.hf-saphire-ia-label{
+  display:none !important;
+  width:0 !important;
+  height:0 !important;
+  overflow:hidden !important;
 }
 
 .hf-saphire-ia-trigger:hover{
   transform:translateY(-5px) scale(1.07) !important;
-  box-shadow:
-    0 18px 38px rgba(20,65,160,.30),
-    0 0 34px rgba(73,126,255,.34),
-    inset 0 2px 5px rgba(255,255,255,1) !important;
 }
 
-.hf-saphire-ia-trigger:hover .hf-saphire-ia-trigger-gem{
-  transform:scale(1.07) rotate(-4deg) !important;
-}
-
-.hf-saphire-ia-trigger:active{
-  transform:scale(.94) !important;
-}
-
-.hf-saphire-ia-trigger:focus-visible{
-  outline:3px solid rgba(74,128,255,.45) !important;
-  outline-offset:4px !important;
+@keyframes hfSaphireGemFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-5px)}
 }
 
 @media(max-width:600px){
@@ -5230,23 +5515,13 @@ const styles = `
     min-width:60px !important;
     max-width:60px !important;
     height:60px !important;
-    min-height:60px !important;
-    max-height:60px !important;
   }
 
   .hf-saphire-ia-trigger-gem{
     width:48px !important;
     min-width:48px !important;
     height:48px !important;
-    min-height:48px !important;
   }
-}
-@keyframes hfSaphireGemFloat{
-  0%,100%{transform:translateY(0)}
-  50%{transform:translateY(-5px)}
-}
-
-@media(max-width:600px){
 }
 @keyframes hfSaphireSparkle{
   0%,100%{
@@ -5264,6 +5539,20 @@ const styles = `
 }
 
 @media(max-width:600px){
+  .hf-saphire-ia-trigger{
+    left:18px;
+    bottom:18px;
+    width:58px;
+    min-width:58px;
+    height:58px;
+    padding:5px;
+    border-radius:50%;
+  }
+
+  .hf-saphire-ia-trigger-gem{
+    width:48px;
+    height:48px;
+  }
 
   .hf-saphire-ia-label{
     display:none;
@@ -7913,13 +8202,6 @@ const styles = `
   }
 }
 `
-
-
-
-
-
-
-
 
 
 
