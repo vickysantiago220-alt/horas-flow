@@ -3,6 +3,7 @@ import express, { Response } from 'express';
 import cors from 'cors';
 
 import { pool } from './db';
+import { askGemini } from './ai/gemini';
 import {
   comparePassword,
   createToken,
@@ -120,7 +121,649 @@ const DEMAND_SELECT = `
 `;
 
 
+
 // =====================================================
+// SAPHIRE IA
+// =====================================================
+
+app.post(
+  '/api/ai/chat',
+  authenticate,
+  async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    try {
+      const { message } = req.body;
+
+      if (
+        !message ||
+        typeof message !== 'string' ||
+        !message.trim()
+      ) {
+        return res.status(400).json({
+          isSuccess: false,
+          message: 'Mensagem é obrigatória.',
+        });
+      }
+
+      const user = getUser(req);
+
+      const scopeWhere =
+        user?.role === 'CLIENTE'
+          ? 'WHERE d.client_id = ?'
+          : '';
+
+      const scopeParams =
+        user?.role === 'CLIENTE'
+          ? [user.clientId]
+          : [];
+
+      // =================================================
+      // RESUMO GERAL
+      // =================================================
+
+      const [summaryRows] =
+        await pool.query(
+          `
+          SELECT
+            COUNT(*) AS totalDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalHours,
+
+            COALESCE(
+              SUM(d.analysis_hours),
+              0
+            ) AS analysisHours,
+
+            COALESCE(
+              SUM(d.required_hours),
+              0
+            ) AS requiredHours,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS finishedHours,
+
+            SUM(
+              CASE
+                WHEN d.status = 'Concluída'
+                THEN 1
+                ELSE 0
+              END
+            ) AS finishedDemands,
+
+            SUM(
+              CASE
+                WHEN d.approval = 'Pendente'
+                THEN 1
+                ELSE 0
+              END
+            ) AS pendingApprovalDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.approval = 'Pendente'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS pendingApprovalHours,
+
+            SUM(
+              CASE
+                WHEN d.delivery_date < CURDATE()
+                  AND d.status <> 'Concluída'
+                THEN 1
+                ELSE 0
+              END
+            ) AS overdueDemands
+
+          FROM demands d
+          ${scopeWhere}
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // ANÁLISE MENSAL
+      // =================================================
+
+      const [monthlyRows] =
+        await pool.query(
+          `
+          SELECT
+            DATE_FORMAT(
+              CASE
+                WHEN d.status = 'Analisada'
+                  THEN d.analysis_month
+
+                WHEN d.status = 'Concluída'
+                  THEN d.delivery_date
+
+                ELSE d.request_date
+              END,
+              '%Y-%m'
+            ) AS month,
+
+            COUNT(*) AS totalDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalHours,
+
+            COALESCE(
+              SUM(d.analysis_hours),
+              0
+            ) AS analysisHours,
+
+            COALESCE(
+              SUM(d.required_hours),
+              0
+            ) AS requiredHours,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS finishedHours
+
+          FROM demands d
+          ${scopeWhere}
+          ${
+            scopeWhere ? 'AND' : 'WHERE'
+          }
+          CASE
+                WHEN d.status = 'Analisada'
+                  THEN d.analysis_month
+
+                WHEN d.status = 'Concluída'
+                  THEN d.delivery_date
+
+                ELSE d.request_date
+              END IS NOT NULL
+
+          GROUP BY
+            DATE_FORMAT(
+              CASE
+                WHEN d.status = 'Analisada'
+                  THEN d.analysis_month
+
+                WHEN d.status = 'Concluída'
+                  THEN d.delivery_date
+
+                ELSE d.request_date
+              END,
+              '%Y-%m'
+            )
+
+          ORDER BY month ASC
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // POR RESPONSÁVEL
+      // =================================================
+
+      const [responsibleRows] =
+        await pool.query(
+          `
+          SELECT
+            COALESCE(
+              NULLIF(TRIM(d.responsible), ''),
+              'Sem responsável'
+            ) AS responsible,
+
+            COUNT(*) AS totalDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalHours
+
+          FROM demands d
+          ${scopeWhere}
+
+          GROUP BY
+            COALESCE(
+              NULLIF(TRIM(d.responsible), ''),
+              'Sem responsável'
+            )
+
+          ORDER BY totalHours DESC
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // POR CLIENTE
+      // =================================================
+
+      const [clientRows] =
+        await pool.query(
+          `
+          SELECT
+            d.client_id AS clientId,
+
+            COALESCE(
+              c.name,
+              CONCAT('Cliente #', d.client_id)
+            ) AS clientName,
+
+            COUNT(*) AS totalDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalHours
+
+          FROM demands d
+
+          LEFT JOIN clients c
+            ON c.id = d.client_id
+
+          ${scopeWhere}
+
+          GROUP BY
+            d.client_id,
+            c.name
+
+          ORDER BY totalHours DESC
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // POR STATUS
+      // =================================================
+
+      const [statusRows] =
+        await pool.query(
+          `
+          SELECT
+            d.status,
+
+            COUNT(*) AS totalDemands,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN d.status = 'Concluída'
+                  THEN
+                    COALESCE(d.analysis_hours, 0) +
+                    COALESCE(d.required_hours, 0)
+
+                  WHEN d.status = 'Analisada'
+                  THEN
+                    COALESCE(d.analysis_hours, 0)
+
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS totalHours
+
+          FROM demands d
+          ${scopeWhere}
+
+          GROUP BY d.status
+
+          ORDER BY totalDemands DESC
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // DEMANDAS ATRASADAS
+      // =================================================
+
+      const [overdueRows] =
+        await pool.query(
+          `
+          SELECT
+            d.number,
+            d.problem,
+            d.status,
+            d.priority,
+            d.responsible,
+            d.delivery_date AS deliveryDate,
+
+            COALESCE(
+              c.name,
+              CONCAT('Cliente #', d.client_id)
+            ) AS clientName,
+
+            DATEDIFF(
+              CURDATE(),
+              d.delivery_date
+            ) AS daysOverdue
+
+          FROM demands d
+
+          LEFT JOIN clients c
+            ON c.id = d.client_id
+
+          ${scopeWhere}
+
+          ${
+            scopeWhere ? 'AND' : 'WHERE'
+          }
+
+          d.delivery_date IS NOT NULL
+          AND d.delivery_date < CURDATE()
+          AND d.status <> 'Concluída'
+
+          ORDER BY daysOverdue DESC
+
+          LIMIT 20
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // PRÓXIMOS 7 DIAS
+      // =================================================
+
+      const [upcomingRows] =
+        await pool.query(
+          `
+          SELECT
+            d.number,
+            d.problem,
+            d.status,
+            d.priority,
+            d.responsible,
+            d.delivery_date AS deliveryDate,
+
+            COALESCE(
+              c.name,
+              CONCAT('Cliente #', d.client_id)
+            ) AS clientName,
+
+            DATEDIFF(
+              d.delivery_date,
+              CURDATE()
+            ) AS daysUntilDelivery
+
+          FROM demands d
+
+          LEFT JOIN clients c
+            ON c.id = d.client_id
+
+          ${scopeWhere}
+
+          ${
+            scopeWhere ? 'AND' : 'WHERE'
+          }
+
+          d.delivery_date IS NOT NULL
+          AND d.delivery_date >= CURDATE()
+          AND d.delivery_date <= DATE_ADD(
+            CURDATE(),
+            INTERVAL 7 DAY
+          )
+          AND d.status <> 'Concluída'
+
+          ORDER BY d.delivery_date ASC
+
+          LIMIT 20
+          `,
+          scopeParams
+        );
+
+      // =================================================
+      // CONTEXTO DA SAPHIRE
+      // =================================================
+
+      const analyticsContext = {
+        user: {
+          name: user?.name || null,
+          role: user?.role || null,
+          clientId: user?.clientId ?? null,
+        },
+
+        summary:
+          (summaryRows as any[])[0] || {},
+
+        monthly:
+          (monthlyRows as any[]).map(row => ({
+            month: row.month,
+            totalDemands: Number(row.totalDemands || 0),
+            totalHours: Number(row.totalHours || 0),
+            analysisHours: Number(row.analysisHours || 0),
+            requiredHours: Number(row.requiredHours || 0),
+            finishedHours: Number(row.finishedHours || 0),
+          })),
+
+        byResponsible:
+          (responsibleRows as any[]).map(row => ({
+            responsible: row.responsible,
+            totalDemands: Number(row.totalDemands || 0),
+            totalHours: Number(row.totalHours || 0),
+          })),
+
+        byClient:
+          (clientRows as any[]).map(row => ({
+            clientId: Number(row.clientId || 0),
+            clientName: row.clientName,
+            totalDemands: Number(row.totalDemands || 0),
+            totalHours: Number(row.totalHours || 0),
+          })),
+
+        byStatus:
+          (statusRows as any[]).map(row => ({
+            status: row.status,
+            totalDemands: Number(row.totalDemands || 0),
+            totalHours: Number(row.totalHours || 0),
+          })),
+
+        overdue:
+          (overdueRows as any[]).map(row => ({
+            number: row.number,
+            problem: row.problem,
+            status: row.status,
+            priority: row.priority,
+            responsible: row.responsible,
+            clientName: row.clientName,
+            deliveryDate: row.deliveryDate,
+            daysOverdue: Number(row.daysOverdue || 0),
+          })),
+
+        upcoming7Days:
+          (upcomingRows as any[]).map(row => ({
+            number: row.number,
+            problem: row.problem,
+            status: row.status,
+            priority: row.priority,
+            responsible: row.responsible,
+            clientName: row.clientName,
+            deliveryDate: row.deliveryDate,
+            daysUntilDelivery: Number(
+              row.daysUntilDelivery || 0
+            ),
+          })),
+      };
+
+      // =================================================
+      // PROMPT DA SAPHIRE
+      // =================================================
+
+      const prompt = `
+Você é a Saphire IA, assistente inteligente do Saphire Sheet.
+
+Sua função é analisar os dados reais do sistema e ajudar
+o usuário a entender demandas, horas, clientes,
+responsáveis, status, prazos e tendências.
+
+REGRAS:
+
+- Responda sempre em português do Brasil.
+- Fale com o usuário em linguagem simples, clara e profissional.
+- A Saphire é uma assistente de gestão, não uma assistente de programação.
+- Interprete perguntas feitas em linguagem natural. O usuário não precisa conhecer os termos técnicos do sistema.
+- Nunca exiba ao usuário nomes internos de campos, propriedades ou estruturas do sistema em uma resposta normal.
+- Nunca mencione espontaneamente: analysis_hours, required_hours, analysis_month, delivery_date, totalHours, analysisHours, finishedHours, pendingApprovalHours, SQL, query, banco de dados, JSON ou nomes técnicos de campos.
+- Quando precisar explicar esses conceitos, traduza para linguagem de negócio.
+- Use "horas de análise" em vez de analysis_hours.
+- Use "horas necessárias" em vez de required_hours.
+- Use "mês da análise" em vez de analysis_month.
+- Use "data de conclusão" em vez de delivery_date.
+- Use "horas totais" em vez de totalHours.
+- Use "horas concluídas" em vez de finishedHours.
+- Se o usuário não pedir detalhes técnicos, não apresente fórmulas, nomes de campos ou estrutura interna do sistema.
+- Quando explicar um cálculo, explique o resultado em linguagem de gestão.
+- Exemplo: em vez de "analysis_hours + required_hours", diga "horas de análise mais as horas necessárias para execução das demandas concluídas".
+- Responda primeiro a conclusão principal e depois apresente os detalhes necessários.
+- Para perguntas simples, seja objetiva.
+- Para análises mais complexas, organize a resposta com títulos e listas.
+- Destaque números e conclusões importantes.
+- Nunca invente informações ou números.
+- Utilize os dados calculados pelo sistema como fonte oficial.
+- Se os dados disponíveis não forem suficientes para responder, informe isso claramente.
+
+- Use somente os dados fornecidos abaixo.
+- Nunca invente números, nomes, datas ou indicadores.
+- Se não houver dados suficientes, diga isso claramente.
+- Faça cálculos apenas com os números disponíveis.
+- Em comparações, mostre claramente os períodos ou grupos comparados.
+- Seja objetiva, profissional e natural.
+- Evite respostas genéricas.
+- Destaque conclusões importantes.
+- Não mencione Gemini.
+- Não mencione Hora Flow.
+- O produto se chama Saphire Sheet.
+- Nunca revele senhas, tokens, chaves ou credenciais.
+
+INTERPRETAÇÃO DAS HORAS:
+
+- Para uma demanda com status "Analisada":
+  totalHours considera somente analysis_hours.
+
+- Para uma demanda com status "Concluída":
+  totalHours considera analysis_hours + required_hours.
+
+- Para qualquer outro status:
+  totalHours considera 0 horas.
+
+- O total geral é a soma das horas das demandas "Analisada" e "Concluída".
+
+- Uma demanda "Analisada" pertence ao período definido por analysis_month.
+
+- Uma demanda "Concluída" pertence ao período definido por delivery_date.
+
+- Nunca considere required_hours de demandas que não estejam com status "Concluída".
+
+DADOS REAIS:
+
+${JSON.stringify(analyticsContext, null, 2)}
+
+PERGUNTA:
+
+${message.trim()}
+
+Responda diretamente à pergunta do usuário.
+`;
+
+      const response =
+        await askGemini(prompt);
+
+      return res.json({
+        isSuccess: true,
+        message: response,
+      });
+
+    } catch (error: any) {
+      console.error(
+        'ERRO SAPHIRE IA:',
+        error
+      );
+
+      return res.status(500).json({
+        isSuccess: false,
+        message:
+          'Não foi possível analisar os dados do Saphire Sheet no momento.',
+
+      });
+    }
+  }
+);// =====================================================
 // LOGIN
 // =====================================================
 
@@ -2817,24 +3460,4 @@ async function startServer() {
 }
 
 startServer();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
