@@ -1267,7 +1267,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',
     analysisMonth:'',requestDate:'',deliveryDate:''
   });
-  const openNewDemand=()=>{
+  const createDemandFromSaphire=(suggestion:any)=>{const now=new Date();const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');const selectedClientId=dashboardClientFilter!=='Todos'?String(dashboardClientFilter):'';const selectedAnalysisMonth=dashboardPeriod!=='Todos'?String(dashboardPeriod):today.slice(0,7);setDemandError('');setEditingDemand(null);setDemandForm({...emptyDemand(),problema:String(suggestion.problema||''),tratamento:String(suggestion.tratamento||''),horasAnalise:Number(suggestion.horasAnalise)||0,horasNecessarias:Number(suggestion.horasNecessarias)||0,prioridade:String(suggestion.prioridade||'Média'),status:'Aguardando análise',clientId:selectedClientId,responsavel:'',analysisMonth:selectedAnalysisMonth,requestDate:today,deliveryDate:String(suggestion.dataEntrega||'')});setSaphireIaOpen(false);setDemandModal(true)}; const openNewDemand=()=>{
     if(!isInternal)return;
     setDemandError('');setEditingDemand(null);setDemandForm(emptyDemand());setDemandModal(true);
   };
@@ -2922,6 +2922,7 @@ const proximas = minhasDemandas
       close={()=>setSaphireIaOpen(false)}
       clientId={dashboardClientFilter}
       period={dashboardPeriod}
+      onApproveDemand={createDemandFromSaphire}
     />}    {notificationsOpen&&<NotificationsModal
       notifications={notifications}
       close={()=>setNotificationsOpen(false)}
@@ -3836,16 +3837,19 @@ function SaphireIAModal({
   user,
   close,
   clientId,
-  period
+  period,
+  onApproveDemand
 }:{
   user:any;
   close:()=>void;
   clientId:string;
   period:string;
+  onApproveDemand:(suggestion:any)=>void;
 }){
   const [message,setMessage]=useState('');
   const [loading,setLoading]=useState(false);
   const [messages,setMessages]=useState<Array<{role:'assistant'|'user';text:string}>>([]);
+  const [demandSuggestion,setDemandSuggestion]=useState<any>(null);
 
   const firstName=String(user?.name||'usuário').split(' ')[0];
 
@@ -3856,6 +3860,119 @@ function SaphireIAModal({
     'Como está a operação?'
   ];
 
+  const startDemandCreation=()=>{
+    setDemandSuggestion({
+      mode:'create',
+      problema:'',
+      tratamento:'',
+      dataEntrega:''
+    });
+  };
+
+  const cancelDemandCreation=()=>{
+    setDemandSuggestion(null);
+  };
+
+  const generateDemandSuggestion=async()=>{
+    if(!demandSuggestion?.problema?.trim() || !demandSuggestion?.tratamento?.trim() || !demandSuggestion?.dataEntrega){
+      return;
+    }
+
+    setLoading(true);
+
+    try{
+      const token=localStorage.getItem('horaflow-token');
+
+      if(!token){
+        throw new Error('Sua sessão expirou. Faça login novamente.');
+      }
+
+      const prompt=`Analise a demanda abaixo e prepare uma sugestão para cadastro no Saphire Sheet.
+
+Problema informado:
+${demandSuggestion.problema}
+
+Tratamento informado:
+${demandSuggestion.tratamento}
+
+Data de entrega desejada:
+${demandSuggestion.dataEntrega}
+
+Retorne SOMENTE um JSON válido, sem markdown, sem explicações fora do JSON, exatamente neste formato:
+{
+  "titulo": "título curto e objetivo da demanda",
+  "problema": "problema revisado de forma clara e profissional",
+  "tratamento": "tratamento revisado, explicando claramente como a demanda será executada",
+  "horasAnalise": 0,
+  "horasNecessarias": 0,
+  "prioridade": "Baixa",
+  "dataEntrega": "YYYY-MM-DD"
+}
+
+Regras:
+- Não invente informações específicas que não foram fornecidas.
+- Melhore a clareza do problema e do tratamento.
+- Explique o tratamento de forma objetiva e profissional.
+- Estime horas de análise e horas necessárias de execução de forma conservadora.
+- A data de entrega deve respeitar a data informada pelo usuário.
+- A prioridade deve ser uma destas: Baixa, Média, Alta ou Urgente.
+- As horas devem ser números.
+- A data deve estar no formato YYYY-MM-DD.`;
+
+      const response=await fetch(`${API}/ai/chat`,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':`Bearer ${token}`
+        },
+        body:JSON.stringify({
+          message:prompt,
+          clientId:clientId !== 'Todos' ? clientId : null,
+          period:period !== 'Todos' ? period : null
+        })
+      });
+
+      const data=await response.json().catch(()=>({
+        isSuccess:false,
+        message:'Resposta inválida do servidor.'
+      }));
+
+      if(!response.ok || data.isSuccess===false){
+        throw new Error(data.message || 'Não foi possível gerar a sugestão da demanda.');
+      }
+
+      const raw=String(data.message||'').trim();
+      const jsonMatch=raw.match(/\{[\s\S]*\}/);
+
+      if(!jsonMatch){
+        throw new Error('A Saphire não retornou uma sugestão válida.');
+      }
+
+      const parsed=JSON.parse(jsonMatch[0]);
+
+      setDemandSuggestion({
+        ...demandSuggestion,
+        mode:'result',
+        titulo:String(parsed.titulo||'Nova demanda'),
+        problema:String(parsed.problema||demandSuggestion.problema),
+        tratamento:String(parsed.tratamento||demandSuggestion.tratamento),
+        horasAnalise:Number(parsed.horasAnalise)||0,
+        horasNecessarias:Number(parsed.horasNecessarias)||0,
+        prioridade:String(parsed.prioridade||'Média'),
+        dataEntrega:String(parsed.dataEntrega||demandSuggestion.dataEntrega)
+      });
+    }catch(error:any){
+      setMessages(prev=>[
+        ...prev,
+        {
+          role:'assistant',
+          text:error?.message || 'Não foi possível gerar a sugestão da demanda.'
+        }
+      ]);
+    }finally{
+      setLoading(false);
+    }
+  };
   const sendMessage=async(text?:string)=>{
     const value=(text ?? message).trim();
 
@@ -3965,7 +4082,61 @@ function SaphireIAModal({
                 <span>O que você precisa resolver?</span>
               </div>
 
-              <div className="hf-saphire-ia-suggestions">
+              {demandSuggestion?.mode==='create' ? (
+                <div className="hf-saphire-ia-demand-create">
+                  <div className="hf-saphire-ia-demand-title">
+                    <strong>✨ Criar demanda com a Saphire</strong>
+                    <span>Descreva o que precisa ser feito e eu preparo a demanda para você.</span>
+                  </div>
+
+                  <label>
+                    <span>Problema</span>
+                    <textarea
+                      value={demandSuggestion.problema}
+                      onChange={e=>setDemandSuggestion({...demandSuggestion,problema:e.target.value})}
+                      placeholder="Descreva o problema ou necessidade..."
+                      rows={4}
+                    />
+                  </label>
+
+                  <label>
+                    <span>Tratamento</span>
+                    <textarea
+                      value={demandSuggestion.tratamento}
+                      onChange={e=>setDemandSuggestion({...demandSuggestion,tratamento:e.target.value})}
+                      placeholder="Como você imagina que essa demanda deve ser tratada?"
+                      rows={4}
+                    />
+                  </label>
+
+                  <label>
+                    <span>Data de entrega</span>
+                    <input
+                      type="date"
+                      value={demandSuggestion.dataEntrega}
+                      onChange={e=>setDemandSuggestion({...demandSuggestion,dataEntrega:e.target.value})}
+                    />
+                  </label>
+
+                  <div className="hf-saphire-ia-demand-actions">
+                    <button
+                      type="button"
+                      onClick={cancelDemandCreation}
+                    >
+                      Voltar
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={generateDemandSuggestion}
+                      disabled={loading}
+                    >
+                      {loading?'Analisando...':'✨ Gerar sugestão'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="hf-saphire-ia-suggestions">
                 {suggestions.map(item=>(
                   <button
                     key={item}
@@ -3976,7 +4147,9 @@ function SaphireIAModal({
                     <span>→</span>
                   </button>
                 ))}
+                <button type="button" onClick={startDemandCreation}>✨ Criar demanda com IA <span>→</span></button>
               </div>
+              )}
             </>
           ) : (
             <div className="hf-saphire-ia-messages">
@@ -4209,6 +4382,129 @@ const styles = `
 .hf-saphire-ia-suggestions button:hover span{
   color:#315efb;
   transform:translateX(3px);
+}
+
+.hf-saphire-ia-demand-create{
+  width:100%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:8px;
+  padding:18px;
+  border:1px solid #e2e7ef;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(31,45,75,.06);
+}
+
+.hf-saphire-ia-demand-title{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.hf-saphire-ia-demand-title strong{
+  color:#1c2940;
+  font-size:15px;
+  font-weight:800;
+}
+
+.hf-saphire-ia-demand-title span{
+  color:#7d899b;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.hf-saphire-ia-demand-create label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  width:100%;
+}
+
+.hf-saphire-ia-demand-create label > span{
+  color:#566176;
+  font-size:11px;
+  font-weight:800;
+}
+
+.hf-saphire-ia-demand-create textarea,
+.hf-saphire-ia-demand-create input[type="date"]{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid #e2e7ef;
+  border-radius:11px;
+  background:#f9fafc;
+  color:#344158;
+  font-family:inherit;
+  font-size:12px;
+  outline:none;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-demand-create textarea{
+  min-height:90px;
+  padding:11px 12px;
+  resize:vertical;
+  line-height:1.5;
+}
+
+.hf-saphire-ia-demand-create input[type="date"]{
+  height:44px;
+  padding:0 12px;
+}
+
+.hf-saphire-ia-demand-create textarea::placeholder{
+  color:#a0a9b8;
+}
+
+.hf-saphire-ia-demand-create textarea:focus,
+.hf-saphire-ia-demand-create input[type="date"]:focus{
+  border-color:#cbd8ff;
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(49,94,251,.08);
+}
+
+.hf-saphire-ia-demand-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  width:100%;
+  padding-top:2px;
+}
+
+.hf-saphire-ia-demand-actions button{
+  min-height:40px;
+  padding:0 14px;
+  border:0;
+  border-radius:10px;
+  font-family:inherit;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-demand-actions button:first-child{
+  background:#f1f3f7;
+  color:#566176;
+}
+
+.hf-saphire-ia-demand-actions button:last-child{
+  background:#315efb;
+  color:#fff;
+  box-shadow:0 5px 15px rgba(49,94,251,.18);
+}
+
+.hf-saphire-ia-demand-actions button:hover{
+  transform:translateY(-1px);
+}
+
+.hf-saphire-ia-demand-actions button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  transform:none;
 }
 
 .hf-saphire-ia-footer{
@@ -8202,6 +8498,19 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
