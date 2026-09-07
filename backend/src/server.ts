@@ -1457,7 +1457,7 @@ app.post(
         treatment,
         analysisHours = 0,
         requiredHours = 0,
-        priority = 'MÃ©dia',
+        priority = 'Média',
         status = 'Aguardando anÃ¡lise',
         clientId = null,
         responsible = null,
@@ -1476,7 +1476,7 @@ app.post(
 
       const validPriorities = [
         'Baixa',
-        'MÃ©dia',
+        'Média',
         'Alta',
         'Urgente',
       ];
@@ -1665,7 +1665,7 @@ app.put(
         requestDate = null,
         deliveryDate = null,
         requiredHours = 0,
-        priority = 'MÃ©dia',
+        priority = 'Média',
         status = 'Aguardando anÃ¡lise',
         clientId = null,
         responsible = null,
@@ -1916,7 +1916,7 @@ app.patch(
 
       const validPriorities = [
         'Baixa',
-        'MÃ©dia',
+        'Média',
         'Alta',
         'Urgente',
       ];
