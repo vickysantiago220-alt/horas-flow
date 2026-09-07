@@ -1742,7 +1742,7 @@ const dashboardDemands=useMemo(()=>{
     {/* FIM COMMAND CENTER MODAL */}
     {mobileMenu&&<div className="hf-overlay" onClick={()=>setMobileMenu(false)}/>}
     <aside className={`hf-sidebar ${mobileMenu?'open':''}`}>
-      <div className="hf-brand-logo"><strong>Saphire</strong><span>Sheet</span></div>
+      <div className="hf-brand-logo"><img src="/saphire_sheet_logo_dark.png" alt="Saphire Sheet" /></div>
       <nav>
         <Nav active={tab==='meu-dia'} icon={<CalendarDays size={18}/>} text="Meu Dia" onClick={()=>{setTab('meu-dia');setMobileMenu(false)}}/>
         <Nav active={tab==='dashboard'} icon={<LayoutDashboard size={18}/>} text="Dashboard" onClick={()=>{setTab('dashboard');setMobileMenu(false)}}/>
@@ -2965,7 +2965,9 @@ const proximas = minhasDemandas
 }
 
 function LoginScreen({email,password,setEmail,setPassword,showPassword,setShowPassword,loading,error,onSubmit}:{email:string;password:string;setEmail:(v:string)=>void;setPassword:(v:string)=>void;showPassword:boolean;setShowPassword:(v:boolean)=>void;loading:boolean;error:string;onSubmit:(e:React.FormEvent)=>void}){
-  return <div className="hf-login"><style>{styles}</style><div className="hf-login-decoration one"/><div className="hf-login-decoration two"/><div className="hf-login-card"><div className="hf-login-brand"><strong>Saphire</strong><span>Sheet</span></div><div className="hf-login-copy"><h1>Bem-vinda de volta</h1><p>Entre para acompanhar suas demandas, horas e aprovações.</p></div><form onSubmit={onSubmit}><label>E-mail<div className="hf-input"><Mail size={18}/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" autoComplete="username" required/></div></label><label>Senha<div className="hf-input"><LockKeyhole size={18}/><input type={showPassword?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Sua senha" autoComplete="current-password" required/><button type="button" onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></label>{error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}<button className="hf-login-button" disabled={loading}>{loading?'Entrando...':'Entrar'}<span>→</span></button></form><div className="hf-login-footer">Acesso seguro • Saphire Sheet</div></div></div>;
+  return <div className="hf-login"><style>{styles}
+
+</style><div className="hf-login-decoration one"/><div className="hf-login-decoration two"/><div className="hf-login-card"><div className="hf-login-brand"><strong>Saphire</strong><span>Sheet</span></div><div className="hf-login-copy"><h1>Bem-vinda de volta</h1><p>Entre para acompanhar suas demandas, horas e aprovações.</p></div><form onSubmit={onSubmit}><label>E-mail<div className="hf-input"><Mail size={18}/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" autoComplete="username" required/></div></label><label>Senha<div className="hf-input"><LockKeyhole size={18}/><input type={showPassword?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Sua senha" autoComplete="current-password" required/><button type="button" onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></label>{error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}<button className="hf-login-button" disabled={loading}>{loading?'Entrando...':'Entrar'}<span>→</span></button></form><div className="hf-login-footer">Acesso seguro • Saphire Sheet</div></div></div>;
 }
 createRoot(document.getElementById('root')!).render(<App />);
 function UsersPage({users,clients,loading,onNew,onRefresh,isAdmin}:{users:User[];clients:Client[];loading:boolean;onNew:()=>void;onRefresh:()=>void;isAdmin:boolean}){
@@ -4456,6 +4458,35 @@ const styles = `
 }
 
 .hf-saphire-ia-demand-create textarea,
+
+.hf-saphire-ia-demand-create input[type="text"][readonly]{
+  width:100%;
+  box-sizing:border-box;
+  min-height:48px;
+  padding:12px 14px;
+  border:1px solid #d8e1f2;
+  border-radius:12px;
+  background:linear-gradient(135deg,#f8faff 0%,#f1f5ff 100%);
+  color:#17243a;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.4;
+  outline:none;
+  cursor:default;
+  box-shadow:0 2px 8px rgba(49,94,251,.05);
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-demand-create input[type="text"][readonly]:hover{
+  border-color:#c5d3ee;
+  background:#fff;
+  box-shadow:0 4px 12px rgba(49,94,251,.08);
+}
+
+.hf-saphire-ia-demand-create label:first-of-type input[type="text"][readonly]{
+  margin-top:3px;
+}
 .hf-saphire-ia-demand-create input[type="date"]{
   width:100%;
   box-sizing:border-box;
@@ -4476,6 +4507,35 @@ const styles = `
   line-height:1.5;
 }
 
+
+.hf-saphire-ia-demand-create input[type="text"][readonly]{
+  width:100%;
+  box-sizing:border-box;
+  min-height:48px;
+  padding:12px 14px;
+  border:1px solid #d8e1f2;
+  border-radius:12px;
+  background:linear-gradient(135deg,#f8faff 0%,#f1f5ff 100%);
+  color:#17243a;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.4;
+  outline:none;
+  cursor:default;
+  box-shadow:0 2px 8px rgba(49,94,251,.05);
+  transition:.18s ease;
+}
+
+.hf-saphire-ia-demand-create input[type="text"][readonly]:hover{
+  border-color:#c5d3ee;
+  background:#fff;
+  box-shadow:0 4px 12px rgba(49,94,251,.08);
+}
+
+.hf-saphire-ia-demand-create label:first-of-type input[type="text"][readonly]{
+  margin-top:3px;
+}
 .hf-saphire-ia-demand-create input[type="date"]{
   height:44px;
   padding:0 12px;
@@ -5097,6 +5157,8 @@ const styles = `
 
 *{box-sizing:border-box}body{margin:0;font-family:Poppins,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#172033}button,input,select,textarea{font-family:Poppins,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.55}
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
+.hf-sidebar{background:#061426 !important}.hf-brand-logo{width:100%;min-height:118px;padding:2px 0 18px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}.hf-brand-logo img{display:block;width:250px;max-width:94%;height:auto;max-height:115px;object-fit:contain;object-position:center;filter:drop-shadow(0 0 5px rgba(255,255,255,.45)) drop-shadow(0 0 11px rgba(255,255,255,.16))}
 .hf-brand-logo{padding:8px 10px 28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:88px;line-height:.92}.hf-brand-logo strong{color:#fff;font-size:24px;font-weight:800;letter-spacing:-.8px}.hf-brand-logo span{color:#5f82ff;font-size:21px;font-weight:500;letter-spacing:1.2px;margin-left:2px}.hf-execution{font-weight:700;color:#315efb}.hf-number-badge{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:28px;padding:0 8px;border-radius:9px;background:#f1f5ff;color:#315efb;font-weight:800;font-size:11px}.hf-demand-text{max-width:220px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#344158}.hf-hours-cell{display:grid;grid-template-columns:auto 8px auto;align-items:center;gap:3px;white-space:nowrap}.hf-hours-cell b{font-size:12px}.hf-hours-cell span{color:#a2acbb}.hf-hours-cell small{grid-column:1/-1;color:#9aa4b3;font-size:9px}.hf-priority-pill,.hf-status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:700;white-space:nowrap}.hf-priority-pill:before,.hf-status-pill:before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}.priority-baixa{background:#eef8f2;color:#258153}.priority-media{background:#f3f5f8;color:#667286}.priority-alta{background:#fff5e7;color:#b66a00}.priority-urgente{background:#fff0f1;color:#c83d4b}.status-aguardando-analise,.status-pendente{background:#fff8e9;color:#a56b00}.status-em-analise{background:#eef4ff;color:#315efb}.status-aguardando-aprovacao{background:#f4efff;color:#7b55c7}.status-em-desenvolvimento{background:#edf8f8;color:#15818a}.status-em-homologacao{background:#f1efff;color:#6b59c9}.status-concluida{background:#edf8f2;color:#258153}.status-reprovada{background:#fff0f1;color:#c83d4b}.hf-paid-dot{display:inline-flex;align-items:center;gap:6px;color:#7d899b;font-size:11px}.hf-paid-dot i{width:7px;height:7px;border-radius:50%;background:#c7ced8}.hf-paid-dot.on{color:#258153;font-weight:700}.hf-paid-dot.on i{background:#2fa66e}.hf-row-actions{display:flex;align-items:center;gap:5px;min-width:220px}.hf-action-btn{height:32px;border:1px solid #e0e6ef;background:#fff;color:#68758a;border-radius:8px;padding:0 9px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:10px;font-weight:600;transition:.18s}.hf-action-btn:hover{border-color:#c9d3e2;background:#f8fafc;transform:translateY(-1px)}.hf-action-btn.primary{color:#315efb;border-color:#d8e1ff;background:#f5f7ff}.hf-action-btn.primary:hover{background:#edf2ff}.hf-action-btn.danger{color:#c83d4b;border-color:#f0d5d9;background:#fff8f8}.hf-action-btn.danger:hover{background:#fff0f1}.actions-head{min-width:220px}.hf-pill.pending{background:#f3f5f8;color:#68758a}.hf-history-modal{width:min(720px,100%)}.hf-history-loading,.hf-history-empty{min-height:220px;display:grid;place-items:center;align-content:center;gap:10px;color:#8793a5;text-align:center}.hf-history-loading svg{animation:spin 1s linear infinite;color:#315efb}.hf-history-empty svg{color:#b7c0ce}.hf-history-empty strong{color:#354259}.hf-history-empty span{font-size:12px}@keyframes spin{to{transform:rotate(360deg)}}.hf-history-content{flex:1;background:#f8fafc;border:1px solid #e7ebf1;border-radius:12px;padding:12px 14px}.hf-history-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.hf-history-top span{font-size:10px;color:#8a95a6;background:#fff;border:1px solid #e4e9f0;border-radius:999px;padding:4px 7px}.hf-history-content p{display:flex;gap:8px;align-items:center;margin:9px 0 5px;font-size:12px;flex-wrap:wrap}.hf-history-content p span{color:#7d899b}.hf-history-content p b{color:#b0b8c5}.hf-history-content p strong{color:#315efb}.hf-history-content small{color:#9aa4b3;font-size:10px}.hf-history-row{align-items:flex-start}.hf-history-line{margin-top:18px;box-shadow:0 0 0 4px #315efb12}.hf-table-wrap table tbody tr:hover{background:#fbfcfe}.hf-table-wrap table td{vertical-align:middle}/* =========================================================
    SAPPHIRE — MODAL DE DEMANDA MODERNO
    ========================================================= */
@@ -8604,242 +8666,6 @@ const styles = `
   }
 }
 `
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
