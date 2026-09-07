@@ -1267,9 +1267,35 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',
     analysisMonth:'',requestDate:'',deliveryDate:''
   });
-  const createDemandFromSaphire=(suggestion:any)=>{const now=new Date();const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');const selectedClientId=dashboardClientFilter!=='Todos'?String(dashboardClientFilter):'';const selectedAnalysisMonth=dashboardPeriod!=='Todos'?String(dashboardPeriod):today.slice(0,7);setDemandError('');setEditingDemand(null);setDemandForm({...emptyDemand(),problema:String(suggestion.problema||''),tratamento:String(suggestion.tratamento||''),horasAnalise:Number(suggestion.horasAnalise)||0,horasNecessarias:Number(suggestion.horasNecessarias)||0,prioridade:String(suggestion.prioridade||'Média'),status:'Aguardando análise',clientId:selectedClientId,responsavel:'',analysisMonth:selectedAnalysisMonth,requestDate:today,deliveryDate:String(suggestion.dataEntrega||'')});setSaphireIaOpen(false);setDemandModal(true)}; const openNewDemand=()=>{
+  const openNewDemand=()=>{
     if(!isInternal)return;
     setDemandError('');setEditingDemand(null);setDemandForm(emptyDemand());setDemandModal(true);
+  };
+
+  const createDemandFromSaphire=(suggestion:any)=>{
+    const now=new Date();
+    const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+    const selectedClientId=dashboardClientFilter!=='Todos'?String(dashboardClientFilter):'';
+    const selectedAnalysisMonth=dashboardPeriod!=='Todos'?String(dashboardPeriod):today.slice(0,7);
+
+    setDemandError('');
+    setEditingDemand(null);
+    setDemandForm({
+      ...emptyDemand(),
+      problema:String(suggestion.problema||''),
+      tratamento:String(suggestion.tratamento||''),
+      horasAnalise:Number(suggestion.horasAnalise)||0,
+      horasNecessarias:Number(suggestion.horasNecessarias)||0,
+      prioridade:String(suggestion.prioridade||'Média'),
+      status:'Aguardando análise',
+      clientId:selectedClientId,
+      responsavel:'',
+      analysisMonth:selectedAnalysisMonth,
+      requestDate:today,
+      deliveryDate:String(suggestion.dataEntrega||'')
+    });
+    setSaphireIaOpen(false);
+    setDemandModal(true);
   };
 
   const openEditDemand=(d:Demand)=>{
@@ -4082,7 +4108,7 @@ Regras:
                 <span>O que você precisa resolver?</span>
               </div>
 
-              {demandSuggestion?.mode==='create' ? (
+              {demandSuggestion?.mode==='result' ? (<div className="hf-saphire-ia-demand-create"><div className="hf-saphire-ia-demand-title"><strong>✨ Sugestão da Saphire pronta</strong><span>Revise os dados antes de aprovar a demanda.</span></div><label><span>Título</span><input type="text" value={demandSuggestion.titulo||''} readOnly /></label><label><span>Problema</span><textarea value={demandSuggestion.problema||''} readOnly rows={4} /></label><label><span>Tratamento sugerido</span><textarea value={demandSuggestion.tratamento||''} readOnly rows={5} /></label><div className="hf-saphire-ia-demand-summary"><div><span>Análise</span><strong>{demandSuggestion.horasAnalise||0}h</strong></div><div><span>Execução</span><strong>{demandSuggestion.horasNecessarias||0}h</strong></div><div><span>Total</span><strong>{(Number(demandSuggestion.horasAnalise)||0)+(Number(demandSuggestion.horasNecessarias)||0)}h</strong></div><div><span>Prioridade</span><strong>{demandSuggestion.prioridade||'Média'}</strong></div><div><span>Entrega</span><strong>{demandSuggestion.dataEntrega||'-'}</strong></div></div><div className="hf-saphire-ia-demand-actions"><button type="button" onClick={cancelDemandCreation}>Voltar</button><button type="button" onClick={()=>onApproveDemand(demandSuggestion)}>✓ Aprovar e abrir demanda</button></div></div>) : demandSuggestion?.mode==='create' ? (
                 <div className="hf-saphire-ia-demand-create">
                   <div className="hf-saphire-ia-demand-title">
                     <strong>✨ Criar demanda com a Saphire</strong>
@@ -8498,6 +8524,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
