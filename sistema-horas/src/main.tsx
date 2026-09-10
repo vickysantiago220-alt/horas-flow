@@ -3751,18 +3751,16 @@ function repairHistoryText(value:string){
 function historyFieldLabel(field:string){
   const repaired=repairHistoryText(field);
 
-  const labels:Record<string,string>={
-    horas_necessarias:'Horas necessárias',
-    horasNecessarias:'Horas necessárias',
-    analysis_hours:'Horas de análise',
-    analysisHours:'Horas de análise',
-    horas_analise:'Horas de análise',
-    horasAnalise:'Horas de análise',
-    aprovacao:'Aprovação',
-    approval:'Aprovação'
-  };
+  if(repaired==="horas_necessarias"||repaired==="horasNecessarias")
+    return "Horas necessárias";
 
-  return labels[repaired]||repaired;
+  if(repaired==="analysis_hours"||repaired==="analysisHours"||repaired==="horas_analise"||repaired==="horasAnalise")
+    return "Horas de análise";
+
+  if(repaired==="aprovacao"||repaired==="approval")
+    return "Aprovação";
+
+  return repaired;
 }
 
 function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loading:boolean}){
@@ -9363,6 +9361,7 @@ const styles = `
   }
 }
 `
+
 
 
 
