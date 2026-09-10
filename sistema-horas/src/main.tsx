@@ -157,6 +157,7 @@ const formatPeriod = (period:string) => {
   const [historyLoading,setHistoryLoading]=useState(false);
   const [copied,setCopied]=useState(false);
   const [mobileMenu,setMobileMenu]=useState(false);
+  const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [commandCenterOpen,setCommandCenterOpen]=useState(false);
 const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [saphireIaOpen,setSaphireIaOpen]=useState(false);
@@ -1741,9 +1742,8 @@ const dashboardDemands=useMemo(()=>{
 
     {/* FIM COMMAND CENTER MODAL */}
     {mobileMenu&&<div className="hf-overlay" onClick={()=>setMobileMenu(false)}/>}
-    <aside className={`hf-sidebar ${mobileMenu?'open':''}`}>
-      <div className="hf-brand-logo"><img src="/saphire-sheet-logo-sidebar.svg" alt="Saphire Sheet" /></div>
-      <nav>
+    <aside className={`hf-sidebar ${mobileMenu ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <div className="hf-brand-logo"><img src="/saphire-sheet-logo-sidebar.svg" alt="Saphire Sheet" /><button type="button" className="hf-sidebar-toggle" onClick={()=>setSidebarCollapsed(v=>!v)} aria-label={sidebarCollapsed?"Expandir menu":"Recolher menu"}>{sidebarCollapsed?"›":"‹"}</button></div><nav>
         <Nav active={tab==='meu-dia'} icon={<CalendarDays size={18}/>} text="Meu Dia" onClick={()=>{setTab('meu-dia');setMobileMenu(false)}}/>
         <Nav active={tab==='dashboard'} icon={<LayoutDashboard size={18}/>} text="Dashboard" onClick={()=>{setTab('dashboard');setMobileMenu(false)}}/>
         <Nav active={tab==='demandas'} icon={<BarChart3 size={18}/>} text="Demandas" onClick={()=>{setTab('demandas');setMobileMenu(false)}}/>
@@ -1753,7 +1753,7 @@ const dashboardDemands=useMemo(()=>{
       <div className="hf-sidebar-bottom"><div className="hf-user-mini"><div className="hf-avatar">{user.name.slice(0,1).toUpperCase()}</div><div><strong>{user.name}</strong><span>{roleLabel(user.role)}</span></div></div><button className="hf-logout" onClick={logout}><LogOut size={17}/> Sair</button></div>
     </aside>
 
-    <main className="hf-main">
+    <main className={`hf-main ${sidebarCollapsed?"sidebar-collapsed":""}`}>
       <header className="hf-topbar">
         <button className="hf-menu" onClick={()=>setMobileMenu(true)}><Menu size={20}/></button>
         <div><div className="hf-eyebrow">Saphire Sheet • Gestão</div><h1>
@@ -6327,6 +6327,110 @@ const styles = `
   }
 }
 
+/* =========================================================
+   SIDEBAR DESKTOP — RECOLHÍVEL E RESPONSIVA
+   ========================================================= */
+
+@media(min-width:1001px){
+
+  .hf-sidebar{
+    width:240px;
+    transition:width .25s ease, padding .25s ease;
+    overflow:hidden;
+  }
+
+  .hf-main{
+    margin-left:240px;
+    width:calc(100% - 240px);
+    transition:margin-left .25s ease, width .25s ease;
+  }
+
+  .hf-sidebar.collapsed{
+    width:78px;
+    padding-left:10px;
+    padding-right:10px;
+  }
+
+  .hf-main.sidebar-collapsed{
+    margin-left:78px;
+    width:calc(100% - 78px);
+  }
+
+  .hf-sidebar.collapsed .hf-brand-logo{
+    padding-left:4px;
+    padding-right:4px;
+  }
+
+  .hf-sidebar.collapsed .hf-brand-logo img{
+    width:48px;
+    transform:scale(1);
+  }
+
+  .hf-sidebar.collapsed .hf-nav{
+    justify-content:center;
+    padding-left:10px;
+    padding-right:10px;
+  }
+
+  .hf-sidebar.collapsed .hf-nav span{
+    width:0;
+    opacity:0;
+    overflow:hidden;
+    white-space:nowrap;
+    transition:opacity .15s ease, width .2s ease;
+  }
+
+  .hf-sidebar.collapsed .hf-user-mini{
+    justify-content:center;
+    margin-left:0;
+    margin-right:0;
+  }
+
+  .hf-sidebar.collapsed .hf-user-mini > div:last-child{
+    width:0;
+    opacity:0;
+    overflow:hidden;
+  }
+
+  .hf-sidebar.collapsed .hf-logout{
+    justify-content:center;
+    padding-left:8px;
+    padding-right:8px;
+  }
+
+  .hf-sidebar-toggle{
+    position:absolute;
+    top:20px;
+    right:8px;
+    width:28px;
+    height:28px;
+    border:1px solid #ffffff18;
+    border-radius:8px;
+    background:#ffffff0d;
+    color:#dbe5f5;
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    font-size:21px;
+    line-height:1;
+    z-index:2;
+    transition:background .18s ease, transform .18s ease;
+  }
+
+  .hf-sidebar-toggle:hover{
+    background:#ffffff18;
+    transform:scale(1.05);
+  }
+
+  .hf-sidebar.collapsed .hf-sidebar-toggle{
+    right:25px;
+  }
+
+}
+
+/* =========================================================
+   FIM SIDEBAR DESKTOP
+   ========================================================= */
 @media(max-width:1000px){.hf-sidebar{transform:translateX(-100%);transition:.2s}.hf-sidebar.open{transform:translateX(0)}.hf-overlay{display:block;position:fixed;inset:0;background:#07101d66;z-index:15}.hf-main{margin-left:0;width:100%;padding:22px}.hf-menu{display:grid;border:1px solid #e1e6ee;background:#fff;width:38px;height:38px;border-radius:10px;place-items:center;color:#344158}.hf-topbar{align-items:flex-start}.hf-topbar>div:nth-child(2){flex:1}.hf-cards{grid-template-columns:repeat(2,1fr)}.hf-grid2{grid-template-columns:1fr}.hf-user-grid{grid-template-columns:repeat(2,1fr)}.hf-client-grid{grid-template-columns:repeat(2,1fr)}.hf-filters{flex-wrap:wrap}.hf-search{min-width:100%}}
 @media(max-width:600px){.hf-login{background:#f4f7fb;padding:14px}.hf-login-card{padding:25px 20px;border-radius:18px}.hf-topbar h1{font-size:23px}.hf-top-actions .hf-primary{display:none}.hf-cards{grid-template-columns:1fr}.hf-cards.small{grid-template-columns:1fr 1fr}.hf-user-grid{grid-template-columns:1fr}.hf-client-grid{grid-template-columns:1fr}.hf-form-grid{grid-template-columns:1fr}.hf-filters select{flex:1}.hf-filter-count{width:100%}.hf-totals{flex-wrap:wrap;justify-content:flex-start}.hf-main{padding:16px}.hf-panel{padding:14px}}
 
