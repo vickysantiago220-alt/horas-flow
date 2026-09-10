@@ -3735,10 +3735,40 @@ function ApprovalModal({demand,month,setMonth,reason,setReason,saving,close,conf
   </div>
 }
 
+function repairHistoryText(value:string){
+  if(!value)return value;
+
+  if(!/[ÃÂ]/.test(value))return value;
+
+  try{
+    const bytes=Uint8Array.from(value,c=>c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  }catch{
+    return value;
+  }
+}
+
+function historyFieldLabel(field:string){
+  const repaired=repairHistoryText(field);
+
+  const labels:Record<string,string>={
+    horas_necessarias:'Horas necessárias',
+    horasNecessarias:'Horas necessárias',
+    analysis_hours:'Horas de análise',
+    analysisHours:'Horas de análise',
+    horas_analise:'Horas de análise',
+    horasAnalise:'Horas de análise',
+    aprovacao:'Aprovação',
+    approval:'Aprovação'
+  };
+
+  return labels[repaired]||repaired;
+}
+
 function HistoryModal({demand,close,loading}:{demand:Demand;close:()=>void;loading:boolean}){
   return <div className="hf-modal-backdrop"><div className="hf-modal hf-history-modal">
     <div className="hf-modal-head"><div><span className="hf-eyebrow">Demanda #{String(demand.numero).padStart(3,'0')}</span><h2>Histórico de alterações</h2><p>Registro de todas as modificações realizadas nesta demanda.</p></div><button onClick={close} aria-label="Fechar"><X size={20}/></button></div>
-    {loading?<div className="hf-history-loading"><RefreshCw size={22}/><span>Carregando histórico...</span></div>:!demand.history.length?<div className="hf-history-empty"><History size={30}/><strong>Nenhuma alteração registrada</strong><span>As próximas edições aparecerão aqui.</span></div>:<div className="hf-history">{demand.history.map(h=><div className="hf-history-row" key={h.id}><div className="hf-history-line"/><div className="hf-history-content"><div className="hf-history-top"><strong>{h.field}</strong><span>{h.user}</span></div><p><span>{h.oldValue||'—'}</span><b>→</b><strong>{h.newValue||'—'}</strong></p><small>{formatApprovalDate(h.date)}</small></div></div>)}</div>}
+    {loading?<div className="hf-history-loading"><RefreshCw size={22}/><span>Carregando histórico...</span></div>:!demand.history.length?<div className="hf-history-empty"><History size={30}/><strong>Nenhuma alteração registrada</strong><span>As próximas edições aparecerão aqui.</span></div>:<div className="hf-history">{demand.history.map(h=><div className="hf-history-row" key={h.id}><div className="hf-history-line"/><div className="hf-history-content"><div className="hf-history-top"><strong>{historyFieldLabel(h.field)}</strong><span>{h.user}</span></div><p><span>{h.oldValue||'—'}</span><b>→</b><strong>{h.newValue||'—'}</strong></p><small>{formatApprovalDate(h.date)}</small></div></div>)}</div>}
   </div></div>
 }
 
@@ -9333,6 +9363,7 @@ const styles = `
   }
 }
 `
+
 
 
 
