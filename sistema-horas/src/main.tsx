@@ -6005,26 +6005,6 @@ const styles = `
   }
 }
 
-@media(max-width:600px){
-  .hf-saphire-ia-trigger{
-    left:18px;
-    bottom:18px;
-    width:58px;
-    min-width:58px;
-    height:58px;
-    padding:5px;
-    border-radius:50%;
-  }
-
-  .hf-saphire-ia-trigger-gem{
-    width:48px;
-    height:48px;
-  }
-
-  .hf-saphire-ia-label{
-    display:none;
-  }
-}
 .hf-command-trigger{
     width:40px;
     padding:0;
