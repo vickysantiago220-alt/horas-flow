@@ -6888,7 +6888,7 @@ const styles = `
     padding:20px 0;
   }
 }
-.hf-demand-modal{width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow-y:auto}
+.hf-demand-modal{width:min(820px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow-y:auto}
 .hf-demand-form{gap:0}
 .hf-form-section{padding:20px 0;border-bottom:1px solid #edf0f5}
 .hf-form-section:first-child{padding-top:4px}
@@ -9018,6 +9018,7 @@ const styles = `
   }
 }
 `
+
 
 
 
