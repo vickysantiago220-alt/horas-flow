@@ -2968,6 +2968,8 @@ const proximas = minhasDemandas
 function LoginScreen({email,password,setEmail,setPassword,showPassword,setShowPassword,loading,error,onSubmit}:{email:string;password:string;setEmail:(v:string)=>void;setPassword:(v:string)=>void;showPassword:boolean;setShowPassword:(v:boolean)=>void;loading:boolean;error:string;onSubmit:(e:React.FormEvent)=>void}){
   return <div className="hf-login"><style>{styles}
 
+
+
 </style><div className="hf-login-decoration one"/><div className="hf-login-decoration two"/><div className="hf-login-card"><div className="hf-login-brand"><img src="/saphire-sheet-logo-login.svg" alt="Saphire Sheet" /></div><div className="hf-login-copy"><h1>Entrar</h1><p>Entre para acompanhar suas demandas, horas e aprovações.</p></div><form onSubmit={onSubmit}><label>E-mail<div className="hf-input"><Mail size={18}/><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com" autoComplete="username" required/></div></label><label>Senha<div className="hf-input"><LockKeyhole size={18}/><input type={showPassword?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Sua senha" autoComplete="current-password" required/><button type="button" onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></label>{error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}<button className="hf-login-button" disabled={loading}>{loading?'Entrando...':'Entrar'}<span>→</span></button></form><div className="hf-login-footer">Acesso seguro • Saphire Sheet</div></div></div>;
 }
 createRoot(document.getElementById('root')!).render(<App />);
@@ -6478,8 +6480,227 @@ const styles = `
   stroke-width:2;
 }
 
-@media(max-width:1000px){.hf-sidebar{transform:translateX(-100%);transition:.2s}.hf-sidebar.open{transform:translateX(0)}.hf-overlay{display:block;position:fixed;inset:0;background:#07101d66;z-index:15}.hf-main{margin-left:0;width:100%;padding:22px}.hf-menu{display:grid;border:1px solid #e1e6ee;background:#fff;width:38px;height:38px;border-radius:10px;place-items:center;color:#344158}.hf-topbar{align-items:flex-start}.hf-topbar>div:nth-child(2){flex:1}.hf-cards{grid-template-columns:repeat(2,1fr)}.hf-grid2{grid-template-columns:1fr}.hf-user-grid{grid-template-columns:repeat(2,1fr)}.hf-client-grid{grid-template-columns:repeat(2,1fr)}.hf-filters{flex-wrap:wrap}.hf-search{min-width:100%}}
-@media(max-width:600px){.hf-login{background:#f4f7fb;padding:14px}.hf-login-card{padding:25px 20px;border-radius:18px}.hf-topbar h1{font-size:23px}.hf-top-actions .hf-primary{display:none}.hf-cards{grid-template-columns:1fr}.hf-cards.small{grid-template-columns:1fr 1fr}.hf-user-grid{grid-template-columns:1fr}.hf-client-grid{grid-template-columns:1fr}.hf-form-grid{grid-template-columns:1fr}.hf-filters select{flex:1}.hf-filter-count{width:100%}.hf-totals{flex-wrap:wrap;justify-content:flex-start}.hf-main{padding:16px}.hf-panel{padding:14px}}
+@media(max-width:1000px){
+  .hf-sidebar{
+    transform:translateX(-100%);
+    transition:.2s;
+  }
+
+  .hf-sidebar.open{
+    transform:translateX(0);
+  }
+
+  .hf-overlay{
+    display:block;
+    position:fixed;
+    inset:0;
+    background:#07101d66;
+    z-index:15;
+  }
+
+  .hf-main{
+    margin-left:0 !important;
+    width:100% !important;
+    max-width:100vw;
+    padding:22px;
+    overflow-x:hidden;
+  }
+
+  .hf-menu{
+    display:grid;
+    border:1px solid #e1e6ee;
+    background:#fff;
+    width:38px;
+    height:38px;
+    border-radius:10px;
+    place-items:center;
+    color:#344158;
+    flex:none;
+  }
+
+  .hf-topbar{
+    align-items:flex-start;
+    min-width:0;
+  }
+
+  .hf-topbar>div:nth-child(2){
+    flex:1;
+    min-width:0;
+  }
+
+  .hf-cards{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .hf-grid2{
+    grid-template-columns:1fr;
+  }
+
+  .hf-user-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .hf-client-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .hf-filters{
+    flex-wrap:wrap;
+  }
+
+  .hf-search{
+    min-width:100%;
+  }
+
+  .hf-panel,
+  .hf-card,
+  .hf-user-card,
+  .hf-client-card{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .hf-table-wrap{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .hf-table{
+    min-width:680px;
+  }
+
+  .hf-form-grid{
+    min-width:0;
+  }
+
+  .hf-modal-backdrop{
+    padding:16px;
+  }
+
+  .hf-modal{
+    width:min(620px,100%);
+    max-width:100%;
+    max-height:calc(100vh - 32px);
+    overflow-y:auto;
+  }
+}
+@media(max-width:600px){
+  .hf-login{
+    background:#f4f7fb;
+    padding:14px;
+  }
+
+  .hf-login-card{
+    padding:25px 20px;
+    border-radius:18px;
+    width:100%;
+    max-width:100%;
+  }
+
+  .hf-topbar{
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .hf-topbar h1{
+    font-size:23px;
+    line-height:1.25;
+  }
+
+  .hf-top-actions{
+    max-width:100%;
+    min-width:0;
+  }
+
+  .hf-top-actions .hf-primary{
+    display:none;
+  }
+
+  .hf-cards{
+    grid-template-columns:1fr;
+  }
+
+  .hf-cards.small{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .hf-user-grid,
+  .hf-client-grid,
+  .hf-form-grid{
+    grid-template-columns:1fr;
+  }
+
+  .hf-filters{
+    width:100%;
+    gap:8px;
+  }
+
+  .hf-filters select,
+  .hf-filters input,
+  .hf-search{
+    flex:1 1 100%;
+    width:100%;
+    min-width:0;
+  }
+
+  .hf-filter-count{
+    width:100%;
+  }
+
+  .hf-totals{
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    gap:10px;
+  }
+
+  .hf-main{
+    padding:16px;
+    width:100%;
+    max-width:100vw;
+    overflow-x:hidden;
+  }
+
+  .hf-panel{
+    padding:14px;
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }
+
+  .hf-panel-title{
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .hf-form-actions{
+    flex-wrap:wrap;
+  }
+
+  .hf-form-actions button{
+    flex:1 1 auto;
+    min-width:120px;
+  }
+
+  .hf-modal-backdrop{
+    padding:10px;
+  }
+
+  .hf-modal{
+    width:100%;
+    max-width:100%;
+    max-height:calc(100vh - 20px);
+    padding:16px;
+    border-radius:16px;
+  }
+
+  .hf-table-wrap{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+  }
+}
 
 /* =====================================================
    MODAIS - NOVA DEMANDA / APROVAÇÃO / REPROVAÇÃO
@@ -8817,6 +9038,11 @@ const styles = `
   }
 }
 `
+
+
+
+
+
 
 
 
