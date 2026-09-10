@@ -1744,8 +1744,8 @@ const dashboardDemands=useMemo(()=>{
     {mobileMenu&&<div className="hf-overlay" onClick={()=>setMobileMenu(false)}/>}
     <aside className={`hf-sidebar ${mobileMenu ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`}>
       <div className="hf-brand-logo"><img src="/saphire-sheet-logo-sidebar.svg" alt="Saphire Sheet" /><button type="button" className="hf-sidebar-toggle" onClick={()=>setSidebarCollapsed(v=>!v)} aria-label={sidebarCollapsed?"Expandir menu":"Recolher menu"}>{sidebarCollapsed?"›":"‹"}</button></div><nav>
-        <Nav active={tab==='meu-dia'} icon={<CalendarDays size={18}/>} text="Meu Dia" onClick={()=>{setTab('meu-dia');setMobileMenu(false)}}/>
         <Nav active={tab==='dashboard'} icon={<LayoutDashboard size={18}/>} text="Dashboard" onClick={()=>{setTab('dashboard');setMobileMenu(false)}}/>
+        <Nav active={tab==='meu-dia'} icon={<CalendarDays size={18}/>} text="Meu Dia" onClick={()=>{setTab('meu-dia');setMobileMenu(false)}}/>
         <Nav active={tab==='demandas'} icon={<BarChart3 size={18}/>} text="Demandas" onClick={()=>{setTab('demandas');setMobileMenu(false)}}/>
         {(isAdmin||isInternal)&&<Nav active={tab==='clientes'} icon={<Building2 size={18}/>} text="Clientes" onClick={()=>{setTab('clientes');setMobileMenu(false)}}/>}
         <Nav active={tab==='usuarios'} icon={<Users size={18}/>} text="Usuários" onClick={()=>{if(isAdmin){setTab('usuarios');setMobileMenu(false)}}} disabled={!isAdmin}/>
@@ -1802,18 +1802,19 @@ const dashboardDemands=useMemo(()=>{
 </button>
 <div className="hf-top-avatar">{user.name.slice(0,1).toUpperCase()}</div></div>
       </header>
-      <button
-        type="button"
-        className="hf-saphire-ia-trigger" style={{position:"fixed",left:"auto",right:28,bottom:24,width:68,height:68,minWidth:68,maxWidth:68,padding:4,borderRadius:"50%",display:"grid",placeItems:"center",overflow:"visible",color:"transparent",fontSize:0}}
-        onClick={()=>setSaphireIaOpen(true)}
-        title="Saphire IA"
-        aria-label="Abrir Saphire IA"
-      >
-        <span className="hf-saphire-ia-trigger-gem">
-          <img className="hf-saphire-ia-fab-icon" src="/saphire-ia-jewel.png" alt="Saphire IA" />
-        </span>
-      </button>
-
+      {isInternal && (
+        <button
+          type="button"
+          className="hf-saphire-ia-trigger" style={{position:"fixed",left:"auto",right:28,bottom:24,width:68,height:68,minWidth:68,maxWidth:68,padding:4,borderRadius:"50%",display:"grid",placeItems:"center",overflow:"visible",color:"transparent",fontSize:0}}
+          onClick={()=>setSaphireIaOpen(true)}
+          title="Saphire IA"
+          aria-label="Abrir Saphire IA"
+        >
+          <span className="hf-saphire-ia-trigger-gem">
+            <img className="hf-saphire-ia-fab-icon" src="/saphire-ia-jewel.png" alt="Saphire IA" />
+          </span>
+        </button>
+      )}
       {apiError&&<div className="hf-alert"><AlertCircle size={18}/><span>{apiError}</span><button onClick={()=>{setApiError('');loadDemands();loadClients()}}><RefreshCw size={16}/></button></div>}
 
       {tab==='usuarios'&&<UsersPage users={users} clients={clients} loading={loading} onNew={openUserModal} onRefresh={loadUsers} isAdmin={isAdmin}/>}
