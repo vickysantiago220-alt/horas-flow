@@ -3614,12 +3614,12 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
             </label>
 
             <label>
-              <span>Mês de análise</span>
+              <span>Data de análise</span>
               <input
-                type="month"
-                value={value.analysisMonth||''}
+                type="date"
+                value={value.analysisMonth ? `${value.analysisMonth}-01` : ''}
                 readOnly={readonly}
-                onChange={e=>setValue({...value,analysisMonth:e.target.value})}
+                onChange={e=>setValue({...value,analysisMonth:e.target.value.slice(0,7)})}
               />
             </label>
 
