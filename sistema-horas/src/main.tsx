@@ -6,7 +6,7 @@ import {
   BarChart3, CheckCircle2, Clock3, Filter, History, LayoutDashboard,
   Plus, Search, Trash2, Users, X, Clipboard, CalendarDays, LogOut,
   UserPlus, ShieldCheck, Building2, Menu, LockKeyhole, Mail, Eye, EyeOff,
-  AlertCircle, RefreshCw, Bell
+  AlertCircle, RefreshCw, Bell, Target
 } from 'lucide-react';
 
 type Role = 'ADMIN' | 'INTERNO' | 'CLIENTE';
@@ -1963,7 +1963,7 @@ const proximas = minhasDemandas
                     <div className="hf-eyebrow">Saphire Sheet • Central de trabalho</div>
                     <h1>Meu Dia</h1>
                     <p>
-                      Olá, {user?.name?.split(' ')[0] || 'usuário'} 👋
+                      Olá, {user?.name?.split(' ')[0] || 'usuário'},
                       Aqui está o que precisa da sua atenção.
                     </p>
                   </div>
@@ -2054,7 +2054,7 @@ const proximas = minhasDemandas
                   <div className="hf-panel">
                     <div className="hf-panel-title">
                       <div>
-                        <h2>🎯 Precisa da sua atenção</h2>
+                        <h2><Target className="hf-title-icon" size={18}/> Precisa da sua atenção</h2>
                         <p>O que merece sua atenção primeiro.</p>
                       </div>
 
@@ -2236,7 +2236,7 @@ const proximas = minhasDemandas
                   <div className="hf-panel">
                     <div className="hf-panel-title">
                       <div>
-                        <h2>📊 Meu resumo</h2>
+                        <h2><BarChart3 className="hf-title-icon" size={18}/> Meu resumo</h2>
                         <p>Seus principais números.</p>
                       </div>
                     </div>
@@ -2291,7 +2291,7 @@ const proximas = minhasDemandas
                 <section className="hf-panel" style={{marginTop:"20px"}}>
                   <div className="hf-panel-title">
                     <div>
-                      <h2>📅 Próximas entregas</h2>
+                      <h2><CalendarDays className="hf-title-icon" size={18}/> Próximas entregas</h2>
                       <p>O que vem pela frente.</p>
                     </div>
                   </div>
@@ -4098,7 +4098,7 @@ Regras:
                   <SaphireGem size={58}/>
                 </div>
 
-                <h2>Olá, {firstName}! 👋</h2>
+                <h2>Olá, {firstName},</h2>
 
                 <p>
                   Eu sou a Saphire IA. Posso ajudar você a
@@ -6431,6 +6431,15 @@ const styles = `
 /* =========================================================
    FIM SIDEBAR DESKTOP
    ========================================================= */
+/* Ícones modernos dos títulos */
+.hf-title-icon{
+  display:inline-block;
+  vertical-align:-3px;
+  margin-right:7px;
+  color:#315efb;
+  stroke-width:2;
+}
+
 @media(max-width:1000px){.hf-sidebar{transform:translateX(-100%);transition:.2s}.hf-sidebar.open{transform:translateX(0)}.hf-overlay{display:block;position:fixed;inset:0;background:#07101d66;z-index:15}.hf-main{margin-left:0;width:100%;padding:22px}.hf-menu{display:grid;border:1px solid #e1e6ee;background:#fff;width:38px;height:38px;border-radius:10px;place-items:center;color:#344158}.hf-topbar{align-items:flex-start}.hf-topbar>div:nth-child(2){flex:1}.hf-cards{grid-template-columns:repeat(2,1fr)}.hf-grid2{grid-template-columns:1fr}.hf-user-grid{grid-template-columns:repeat(2,1fr)}.hf-client-grid{grid-template-columns:repeat(2,1fr)}.hf-filters{flex-wrap:wrap}.hf-search{min-width:100%}}
 @media(max-width:600px){.hf-login{background:#f4f7fb;padding:14px}.hf-login-card{padding:25px 20px;border-radius:18px}.hf-topbar h1{font-size:23px}.hf-top-actions .hf-primary{display:none}.hf-cards{grid-template-columns:1fr}.hf-cards.small{grid-template-columns:1fr 1fr}.hf-user-grid{grid-template-columns:1fr}.hf-client-grid{grid-template-columns:1fr}.hf-form-grid{grid-template-columns:1fr}.hf-filters select{flex:1}.hf-filter-count{width:100%}.hf-totals{flex-wrap:wrap;justify-content:flex-start}.hf-main{padding:16px}.hf-panel{padding:14px}}
 
