@@ -1305,7 +1305,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     setDemandForm({
       problema:d.problema,tratamento:d.tratamento,horasAnalise:d.horasAnalise,
       horasNecessarias:d.horasNecessarias,prioridade:d.prioridade,status:d.status,
-      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,7),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
+      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,10),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
     });
     setDemandModal(true);
   };
@@ -3617,9 +3617,9 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
               <span>Data de análise</span>
               <input
                 type="date"
-                value={value.analysisMonth ? `${value.analysisMonth}-01` : ''}
+                value={value.analysisMonth || ''}
                 readOnly={readonly}
-                onChange={e=>setValue({...value,analysisMonth:e.target.value.slice(0,7)})}
+                onChange={e=>setValue({...value,analysisMonth:e.target.value})}
               />
             </label>
 
@@ -8816,6 +8816,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
