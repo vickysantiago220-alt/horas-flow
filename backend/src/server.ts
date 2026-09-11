@@ -116,6 +116,7 @@ const DEMAND_SELECT = `
     approved_at AS approvedAt,
     rejection_reason AS rejectionReason,
     responsible,
+    requester_user_id AS requesterUserId,
     client_id AS clientId,
     paid,
     created_at AS createdAt,
@@ -1461,6 +1462,7 @@ app.post(
         status = 'Aguardando anÃ¡lise',
         clientId = null,
         responsible = null,
+        requesterUserId = null,
       } = req.body;
 
       if (
@@ -1544,6 +1546,7 @@ app.post(
             request_date,
             delivery_date,
             responsible,
+            requester_user_id,
             client_id,
             paid
           )
@@ -1561,6 +1564,7 @@ app.post(
             NULL,
             NULL,
             NULL,
+            ?,
             ?,
             ?,
             ?,
@@ -1585,6 +1589,9 @@ app.post(
               : null,
             responsible?.trim()
               ? responsible.trim()
+              : null,
+            requesterUserId
+              ? Number(requesterUserId)
               : null,
             clientId
               ? Number(clientId)
@@ -2974,6 +2981,10 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
 
 
 
