@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express, { Response } from 'express';
+import multer from 'multer';
+import { createClient } from '@supabase/supabase-js';
 import cors from 'cors';
 
 import { pool } from './db';
@@ -22,6 +24,22 @@ import {
 const app = express();
 
 const PORT = Number(process.env.PORT) || 3001;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 5,
+    fileSize: 10 * 1024 * 1024,
+  },
+});
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+const SUPABASE_STORAGE_BUCKET =
+  process.env.SUPABASE_STORAGE_BUCKET || 'demand-comment-attachments';
 
 app.use(cors());
 app.use(express.json());
@@ -2170,7 +2188,23 @@ app.get(
             c.user_id AS userId,
             u.name AS userName,
             c.comment,
-            c.created_at AS createdAt
+            c.created_at AS createdAt,
+            COALESCE(
+              (
+                SELECT JSON_ARRAYAGG(
+                  JSON_OBJECT(
+                    'id', a.id,
+                    'fileName', a.file_name,
+                    'fileUrl', a.file_url,
+                    'fileType', a.file_type,
+                    'fileSize', a.file_size
+                  )
+                )
+                FROM demand_comment_attachments a
+                WHERE a.comment_id = c.id
+              ),
+              JSON_ARRAY()
+            ) AS attachments
           FROM demand_comments c
           LEFT JOIN users u ON u.id = c.user_id
           WHERE c.demand_id = ?
@@ -2197,11 +2231,12 @@ app.get(
 
 app.post(
   '/api/demands/:id/comments',
+  upload.array('attachments', 5),
   authorize('ADMIN', 'INTERNO', 'CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
       const demandId = Number(req.params.id);
-      const comment = String(req.body.comment || '').trim();
+      const comment = String(req.body?.comment || '').trim();
 
       if (!Number.isInteger(demandId) || demandId <= 0) {
         return res.status(400).json({
@@ -2262,6 +2297,49 @@ app.post(
 
       const commentId = (result as any).insertId;
 
+      const files = ((req as any).files || []) as Express.Multer.File[];
+
+      for (const file of files) {
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `demands/${demandId}/comments/${commentId}/${Date.now()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('Erro ao enviar anexo para o Supabase:', uploadError);
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET)
+          .getPublicUrl(filePath);
+
+        await pool.execute(
+          `
+            INSERT INTO demand_comment_attachments (
+              comment_id,
+              file_name,
+              file_url,
+              file_type,
+              file_size
+            )
+            VALUES (?, ?, ?, ?, ?)
+          `,
+          [
+            commentId,
+            file.originalname,
+            publicUrlData.publicUrl,
+            file.mimetype,
+            file.size,
+          ]
+        );
+      }
+
       const [rows] = await pool.query(
         `
           SELECT
@@ -2270,7 +2348,23 @@ app.post(
             c.user_id AS userId,
             u.name AS userName,
             c.comment,
-            c.created_at AS createdAt
+            c.created_at AS createdAt,
+            COALESCE(
+              (
+                SELECT JSON_ARRAYAGG(
+                  JSON_OBJECT(
+                    'id', a.id,
+                    'fileName', a.file_name,
+                    'fileUrl', a.file_url,
+                    'fileType', a.file_type,
+                    'fileSize', a.file_size
+                  )
+                )
+                FROM demand_comment_attachments a
+                WHERE a.comment_id = c.id
+              ),
+              JSON_ARRAY()
+            ) AS attachments
           FROM demand_comments c
           LEFT JOIN users u ON u.id = c.user_id
           WHERE c.id = ?
@@ -3153,6 +3247,12 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
+
 
 
 

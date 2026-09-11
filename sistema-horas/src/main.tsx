@@ -208,6 +208,7 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [demandCommentsLoading,setDemandCommentsLoading]=useState(false);
   const [demandCommentText,setDemandCommentText]=useState('');
   const [demandCommentSaving,setDemandCommentSaving]=useState(false);
+  const [demandCommentFiles,setDemandCommentFiles]=useState<File[]>([]);
 
   const [demandForm,setDemandForm]=useState<any>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
@@ -1139,7 +1140,12 @@ const markNotificationAsRead = (id:string) => {
   };
   const request=async(path:string,options:RequestInit={})=>{
     const headers=new Headers(options.headers||{});
-    headers.set('Content-Type','application/json');
+    const isFormData=options.body instanceof FormData;
+    if(isFormData){
+      headers.delete('Content-Type');
+    }else{
+      headers.set('Content-Type','application/json');
+    }
     if(token)headers.set('Authorization',`Bearer ${token}`);
     const response=await fetch(`${API}${path}`,{...options,headers});
     const data=await response.json().catch(()=>({success:false,message:'Resposta inválida do servidor.'}));
@@ -1164,11 +1170,20 @@ const markNotificationAsRead = (id:string) => {
 
     setDemandCommentSaving(true);
     try{
+      const formData=new FormData();
+      formData.append('comment',demandCommentText.trim());
+
+      demandCommentFiles.forEach(file=>{
+        formData.append('attachments',file);
+      });
+
       await request(`/demands/${editingDemand.id}/comments`,{
         method:'POST',
-        body:JSON.stringify({comment:demandCommentText.trim()})
+        body:formData
       });
+
       setDemandCommentText('');
+      setDemandCommentFiles([]);
       await loadDemandComments(editingDemand.id);
     }catch(error:any){
       setDemandError(error.message||'Não foi possível enviar o comentário.');
@@ -3001,7 +3016,7 @@ const proximas = minhasDemandas
       setClearedIds={setNotificationClearedIds}
       notificationStorageKey={notificationStorageKey}
     />}
-    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment}/>}
+    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment} files={demandCommentFiles} setFiles={setDemandCommentFiles}/>}
   </div>;
 }
 
@@ -3589,7 +3604,7 @@ function NotificationsModal({
   </div>;
 }
 
-function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve,comments,commentsLoading,commentText,setCommentText,commentSaving,sendComment}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void;comments:any[];commentsLoading:boolean;commentText:string;setCommentText:(v:string)=>void;commentSaving:boolean;sendComment:()=>void}){
+function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve,comments,commentsLoading,commentText,setCommentText,commentSaving,sendComment,files,setFiles}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void;comments:any[];commentsLoading:boolean;commentText:string;setCommentText:(v:string)=>void;commentSaving:boolean;sendComment:()=>void;files:File[];setFiles:(v:File[])=>void}){
   const readonly=isClient;
   const demandForApproval=editing;
 
@@ -3794,6 +3809,45 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
               rows={3}
               disabled={commentSaving}
             />
+
+            <div className="hf-comment-attachments">
+              <label className="hf-attach-button">
+                📎 Anexar arquivo
+                <input
+                  type="file"
+                  multiple
+                  disabled={commentSaving}
+                  onChange={e=>{
+                    const selected=Array.from(e.target.files||[]);
+                    if(selected.length){
+                      const valid=selected.filter(file=>file.size<=10*1024*1024);
+                      setFiles([...files,...valid].slice(0,5));
+                      e.currentTarget.value='';
+                    }
+                  }}
+                />
+              </label>
+              <small>Até 5 arquivos • 10 MB cada</small>
+
+              {files.length>0 && (
+                <div className="hf-selected-files">
+                  {files.map((file,index)=>(
+                    <div className="hf-selected-file" key={`${file.name}-${index}`}>
+                      <span>📎 {file.name}</span>
+                      <small>{(file.size/1024/1024).toFixed(2)} MB</small>
+                      <button
+                        type="button"
+                        onClick={()=>setFiles(files.filter((_,i)=>i!==index))}
+                        disabled={commentSaving}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="hf-comment-compose-actions">
               <span>{commentText.length}/2000</span>
               <button
@@ -7714,6 +7768,73 @@ const styles = `
   outline:0;
 }
 
+.hf-comments-section .hf-comment-attachments{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+
+.hf-attach-button{
+  width:max-content;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 10px;
+  border:1px solid #dfe5ee;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#334155;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.hf-attach-button input{
+  display:none;
+}
+
+.hf-comment-attachments>small{
+  color:#9aa4b3;
+  font-size:10px;
+}
+
+.hf-selected-files{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.hf-selected-file{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  border:1px solid #e5e9f0;
+  border-radius:8px;
+  background:#fafbfc;
+  font-size:11px;
+}
+
+.hf-selected-file span{
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.hf-selected-file small{
+  color:#9aa4b3;
+}
+
+.hf-selected-file button{
+  border:0;
+  background:transparent;
+  color:#9aa4b3;
+  font-size:18px;
+  cursor:pointer;
+}
 .hf-comment-compose-actions{
   display:flex;
   align-items:center;
@@ -7755,7 +7876,74 @@ const styles = `
     gap:2px;
   }
 
-  .hf-comment-compose-actions{
+  .hf-comments-section .hf-comment-attachments{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+
+.hf-attach-button{
+  width:max-content;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 10px;
+  border:1px solid #dfe5ee;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#334155;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.hf-attach-button input{
+  display:none;
+}
+
+.hf-comment-attachments>small{
+  color:#9aa4b3;
+  font-size:10px;
+}
+
+.hf-selected-files{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+
+.hf-selected-file{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  border:1px solid #e5e9f0;
+  border-radius:8px;
+  background:#fafbfc;
+  font-size:11px;
+}
+
+.hf-selected-file span{
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.hf-selected-file small{
+  color:#9aa4b3;
+}
+
+.hf-selected-file button{
+  border:0;
+  background:transparent;
+  color:#9aa4b3;
+  font-size:18px;
+  cursor:pointer;
+}
+.hf-comment-compose-actions{
     align-items:stretch;
     flex-direction:column;
   }
@@ -9683,6 +9871,15 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
 
 
 
