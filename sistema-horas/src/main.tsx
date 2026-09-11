@@ -204,6 +204,11 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [demandSuccess,setDemandSuccess]=useState('');
   const [demandError,setDemandError]=useState('');
   const [editingDemand,setEditingDemand]=useState<Demand|null>(null);
+  const [demandComments,setDemandComments]=useState<any[]>([]);
+  const [demandCommentsLoading,setDemandCommentsLoading]=useState(false);
+  const [demandCommentText,setDemandCommentText]=useState('');
+  const [demandCommentSaving,setDemandCommentSaving]=useState(false);
+
   const [demandForm,setDemandForm]=useState<any>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
     status:'Aguardando análise',clientId:'',responsavel:'',requesterUserId:'',analysisMonth:'',requestDate:'',deliveryDate:''
@@ -1141,6 +1146,36 @@ const markNotificationAsRead = (id:string) => {
     if(!response.ok||data.success===false)throw new Error(data.message||'Erro na API.');
     return data;
   };
+  const loadDemandComments=async(demandId:string|number)=>{
+    setDemandCommentsLoading(true);
+    try{
+      const data=await request(`/demands/${demandId}/comments`);
+      setDemandComments(Array.isArray(data.data)?data.data:[]);
+    }catch(error:any){
+      console.error('Erro ao carregar comentários:',error);
+      setDemandComments([]);
+    }finally{
+      setDemandCommentsLoading(false);
+    }
+  };
+
+  const sendDemandComment=async()=>{
+    if(!editingDemand||!demandCommentText.trim()||demandCommentSaving)return;
+
+    setDemandCommentSaving(true);
+    try{
+      await request(`/demands/${editingDemand.id}/comments`,{
+        method:'POST',
+        body:JSON.stringify({comment:demandCommentText.trim()})
+      });
+      setDemandCommentText('');
+      await loadDemandComments(editingDemand.id);
+    }catch(error:any){
+      setDemandError(error.message||'Não foi possível enviar o comentário.');
+    }finally{
+      setDemandCommentSaving(false);
+    }
+  };
 
   const login=async(e?:React.FormEvent)=>{
     e?.preventDefault();setLoginError('');setLoginLoading(true);
@@ -1307,7 +1342,10 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
       horasNecessarias:d.horasNecessarias,prioridade:d.prioridade,status:d.status,
       clientId:String((d as any).clientId||''),responsavel:d.responsavel,requesterUserId:String((d as any).requesterUserId||''),analysisMonth:String((d as any).analysisMonth||'').slice(0,10),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
     });
+    setDemandComments([]);
+    setDemandCommentText('');
     setDemandModal(true);
+    loadDemandComments(d.id);
   };
 
   const saveDemand=async(e:React.FormEvent)=>{
@@ -2963,7 +3001,7 @@ const proximas = minhasDemandas
       setClearedIds={setNotificationClearedIds}
       notificationStorageKey={notificationStorageKey}
     />}
-    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve}/>}
+    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment}/>}
   </div>;
 }
 
@@ -3551,7 +3589,7 @@ function NotificationsModal({
   </div>;
 }
 
-function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void}){
+function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve,comments,commentsLoading,commentText,setCommentText,commentSaving,sendComment}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void;comments:any[];commentsLoading:boolean;commentText:string;setCommentText:(v:string)=>void;commentSaving:boolean;sendComment:()=>void}){
   const readonly=isClient;
   const demandForApproval=editing;
 
@@ -3713,6 +3751,63 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
 
         {error&&<div className="hf-form-error"><AlertCircle size={17}/><span>{error}</span></div>}
 
+        {editing&&<div className="hf-comments-section">
+          <div className="hf-comments-head">
+            <div>
+              <strong>💬 Comentários</strong>
+              <small>Converse sobre esta demanda com a equipe.</small>
+            </div>
+            <span>{comments.length}</span>
+          </div>
+
+          <div className="hf-comments-list">
+            {commentsLoading ? (
+              <div className="hf-comments-empty">Carregando comentários...</div>
+            ) : !comments.length ? (
+              <div className="hf-comments-empty">
+                <History size={22}/>
+                <span>Nenhum comentário ainda.</span>
+              </div>
+            ) : (
+              comments.map((comment:any)=>(
+                <div className="hf-comment" key={comment.id}>
+                  <div className="hf-comment-avatar">
+                    {String(comment.userName||comment.user_name||'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hf-comment-content">
+                    <div className="hf-comment-top">
+                      <strong>{comment.userName||comment.user_name||'Usuário'}</strong>
+                      <small>{formatDate(comment.createdAt||comment.created_at||'')}</small>
+                    </div>
+                    <p>{comment.comment}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hf-comment-compose">
+            <textarea
+              value={commentText}
+              onChange={e=>setCommentText(e.target.value)}
+              placeholder="Escreva um comentário sobre esta demanda..."
+              rows={3}
+              disabled={commentSaving}
+            />
+            <div className="hf-comment-compose-actions">
+              <span>{commentText.length}/2000</span>
+              <button
+                type="button"
+                className="hf-primary"
+                disabled={!commentText.trim()||commentSaving}
+                onClick={sendComment}
+              >
+                <History size={15}/>
+                {commentSaving?'Enviando...':'Enviar comentário'}
+              </button>
+            </div>
+          </div>
+        </div>}
         <div className="hf-form-actions">
           <button type="button" className="hf-secondary" onClick={close}>Fechar</button>
           {isClient&&editing&&<>
@@ -7459,6 +7554,216 @@ const styles = `
   margin-top:2px !important;
 }
 
+/* =====================================================
+   COMENTÁRIOS DA DEMANDA
+   ===================================================== */
+.hf-comments-section{
+  margin-top:8px;
+  padding:20px 0 4px;
+  border-top:1px solid #edf0f5;
+}
+
+.hf-comments-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:16px;
+}
+
+.hf-comments-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.hf-comments-head strong{
+  color:#172033;
+  font-size:15px;
+  font-weight:800;
+  line-height:1.2;
+}
+
+.hf-comments-head small{
+  color:#8793a5;
+  font-size:11px;
+  font-weight:500;
+}
+
+.hf-comments-head>span{
+  min-width:28px;
+  height:28px;
+  padding:0 8px;
+  border-radius:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eef3ff;
+  color:#315efb;
+  font-size:12px;
+  font-weight:800;
+}
+
+.hf-comments-list{
+  display:grid;
+  gap:10px;
+  max-height:230px;
+  overflow:auto;
+  padding-right:3px;
+}
+
+.hf-comment{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px;
+  border:1px solid #e8ecf2;
+  border-radius:12px;
+  background:#fafbfd;
+}
+
+.hf-comment-avatar{
+  width:32px;
+  height:32px;
+  flex:none;
+  border-radius:9px;
+  display:grid;
+  place-items:center;
+  background:#14233c;
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+}
+
+.hf-comment-content{
+  min-width:0;
+  flex:1;
+}
+
+.hf-comment-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:5px;
+}
+
+.hf-comment-top strong{
+  color:#27344b;
+  font-size:12px;
+  font-weight:800;
+}
+
+.hf-comment-top small{
+  color:#9aa4b3;
+  font-size:10px;
+  white-space:nowrap;
+}
+
+.hf-comment-content p{
+  margin:0;
+  color:#5f6b7e;
+  font-size:12px;
+  line-height:1.55;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+.hf-comments-empty{
+  min-height:70px;
+  padding:18px;
+  border:1px dashed #dfe5ee;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:#8994a5;
+  font-size:12px;
+  background:#fbfcfe;
+}
+
+.hf-comment-compose{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #e3e8f0;
+  border-radius:12px;
+  background:#fff;
+}
+
+.hf-comment-compose textarea{
+  width:100%;
+  min-height:76px;
+  resize:vertical;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#27344b;
+  font:inherit;
+  font-size:12px;
+  line-height:1.5;
+  padding:2px;
+  box-sizing:border-box;
+}
+
+.hf-comment-compose textarea::placeholder{
+  color:#a0a9b7;
+}
+
+.hf-comment-compose textarea:focus{
+  outline:0;
+}
+
+.hf-comment-compose-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:8px;
+  padding-top:9px;
+  border-top:1px solid #edf0f5;
+}
+
+.hf-comment-compose-actions>span{
+  color:#9aa4b3;
+  font-size:10px;
+  font-weight:600;
+}
+
+.hf-comment-compose-actions .hf-primary{
+  height:36px !important;
+  padding:0 13px !important;
+  border-radius:9px !important;
+  font-size:11px;
+  box-shadow:0 6px 14px rgba(13,26,45,.14);
+}
+
+.hf-comment-compose-actions .hf-primary:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+
+@media(max-width:650px){
+  .hf-comments-section{
+    padding-top:17px;
+  }
+
+  .hf-comment-top{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .hf-comment-compose-actions{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .hf-comment-compose-actions .hf-primary{
+    width:100%;
+  }
+}
 .hf-demand-modal .hf-form-actions{
   display:flex !important;
   justify-content:flex-end !important;
@@ -9378,6 +9683,17 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
 
 
 
