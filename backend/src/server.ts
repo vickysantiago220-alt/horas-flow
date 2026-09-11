@@ -2138,6 +2138,30 @@ app.get(
         });
       }
 
+      const [demandRows] = await pool.query(
+        `SELECT id, client_id AS clientId FROM demands WHERE id = ? LIMIT 1`,
+        [demandId]
+      );
+
+      const demand = (demandRows as any[])[0];
+
+      if (!demand) {
+        return res.status(404).json({
+          success: false,
+          message: 'Demanda não encontrada.',
+        });
+      }
+
+      if (
+        req.user?.role === 'CLIENTE' &&
+        Number(demand.clientId) !== Number(req.user.clientId)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Você não possui acesso a esta demanda.',
+        });
+      }
+
       const [rows] = await pool.query(
         `
           SELECT
@@ -2201,14 +2225,26 @@ app.post(
       }
 
       const [demandRows] = await pool.query(
-        `SELECT id FROM demands WHERE id = ? LIMIT 1`,
+        `SELECT id, client_id AS clientId FROM demands WHERE id = ? LIMIT 1`,
         [demandId]
       );
 
-      if (!(demandRows as any[]).length) {
+      const demand = (demandRows as any[])[0];
+
+      if (!demand) {
         return res.status(404).json({
           success: false,
           message: 'Demanda não encontrada.',
+        });
+      }
+
+      if (
+        req.user?.role === 'CLIENTE' &&
+        Number(demand.clientId) !== Number(req.user.clientId)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Você não possui acesso a esta demanda.',
         });
       }
 
@@ -3117,6 +3153,11 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
 
 
 
