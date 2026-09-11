@@ -30,7 +30,7 @@ type HistoryItem = { id:string; date:string; user:string; field:string; oldValue
 type Demand = {
   id:string; numero:number; problema:string; tratamento:string; horasAnalise:number; horasNecessarias:number;
   prioridade:Priority; status:Status; aprovacao:'Pendente'|'Aprovada'|'Reprovada'; aprovadoPor:string;
-  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; criadoEm:string; history:HistoryItem[];
+  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; requesterUserId?:number|string; criadoEm:string; history:HistoryItem[];
 };
 
 const API = 'https://horas-flow.onrender.com/api';
@@ -88,7 +88,7 @@ function normalizeDemand(raw:any):Demand {
     status:raw.status ?? 'Pendente', aprovacao:normalizeApproval(raw.approval ?? raw.aprovacao), aprovadoPor:raw.approvedBy ?? raw.approved_by ?? '',
     aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, requestDate, deliveryDate,
     rejectionReason:raw.rejectionReason ?? raw.rejection_reason ?? raw.rejection ?? '',
-    pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '',
+    pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '', requesterUserId:raw.requesterUserId ?? raw.requester_user_id ?? '',
     criadoEm:String(created).slice(0,10), history:raw.history ?? []
   };
 }
@@ -206,7 +206,7 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [editingDemand,setEditingDemand]=useState<Demand|null>(null);
   const [demandForm,setDemandForm]=useState<any>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
-    status:'Aguardando análise',clientId:'',responsavel:'',analysisMonth:'',requestDate:'',deliveryDate:''
+    status:'Aguardando análise',clientId:'',responsavel:'',requesterUserId:'',analysisMonth:'',requestDate:'',deliveryDate:''
   });
 
   const isAdmin=user?.role==='ADMIN';
@@ -1265,7 +1265,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const emptyDemand=()=>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
-    status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',
+    status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',requesterUserId:'',
     analysisMonth:'',requestDate:'',deliveryDate:''
   });
   const openNewDemand=()=>{
@@ -1305,7 +1305,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     setDemandForm({
       problema:d.problema,tratamento:d.tratamento,horasAnalise:d.horasAnalise,
       horasNecessarias:d.horasNecessarias,prioridade:d.prioridade,status:d.status,
-      clientId:String((d as any).clientId||''),responsavel:d.responsavel,analysisMonth:String((d as any).analysisMonth||'').slice(0,10),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
+      clientId:String((d as any).clientId||''),responsavel:d.responsavel,requesterUserId:String((d as any).requesterUserId||''),analysisMonth:String((d as any).analysisMonth||'').slice(0,10),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
     });
     setDemandModal(true);
   };
@@ -1346,7 +1346,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
         analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
-        clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||''
+        clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||'',requesterUserId:Number(demandForm.requesterUserId)||null
       };
       const creatingDemand = !editingDemand;
 
@@ -3665,24 +3665,41 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
             <label>
               <span>Prioridade {readonly&&<small className="hf-muted"> · editável</small>}</span><select value={value.prioridade} onChange={e=>setValue({...value,prioridade:e.target.value})}>{priorities.map(p=><option key={p}>{p}</option>)}</select></label>
             <label><span>Status</span><select value={value.status} onChange={e=>setValue({...value,status:e.target.value})} disabled={readonly}>{statuses.map(s=><option key={s}>{s}</option>)}</select></label>
-          </div>
+          </div>          <label>
+            <span>Usuário solicitante</span>
+            <select
+              value={value.requesterUserId||''}
+              onChange={e=>setValue({...value,requesterUserId:e.target.value})}
+              disabled={readonly}
+            >
+              <option value="">Selecione o usuário solicitante</option>
+              {users
+                .filter((u:any)=>Boolean(u.active))
+                .map((u:any)=>(
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+
           <label>
-  <span>Responsável</span>
-  <select
-    value={value.responsavel}
-    onChange={e=>setValue({...value,responsavel:e.target.value})}
-    disabled={readonly}
-  >
-    <option value="">Selecione o responsável</option>
-    {users
-      .filter((u:any)=>Boolean(u.active))
-      .map((u:any)=>(
-        <option key={u.id} value={u.name}>
-          {u.name}
-        </option>
-      ))}
-  </select>
-</label>
+            <span>Responsável</span>
+            <select
+              value={value.responsavel}
+              onChange={e=>setValue({...value,responsavel:e.target.value})}
+              disabled={readonly}
+            >
+              <option value="">Selecione o responsável</option>
+              {users
+                .filter((u:any)=>Boolean(u.active))
+                .map((u:any)=>(
+                  <option key={u.id} value={u.name}>
+                    {u.name}
+                  </option>
+                ))}
+            </select>
+          </label>
         </div>
 
         {editing&&<div className="hf-form-section">
@@ -9361,6 +9378,15 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
 
 
 
