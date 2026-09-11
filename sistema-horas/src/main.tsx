@@ -7777,6 +7777,7 @@ const styles = `
 
 .hf-attach-button{
   width:max-content;
+  min-height:32px;
   display:inline-flex;
   align-items:center;
   gap:6px;
@@ -7885,6 +7886,7 @@ const styles = `
 
 .hf-attach-button{
   width:max-content;
+  min-height:32px;
   display:inline-flex;
   align-items:center;
   gap:6px;
@@ -9871,6 +9873,7 @@ const styles = `
   }
 }
 `
+
 
 
 
