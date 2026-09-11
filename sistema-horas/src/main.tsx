@@ -3784,20 +3784,56 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
                 <span>Nenhum comentário ainda.</span>
               </div>
             ) : (
-              comments.map((comment:any)=>(
-                <div className="hf-comment" key={comment.id}>
-                  <div className="hf-comment-avatar">
-                    {String(comment.userName||comment.user_name||'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="hf-comment-content">
-                    <div className="hf-comment-top">
-                      <strong>{comment.userName||comment.user_name||'Usuário'}</strong>
-                      <small>{formatDate(comment.createdAt||comment.created_at||'')}</small>
+              comments.map((comment:any)=>{
+                let attachments:any[] = [];
+
+                if(Array.isArray(comment.attachments)){
+                  attachments = comment.attachments;
+                }else if(typeof comment.attachments === 'string'){
+                  try{
+                    const parsed=JSON.parse(comment.attachments);
+                    attachments=Array.isArray(parsed)?parsed:[];
+                  }catch{
+                    attachments=[];
+                  }
+                }
+
+                return (
+                  <div className="hf-comment" key={comment.id}>
+                    <div className="hf-comment-avatar">
+                      {String(comment.userName||comment.user_name||'U').charAt(0).toUpperCase()}
                     </div>
-                    <p>{comment.comment}</p>
+                    <div className="hf-comment-content">
+                      <div className="hf-comment-top">
+                        <strong>{comment.userName||comment.user_name||'Usuário'}</strong>
+                        <small>{formatDate(comment.createdAt||comment.created_at||'')}</small>
+                      </div>
+
+                      <p>{comment.comment}</p>
+
+                      {attachments.length>0 && (
+                        <div className="hf-comment-files">
+                          {attachments.map((attachment:any)=>(
+                            <a
+                              key={attachment.id||attachment.fileUrl||attachment.file_url}
+                              className="hf-comment-file"
+                              href={attachment.fileUrl||attachment.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <span>📎</span>
+                              <span className="hf-comment-file-name">
+                                {attachment.fileName||attachment.file_name||'Arquivo anexado'}
+                              </span>
+                              <span className="hf-comment-file-open">Abrir ↗</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -7800,6 +7836,45 @@ const styles = `
   font-size:10px;
 }
 
+.hf-comment-files{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+
+.hf-comment-file{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  width:max-content;
+  max-width:100%;
+  padding:7px 9px;
+  border:1px solid #dfe5ee;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#334155;
+  text-decoration:none;
+  font-size:11px;
+}
+
+.hf-comment-file:hover{
+  background:#f1f5f9;
+}
+
+.hf-comment-file-name{
+  max-width:320px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:600;
+}
+
+.hf-comment-file-open{
+  color:#64748b;
+  font-weight:600;
+}
+
 .hf-selected-files{
   display:flex;
   flex-direction:column;
@@ -7907,6 +7982,45 @@ const styles = `
 .hf-comment-attachments>small{
   color:#9aa4b3;
   font-size:10px;
+}
+
+.hf-comment-files{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+
+.hf-comment-file{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  width:max-content;
+  max-width:100%;
+  padding:7px 9px;
+  border:1px solid #dfe5ee;
+  border-radius:8px;
+  background:#f8fafc;
+  color:#334155;
+  text-decoration:none;
+  font-size:11px;
+}
+
+.hf-comment-file:hover{
+  background:#f1f5f9;
+}
+
+.hf-comment-file-name{
+  max-width:320px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:600;
+}
+
+.hf-comment-file-open{
+  color:#64748b;
+  font-weight:600;
 }
 
 .hf-selected-files{
@@ -9873,6 +9987,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
