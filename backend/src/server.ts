@@ -2123,6 +2123,142 @@ app.get(
 // ADMIN / INTERNO
 // =====================================================
 
+
+app.get(
+  '/api/demands/:id/comments',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const demandId = Number(req.params.id);
+
+      if (!Number.isInteger(demandId) || demandId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Demanda inválida.',
+        });
+      }
+
+      const [rows] = await pool.query(
+        `
+          SELECT
+            c.id,
+            c.demand_id AS demandId,
+            c.user_id AS userId,
+            u.name AS userName,
+            c.comment,
+            c.created_at AS createdAt
+          FROM demand_comments c
+          LEFT JOIN users u ON u.id = c.user_id
+          WHERE c.demand_id = ?
+          ORDER BY c.created_at ASC, c.id ASC
+        `,
+        [demandId]
+      );
+
+      return res.json({
+        success: true,
+        data: rows,
+      });
+    } catch (error: any) {
+      console.error('Erro ao listar comentários:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao listar comentários.',
+        error: error?.message,
+      });
+    }
+  }
+);
+
+app.post(
+  '/api/demands/:id/comments',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const demandId = Number(req.params.id);
+      const comment = String(req.body.comment || '').trim();
+
+      if (!Number.isInteger(demandId) || demandId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Demanda inválida.',
+        });
+      }
+
+      if (!comment) {
+        return res.status(400).json({
+          success: false,
+          message: 'O comentário é obrigatório.',
+        });
+      }
+
+      if (!req.user?.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado.',
+        });
+      }
+
+      const [demandRows] = await pool.query(
+        `SELECT id FROM demands WHERE id = ? LIMIT 1`,
+        [demandId]
+      );
+
+      if (!(demandRows as any[]).length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Demanda não encontrada.',
+        });
+      }
+
+      const [result] = await pool.execute(
+        `
+          INSERT INTO demand_comments (
+            demand_id,
+            user_id,
+            comment
+          )
+          VALUES (?, ?, ?)
+        `,
+        [demandId, req.user.id, comment]
+      );
+
+      const commentId = (result as any).insertId;
+
+      const [rows] = await pool.query(
+        `
+          SELECT
+            c.id,
+            c.demand_id AS demandId,
+            c.user_id AS userId,
+            u.name AS userName,
+            c.comment,
+            c.created_at AS createdAt
+          FROM demand_comments c
+          LEFT JOIN users u ON u.id = c.user_id
+          WHERE c.id = ?
+          LIMIT 1
+        `,
+        [commentId]
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Comentário adicionado com sucesso.',
+        data: (rows as any[])[0],
+      });
+    } catch (error: any) {
+      console.error('Erro ao adicionar comentário:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao adicionar comentário.',
+        error: error?.message,
+      });
+    }
+  }
+);
 app.delete(
   '/api/demands/:id',
   authorize('ADMIN', 'INTERNO'),
@@ -2981,6 +3117,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
