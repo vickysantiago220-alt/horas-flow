@@ -593,8 +593,23 @@ const markNotificationAsRead = (id:string) => {
 
 
 
-  const exportStatusReport = () => {
+  const exportStatusReport = async () => {
     const doc = new jsPDF();
+
+    const logoData = await new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Não foi possível preparar o logo.')); return; }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Não foi possível carregar o logo.'));
+      img.src = '/saphire-sheet-logo-sidebar.svg';
+    });
 
     const formatReportPeriod = (period: string) => {
       if (period === 'Todos') return 'Todos os períodos';
@@ -747,16 +762,12 @@ const markNotificationAsRead = (id:string) => {
     doc.setFillColor(15, 23, 42);
     doc.rect(0, 0, 210, 30, 'F');
 
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text(
-      'SAPHIRE SHEET',
-      14,
-      13
-    );
+    doc.addImage(logoData, 'PNG', 154, 5, 42, 18);
 
-    doc.setFont('helvetica', 'normal');
+
+
+    doc.setTextColor(255, 255, 255);
+doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text(
       'STATUS REPORT EXECUTIVO',
@@ -878,52 +889,11 @@ const markNotificationAsRead = (id:string) => {
       58,
       'TOTAL DO MÊS',
       `${totalMonthHours}h`
-    );
-
-    // =================================================
-    // INDICADORES GERAIS
-    // =================================================
-
-    doc.setTextColor(22, 35, 59);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-
-    doc.text(
-      'INDICADORES GERAIS',
-      14,
-      106
-    );
-
-    drawMetric(
-      14,
-      112,
-      44,
-      'DEMANDAS',
-      String(totalDemands)
-    );
-
-    drawMetric(
-      62,
-      112,
-      44,
-      'APROVADAS',
-      String(approvedDemands)
-    );
-
-    drawMetric(
-      110,
-      112,
-      44,
-      'REPROVADAS',
-      String(rejectedDemands)
-    );
-
-
-    // =================================================
+    );// =================================================
     // DEMANDAS ANALISADAS
     // =================================================
 
-    let analyzedStartY = 149;
+    let analyzedStartY = 106;
 
     doc.setTextColor(22, 35, 59);
     doc.setFont('helvetica', 'bold');
@@ -9987,6 +9957,17 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
 
 
 
