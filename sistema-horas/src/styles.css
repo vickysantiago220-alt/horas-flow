@@ -2112,3 +2112,113 @@ section.hf-dashboard-hours-completed + section.hf-grid2{
 /* =========================================================
    FIM
    ========================================================= */
+
+/* =========================================================
+   TABELA DE DEMANDAS — APROVEITAMENTO DE ESPAÇO
+   ========================================================= */
+
+@media (min-width: 901px) {
+
+  .hf-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .hf-table-wrap table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .hf-table-wrap th,
+  .hf-table-wrap td {
+    padding: 9px 7px;
+    box-sizing: border-box;
+  }
+
+  /* Distribuição das 13 colunas */
+  .hf-table-wrap th:nth-child(1),
+  .hf-table-wrap td:nth-child(1) {
+    width: 4%;
+  }
+
+  .hf-table-wrap th:nth-child(2),
+  .hf-table-wrap td:nth-child(2) {
+    width: 9%;
+  }
+
+  .hf-table-wrap th:nth-child(3),
+  .hf-table-wrap td:nth-child(3) {
+    width: 12%;
+  }
+
+  .hf-table-wrap th:nth-child(4),
+  .hf-table-wrap td:nth-child(4) {
+    width: 16%;
+  }
+
+  .hf-table-wrap th:nth-child(5),
+  .hf-table-wrap td:nth-child(5) {
+    width: 5%;
+  }
+
+  .hf-table-wrap th:nth-child(6),
+  .hf-table-wrap td:nth-child(6) {
+    width: 7%;
+  }
+
+  .hf-table-wrap th:nth-child(7),
+  .hf-table-wrap td:nth-child(7) {
+    width: 8%;
+  }
+
+  .hf-table-wrap th:nth-child(8),
+  .hf-table-wrap td:nth-child(8) {
+    width: 8%;
+  }
+
+  .hf-table-wrap th:nth-child(9),
+  .hf-table-wrap td:nth-child(9) {
+    width: 8%;
+  }
+
+  .hf-table-wrap th:nth-child(10),
+  .hf-table-wrap td:nth-child(10) {
+    width: 8%;
+  }
+
+  .hf-table-wrap th:nth-child(11),
+  .hf-table-wrap td:nth-child(11) {
+    width: 8%;
+  }
+
+  .hf-table-wrap th:nth-child(12),
+  .hf-table-wrap td:nth-child(12) {
+    width: 10%;
+  }
+
+  .hf-table-wrap th:nth-child(13),
+  .hf-table-wrap td:nth-child(13) {
+    width: 7%;
+  }
+
+  .hf-table-wrap td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hf-table-wrap td:nth-child(3),
+  .hf-table-wrap td:nth-child(4) {
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .hf-table-wrap td:nth-child(2),
+  .hf-table-wrap td:nth-child(9),
+  .hf-table-wrap td:nth-child(11),
+  .hf-table-wrap td:nth-child(12) {
+    white-space: nowrap;
+  }
+}
+
