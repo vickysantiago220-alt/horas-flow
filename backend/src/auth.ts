@@ -36,7 +36,7 @@ export function createToken(user: AuthUser): string {
     },
     JWT_SECRET,
     {
-      expiresIn: '8h',
+      expiresIn: '15d',
     }
   );
 }
