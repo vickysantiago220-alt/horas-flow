@@ -3169,7 +3169,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     document.addEventListener('mousedown',handleOutsideClick);
     return()=>document.removeEventListener('mousedown',handleOutsideClick);
   },[]);
-  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id}>
+  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id} onClick={()=>onEdit(d)} style={{cursor:"pointer"}}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
     <td>
   {(() => {
@@ -9960,6 +9960,7 @@ const styles = `
   }
 }
 `
+
 
 
 
