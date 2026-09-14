@@ -3169,7 +3169,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     document.addEventListener('mousedown',handleOutsideClick);
     return()=>document.removeEventListener('mousedown',handleOutsideClick);
   },[]);
-  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id} onClick={()=>onEdit(d)} style={{cursor:"pointer"}}>
+  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Aprovado por</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id} onClick={()=>onEdit(d)} style={{cursor:"pointer"}}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
     <td>
   {(() => {
@@ -3227,6 +3227,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     <td><span className={`hf-priority-pill priority-${slug(d.prioridade)}`}>{d.prioridade}</span></td>
     <td><span className={`hf-status-pill status-${slug(normalizeStatus(d.status))}`}>{normalizeStatus(d.status)}</span></td>
     <td>{d.aprovacao==='Aprovada'?<span className="hf-pill approved">Aprovada</span>:d.aprovacao==='Reprovada'?<span className="hf-pill rejected">Reprovada</span>:canApprove?<div className="hf-approval-actions"><button className="hf-approve" onClick={()=>approve(d,true)}>Aprovar</button><button className="hf-reject" onClick={()=>approve(d,false)}>Reprovar</button></div>:<span className="hf-pill pending">Pendente</span>}</td>
+    <td>{d.aprovadoPor||'—'}</td>
     <td>{d.aprovacao==='Reprovada'?<span className="hf-rejection-reason" title={d.rejectionReason||'Sem motivo informado'}>{d.rejectionReason||'Sem motivo informado'}</span>:<span className="hf-muted">—</span>}</td>
     <td><span className={d.deliveryDate?'hf-execution':'hf-muted'}>{formatDate(d.deliveryDate || (d as any).delivery_date)}</span></td>
     <td>{d.responsavel||'—'}</td>
@@ -9960,6 +9961,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
