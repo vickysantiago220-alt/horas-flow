@@ -1354,7 +1354,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
       return;
     }
 
-    if(!demandForm.problema.trim()||!demandForm.tratamento.trim()){setDemandError('Informe o problema e o tratamento.');return}
+    if(!demandForm.problema.trim()){setDemandError('Informe o problema.');return}
     if(!demandForm.clientId){setDemandError('Selecione o cliente vinculado.');return}
 
     if(normalizeStatus(demandForm.status)==='Analisada' && Number(demandForm.horasAnalise)<=0){
@@ -1365,7 +1365,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     try{
       setDemandSaving(true);
       const payload={
-        problem:demandForm.problema.trim(),treatment:demandForm.tratamento.trim(),
+        problem:demandForm.problema.trim(),
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
         analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
@@ -3169,7 +3169,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     document.addEventListener('mousedown',handleOutsideClick);
     return()=>document.removeEventListener('mousedown',handleOutsideClick);
   },[]);
-  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Aprovado por</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id} onClick={()=>onEdit(d)} style={{cursor:"pointer"}}>
+  return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Aprovado por</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id} onClick={()=>onEdit(d)} style={{cursor:"pointer"}}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
     <td>
   {(() => {
@@ -3197,7 +3197,6 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
   })()}
 </td>
     <td><div className="hf-demand-text" title={d.problema}>{d.problema||'—'}</div></td>
-    <td><div className="hf-demand-text" title={d.tratamento}>{d.tratamento||'—'}</div></td>
     <td>
   <div className="hf-hours-tooltip">
     <div className="hf-hours-cell">
@@ -3264,8 +3263,6 @@ function DemandCardsView({demands,clients,onOpen}:{demands:Demand[];clients:Clie
         </div>
 
         <h3>{d.problema||'Sem descrição da demanda'}</h3>
-
-        <p>{d.tratamento||'Sem tratamento informado.'}</p>
 
         <div className="hf-demand-card-footer">
           <span>
@@ -3620,9 +3617,6 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
           </label>
           <label><span>Problema</span>
             <textarea value={value.problema} onChange={e=>setValue({...value,problema:e.target.value})} placeholder="Descreva de forma clara o problema ou necessidade..." rows={3} readOnly={readonly}/>
-          </label>
-          <label><span>Tratamento</span>
-            <textarea value={value.tratamento} onChange={e=>setValue({...value,tratamento:e.target.value})} placeholder="Descreva como a demanda será tratada..." rows={3} readOnly={readonly}/>
           </label>
         </div>
 
@@ -4111,7 +4105,7 @@ function SaphireIAModal({
   };
 
   const generateDemandSuggestion=async()=>{
-    if(!demandSuggestion?.problema?.trim() || !demandSuggestion?.tratamento?.trim() || !demandSuggestion?.dataEntrega){
+    if(!demandSuggestion?.problema?.trim() || !demandSuggestion?.dataEntrega){
       return;
     }
 
@@ -4129,9 +4123,6 @@ function SaphireIAModal({
 Problema informado:
 ${demandSuggestion.problema}
 
-Tratamento informado:
-${demandSuggestion.tratamento}
-
 Data de entrega desejada:
 ${demandSuggestion.dataEntrega}
 
@@ -4139,7 +4130,6 @@ Retorne SOMENTE um JSON válido, sem markdown, sem explicações fora do JSON, e
 {
   "titulo": "título curto e objetivo da demanda",
   "problema": "problema revisado de forma clara e profissional",
-  "tratamento": "tratamento revisado, explicando claramente como a demanda será executada",
   "horasAnalise": 0,
   "horasNecessarias": 0,
   "prioridade": "Baixa",
@@ -4147,9 +4137,7 @@ Retorne SOMENTE um JSON válido, sem markdown, sem explicações fora do JSON, e
 }
 
 Regras:
-- Não invente informações específicas que não foram fornecidas.
-- Melhore a clareza do problema e do tratamento.
-- Explique o tratamento de forma objetiva e profissional.
+- Não invente informações específicas que não foram fornecidas.  - Melhore a clareza do problema de forma objetiva e profissional.
 - Estime horas de análise e horas necessárias de execução de forma conservadora.
 - A data de entrega deve respeitar a data informada pelo usuário.
 - A prioridade deve ser uma destas: Baixa, Média, Alta ou Urgente.
@@ -4192,7 +4180,6 @@ Regras:
         mode:'result',
         titulo:String(parsed.titulo||'Nova demanda'),
         problema:String(parsed.problema||demandSuggestion.problema),
-        tratamento:String(parsed.tratamento||demandSuggestion.tratamento),
         horasAnalise:Number(parsed.horasAnalise)||0,
         horasNecessarias:Number(parsed.horasNecessarias)||0,
         prioridade:String(parsed.prioridade||'Média'),
@@ -4319,7 +4306,7 @@ Regras:
                 <span>O que você precisa resolver?</span>
               </div>
 
-              {demandSuggestion?.mode==='result' ? (<div className="hf-saphire-ia-demand-create"><div className="hf-saphire-ia-demand-title"><strong>✨ Sugestão da Saphire pronta</strong><span>Revise os dados antes de aprovar a demanda.</span></div><label><span>Título</span><input type="text" value={demandSuggestion.titulo||''} readOnly /></label><label><span>Problema</span><textarea value={demandSuggestion.problema||''} readOnly rows={4} /></label><label><span>Tratamento sugerido</span><textarea value={demandSuggestion.tratamento||''} readOnly rows={5} /></label><div className="hf-saphire-ia-demand-summary"><div><span>Análise</span><strong>{demandSuggestion.horasAnalise||0}h</strong></div><div><span>Execução</span><strong>{demandSuggestion.horasNecessarias||0}h</strong></div><div><span>Total</span><strong>{(Number(demandSuggestion.horasAnalise)||0)+(Number(demandSuggestion.horasNecessarias)||0)}h</strong></div><div><span>Prioridade</span><strong>{demandSuggestion.prioridade||'Média'}</strong></div><div><span>Entrega</span><strong>{demandSuggestion.dataEntrega||'-'}</strong></div></div><div className="hf-saphire-ia-demand-actions"><button type="button" onClick={cancelDemandCreation}>Voltar</button><button type="button" onClick={()=>onApproveDemand(demandSuggestion)}>✓ Aprovar e abrir demanda</button></div></div>) : demandSuggestion?.mode==='create' ? (
+              {demandSuggestion?.mode==='result' ? (<div className="hf-saphire-ia-demand-create"><div className="hf-saphire-ia-demand-title"><strong>✨ Sugestão da Saphire pronta</strong><span>Revise os dados antes de aprovar a demanda.</span></div><label><span>Título</span><input type="text" value={demandSuggestion.titulo||''} readOnly /></label><label><span>Problema</span><textarea value={demandSuggestion.problema||''} readOnly rows={4} /></label><div className="hf-saphire-ia-demand-summary"><div><span>Análise</span><strong>{demandSuggestion.horasAnalise||0}h</strong></div><div><span>Execução</span><strong>{demandSuggestion.horasNecessarias||0}h</strong></div><div><span>Total</span><strong>{(Number(demandSuggestion.horasAnalise)||0)+(Number(demandSuggestion.horasNecessarias)||0)}h</strong></div><div><span>Prioridade</span><strong>{demandSuggestion.prioridade||'Média'}</strong></div><div><span>Entrega</span><strong>{demandSuggestion.dataEntrega||'-'}</strong></div></div><div className="hf-saphire-ia-demand-actions"><button type="button" onClick={cancelDemandCreation}>Voltar</button><button type="button" onClick={()=>onApproveDemand(demandSuggestion)}>✓ Aprovar e abrir demanda</button></div></div>) : demandSuggestion?.mode==='create' ? (
                 <div className="hf-saphire-ia-demand-create">
                   <div className="hf-saphire-ia-demand-title">
                     <strong>✨ Criar demanda com a Saphire</strong>
@@ -4332,16 +4319,6 @@ Regras:
                       value={demandSuggestion.problema}
                       onChange={e=>setDemandSuggestion({...demandSuggestion,problema:e.target.value})}
                       placeholder="Descreva o problema ou necessidade..."
-                      rows={4}
-                    />
-                  </label>
-
-                  <label>
-                    <span>Tratamento</span>
-                    <textarea
-                      value={demandSuggestion.tratamento}
-                      onChange={e=>setDemandSuggestion({...demandSuggestion,tratamento:e.target.value})}
-                      placeholder="Como você imagina que essa demanda deve ser tratada?"
                       rows={4}
                     />
                   </label>
@@ -9961,6 +9938,12 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
 
 
 

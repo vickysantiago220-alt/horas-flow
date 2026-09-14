@@ -1484,13 +1484,12 @@ app.post(
       } = req.body;
 
       if (
-        !problem?.trim() ||
-        !treatment?.trim()
+        !problem?.trim()
       ) {
         return res.status(400).json({
           success: false,
           message:
-            'Problema e tratamento sÃ£o obrigatÃ³rios.',
+            'Problema é obrigatório.',
         });
       }
 
@@ -1593,7 +1592,7 @@ app.post(
           [
             nextNumber,
             problem.trim(),
-            treatment.trim(),
+            (treatment || '').trim(),
             Number(analysisHours) || 0,
             req.body.analysisMonth ? (String(req.body.analysisMonth) + '-01') : null,
             Number(requiredHours) || 0,
@@ -1697,13 +1696,12 @@ app.put(
       } = req.body;
 
       if (
-        !problem?.trim() ||
-        !treatment?.trim()
+        !problem?.trim()
       ) {
         return res.status(400).json({
           success: false,
           message:
-            'Problema e tratamento sÃ£o obrigatÃ³rios.',
+            'Problema é obrigatório.',
         });
       }
 
@@ -1763,7 +1761,7 @@ app.put(
         `,
         [
           problem.trim(),
-          treatment.trim(),
+          (treatment || '').trim(),
           Number(analysisHours) || 0,
           analysisMonth ? (String(analysisMonth) + '-01') : null,
           Number(requiredHours) || 0,
@@ -1797,7 +1795,7 @@ app.put(
         req,
         'Tratamento',
         beforeDemand.treatment,
-        treatment.trim()
+        (treatment || '').trim()
       );
       await recordDemandHistory(
         id,
@@ -3247,6 +3245,11 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
 
 
 
