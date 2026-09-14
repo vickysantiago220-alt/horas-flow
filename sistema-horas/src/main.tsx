@@ -3160,6 +3160,15 @@ function DemandKanbanView({demands,clients,onOpen}:{demands:Demand[];clients:Cli
   </div>
 }
 function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,isClient,clients}:{demands:Demand[];remove:(id:string)=>void;approve:(d:Demand,approved?:boolean)=>void;history:(d:Demand)=>void;canEdit:boolean;canApprove:boolean;onEdit:(d:Demand)=>void;isClient:boolean;clients:any[]}){
+  const [openActionId,setOpenActionId]=useState<string|null>(null);
+  useEffect(()=>{
+    const handleOutsideClick=(event:MouseEvent)=>{
+      const target=event.target as HTMLElement;
+      if(!target.closest('.hf-action-menu')) setOpenActionId(null);
+    };
+    document.addEventListener('mousedown',handleOutsideClick);
+    return()=>document.removeEventListener('mousedown',handleOutsideClick);
+  },[]);
   return <div className="hf-table-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Problema</th><th>Tratamento</th><th>Horas</th><th>Prioridade</th><th>Status</th><th>Aprovação</th><th>Motivo</th><th>Data de entrega</th><th>Responsável</th><th>Pago</th><th className="actions-head">Ações</th></tr></thead><tbody>{demands.map(d=><tr key={d.id}>
     <td className="number"><span className="hf-number-badge">#{String(d.numero).padStart(3,'0')}</span></td>
     <td>
@@ -3222,12 +3231,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
     <td><span className={d.deliveryDate?'hf-execution':'hf-muted'}>{formatDate(d.deliveryDate || (d as any).delivery_date)}</span></td>
     <td>{d.responsavel||'—'}</td>
     <td><span className={`hf-paid-dot ${d.pago?'on':''}`}><i/>{d.pago?'Sim':'Não'}</span></td>
-    <td><div className="hf-row-actions">
-      <button className="hf-action-btn" onClick={()=>history(d)} title="Ver histórico"><History size={15}/><span>Histórico</span></button>
-      {isClient&&<button className="hf-action-btn primary" onClick={()=>onEdit(d)} title="Visualizar demanda"><Eye size={15}/><span>Visualizar</span></button>}
-      {canEdit&&<button className="hf-action-btn primary" onClick={()=>onEdit(d)} title="Editar demanda"><Clipboard size={15}/><span>Editar</span></button>}
-      {canEdit&&<button className="hf-action-btn danger" onClick={()=>remove(d.id)} title="Excluir demanda"><Trash2 size={15}/><span>Excluir</span></button>}
-    </div></td>
+    <td><div className="hf-action-menu" style={{position:"relative",display:"inline-block"}}><button type="button" className="hf-action-btn" onClick={()=>setOpenActionId(openActionId===d.id?null:d.id)} title="Ações"><span>⋮</span><span>Ações</span></button>{openActionId===d.id&&<div style={{position:"absolute",right:0,top:"calc(100% + 4px)",zIndex:1000,minWidth:150,background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",padding:4}}><button type="button" className="hf-action-btn" style={{width:"100%",justifyContent:"flex-start"}} onClick={()=>{history(d);setOpenActionId(null)}}><History size={15}/><span>Histórico</span></button>{isClient&&<button type="button" className="hf-action-btn primary" style={{width:"100%",justifyContent:"flex-start"}} onClick={()=>{onEdit(d);setOpenActionId(null)}}><Eye size={15}/><span>Visualizar</span></button>}{canEdit&&<button type="button" className="hf-action-btn primary" style={{width:"100%",justifyContent:"flex-start"}} onClick={()=>{onEdit(d);setOpenActionId(null)}}><Clipboard size={15}/><span>Editar</span></button>}{canEdit&&<button type="button" className="hf-action-btn danger" style={{width:"100%",justifyContent:"flex-start"}} onClick={()=>{remove(d.id);setOpenActionId(null)}}><Trash2 size={15}/><span>Excluir</span></button>}</div>}</div></td>
   </tr>)}</tbody></table>{!demands.length&&<div className="hf-empty"><Search size={28}/><strong>Nenhuma demanda encontrada</strong><span>Ajuste os filtros ou crie uma nova demanda.</span></div>}</div>
 }
 
@@ -9957,6 +9961,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
