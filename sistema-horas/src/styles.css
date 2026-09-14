@@ -2615,3 +2615,14 @@ section.hf-dashboard-hours-completed + section.hf-grid2{
     font-size: 9px;
   }
 }
+.hf-filters-clean > .hf-search {
+  width: auto !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.hf-filters-clean > .hf-filter-trigger {
+  width: auto !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
