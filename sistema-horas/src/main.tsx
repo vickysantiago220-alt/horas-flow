@@ -2270,11 +2270,7 @@ const proximas = minhasDemandas
                       </div>
                     </div>
 
-                    <div style={{
-                      display:"flex",
-                      flexDirection:"column",
-                      gap:"14px"
-                    }}>
+                    <div className="hf-meu-resumo-modern">
                       <div>
                         <span className="hf-dashboard-mini-label">
                           Minhas demandas
@@ -9769,6 +9765,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
