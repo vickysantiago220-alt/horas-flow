@@ -3970,3 +3970,885 @@ section.hf-dashboard-hours-completed + section.hf-grid2{
 .hf-gantt-today-line{position:absolute;top:50px;bottom:0;width:2px;background:#ef4444;z-index:10;pointer-events:none}
 .hf-gantt-today-line span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);padding:3px 7px;border-radius:999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700}
 .hf-gantt-empty{padding:50px;text-align:center;color:#8490a3}
+/* =========================================================
+   SAPHIRE SHEET — DASHBOARD MODERNA
+   Escopo exclusivo da Dashboard
+   ========================================================= */
+
+section.hf-dashboard-kpis{
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:18px !important;
+  width:100% !important;
+  margin:0 !important;
+}
+
+section.hf-dashboard-kpis > .hf-card{
+  width:100% !important;
+  min-width:0 !important;
+  height:138px !important;
+  min-height:138px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  border-radius:18px !important;
+}
+
+section.hf-dashboard-secondary{
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:16px !important;
+  width:100% !important;
+  margin:18px 0 0 !important;
+}
+
+section.hf-dashboard-secondary > .hf-dashboard-mini{
+  width:100% !important;
+  min-width:0 !important;
+  height:96px !important;
+  min-height:96px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  border-radius:16px !important;
+  padding:18px !important;
+}
+
+section.hf-dashboard-main-grid{
+  display:grid !important;
+  grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr) !important;
+  gap:18px !important;
+  width:100% !important;
+  margin-top:22px !important;
+}
+
+section.hf-dashboard-main-grid .hf-panel{
+  border-radius:18px !important;
+  overflow:hidden !important;
+  box-shadow:0 4px 20px rgba(15,23,42,.055) !important;
+}
+
+section.hf-dashboard-main-grid .hf-panel-title{
+  padding:20px 22px 8px !important;
+}
+
+section.hf-dashboard-main-grid .hf-panel-title h2{
+  font-size:16px !important;
+  font-weight:800 !important;
+}
+
+.hf-chart-panel{
+  min-height:380px !important;
+}
+
+.hf-status-chart{
+  display:grid !important;
+  grid-template-columns:240px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:28px !important;
+  padding:18px 24px 26px !important;
+  min-height:280px !important;
+}
+
+.hf-status-chart > div:first-child{
+  width:220px !important;
+  height:220px !important;
+  min-width:220px !important;
+  min-height:220px !important;
+  filter:drop-shadow(0 10px 22px rgba(15,23,42,.10)) !important;
+}
+
+.hf-status-chart > div:last-child{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:9px !important;
+}
+
+.hf-status-chart > div:last-child > div{
+  padding:10px 12px !important;
+  border:1px solid #edf0f5 !important;
+  border-radius:12px !important;
+  background:#fafbfc !important;
+  transition:all .18s ease !important;
+}
+
+.hf-status-chart > div:last-child > div:hover{
+  background:#fff !important;
+  border-color:#dce3ee !important;
+  transform:translateX(2px) !important;
+}
+
+@media(max-width:1200px){
+  section.hf-dashboard-kpis{
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  section.hf-dashboard-secondary{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  section.hf-dashboard-main-grid{
+    grid-template-columns:1fr !important;
+  }
+}
+
+@media(max-width:700px){
+  section.hf-dashboard-kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:12px !important;
+  }
+
+  section.hf-dashboard-secondary{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:12px !important;
+  }
+
+  section.hf-dashboard-kpis > .hf-card{
+    height:120px !important;
+    min-height:120px !important;
+  }
+
+  .hf-status-chart{
+    grid-template-columns:1fr !important;
+    justify-items:center !important;
+  }
+
+  .hf-status-chart > div:last-child{
+    width:100% !important;
+  }
+}
+
+@media(max-width:480px){
+  section.hf-dashboard-kpis,
+  section.hf-dashboard-secondary{
+    grid-template-columns:1fr !important;
+  }
+}
+
+/* =========================================================
+   SAPHIRE SHEET — GRÁFICO DE STATUS MODERNO
+   Somente Dashboard
+   ========================================================= */
+
+.hf-chart-panel{
+  min-height:420px !important;
+  border-radius:20px !important;
+  overflow:hidden !important;
+  box-shadow:0 8px 30px rgba(15,23,42,.06) !important;
+}
+
+.hf-chart-panel .hf-panel-title{
+  padding:24px 26px 8px !important;
+}
+
+.hf-chart-panel .hf-panel-title h2{
+  font-size:18px !important;
+  font-weight:800 !important;
+  color:#0f172a !important;
+}
+
+.hf-status-chart{
+  display:grid !important;
+  grid-template-columns:380px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:28px !important;
+  padding:12px 26px 28px !important;
+  min-height:330px !important;
+}
+
+/* DONUT */
+.hf-status-chart > div:first-child{
+  width:330px !important;
+  height:330px !important;
+  min-width:330px !important;
+  min-height:330px !important;
+  margin:auto !important;
+  filter:drop-shadow(0 14px 24px rgba(15,23,42,.12)) !important;
+}
+
+/* LEGENDA */
+.hf-status-chart > div:last-child{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:8px !important;
+  width:100% !important;
+}
+
+/* Cada status */
+.hf-status-chart > div:last-child > div{
+  position:relative !important;
+  display:flex !important;
+  align-items:center !important;
+  min-height:48px !important;
+  padding:10px 14px 10px 16px !important;
+  border:1px solid #edf1f6 !important;
+  border-radius:14px !important;
+  background:linear-gradient(90deg,#fbfcfe,#f7f9fc) !important;
+  box-sizing:border-box !important;
+  transition:all .2s ease !important;
+}
+
+/* efeito moderno */
+.hf-status-chart > div:last-child > div:hover{
+  transform:translateX(4px) !important;
+  background:#fff !important;
+  box-shadow:0 6px 18px rgba(15,23,42,.08) !important;
+  border-color:#dbe3ef !important;
+}
+
+/* Indicador de status */
+.hf-status-chart > div:last-child > div > div:first-child{
+  width:12px !important;
+  height:12px !important;
+  min-width:12px !important;
+  min-height:12px !important;
+  border-radius:50% !important;
+  margin-right:12px !important;
+  box-shadow:0 0 0 4px rgba(148,163,184,.10) !important;
+}
+
+/* Texto */
+.hf-status-chart > div:last-child > div span{
+  font-size:14px !important;
+  color:#334155 !important;
+}
+
+/* Número */
+.hf-status-chart > div:last-child > div strong{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#0f172a !important;
+}
+
+/* Porcentagem */
+.hf-status-chart > div:last-child > div small{
+  font-size:13px !important;
+  font-weight:600 !important;
+  color:#94a3b8 !important;
+}
+
+/* Responsividade */
+@media(max-width:1100px){
+  .hf-status-chart{
+    grid-template-columns:300px minmax(0,1fr) !important;
+    gap:20px !important;
+  }
+
+  .hf-status-chart > div:first-child{
+    width:270px !important;
+    height:270px !important;
+    min-width:270px !important;
+    min-height:270px !important;
+  }
+}
+
+@media(max-width:800px){
+  .hf-status-chart{
+    grid-template-columns:1fr !important;
+    justify-items:center !important;
+  }
+
+  .hf-status-chart > div:first-child{
+    width:280px !important;
+    height:280px !important;
+    min-width:280px !important;
+    min-height:280px !important;
+  }
+
+  .hf-status-chart > div:last-child{
+    width:100% !important;
+  }
+}
+
+/* ===== GRÁFICO DE STATUS — MODERNO ===== */
+
+.hf-status-chart{
+  display:grid !important;
+  grid-template-columns:430px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:25px !important;
+  padding:10px 28px 28px !important;
+  min-height:350px !important;
+}
+
+/* DONUT GRANDE */
+.hf-status-chart > div:first-child{
+  width:350px !important;
+  height:350px !important;
+  min-width:350px !important;
+  min-height:350px !important;
+  margin:auto !important;
+  filter:drop-shadow(0 12px 25px rgba(15,23,42,.13)) !important;
+}
+
+/* ÁREA DOS STATUS */
+.hf-status-chart > div:last-child{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:10px !important;
+  width:100% !important;
+}
+
+/* CADA STATUS */
+.hf-status-chart > div:last-child > div{
+  display:grid !important;
+  grid-template-columns:18px minmax(180px,1fr) 45px 55px !important;
+  align-items:center !important;
+  gap:10px !important;
+  min-height:52px !important;
+  padding:8px 16px !important;
+  border:0 !important;
+  border-radius:14px !important;
+  background:linear-gradient(90deg,#f8fafc,#f3f6fa) !important;
+  box-shadow:inset 0 0 0 1px rgba(226,232,240,.7) !important;
+  box-sizing:border-box !important;
+}
+
+/* BOLINHA DO STATUS */
+.hf-status-chart > div:last-child > div > div:first-child{
+  width:13px !important;
+  height:13px !important;
+  min-width:13px !important;
+  min-height:13px !important;
+  border-radius:50% !important;
+  margin:0 !important;
+}
+
+/* TEXTO DO STATUS */
+.hf-status-chart > div:last-child > div span{
+  font-size:14px !important;
+  font-weight:500 !important;
+  color:#334155 !important;
+  white-space:nowrap !important;
+}
+
+/* NÚMERO */
+.hf-status-chart > div:last-child > div strong{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#0f172a !important;
+  text-align:right !important;
+}
+
+/* PORCENTAGEM */
+.hf-status-chart > div:last-child > div small{
+  font-size:13px !important;
+  font-weight:600 !important;
+  color:#94a3b8 !important;
+  text-align:right !important;
+}
+
+/* HOVER */
+.hf-status-chart > div:last-child > div:hover{
+  transform:translateX(4px) !important;
+  background:#fff !important;
+  box-shadow:0 5px 16px rgba(15,23,42,.08) !important;
+}
+
+/* RESPONSIVO */
+@media(max-width:1000px){
+  .hf-status-chart{
+    grid-template-columns:320px minmax(0,1fr) !important;
+  }
+
+  .hf-status-chart > div:first-child{
+    width:280px !important;
+    height:280px !important;
+    min-width:280px !important;
+    min-height:280px !important;
+  }
+
+  .hf-status-chart > div:last-child > div{
+    grid-template-columns:16px minmax(120px,1fr) 40px 45px !important;
+  }
+}
+
+@media(max-width:750px){
+  .hf-status-chart{
+    grid-template-columns:1fr !important;
+  }
+
+  .hf-status-chart > div:first-child{
+    width:300px !important;
+    height:300px !important;
+    min-width:300px !important;
+    min-height:300px !important;
+  }
+
+  .hf-status-chart > div:last-child{
+    width:100% !important;
+  }
+}
+/* =========================================================
+   SAPHIRE SHEET — DONUT MODERNO / STATUS
+   Somente Dashboard
+   ========================================================= */
+
+.hf-status-chart{
+  display:grid !important;
+  grid-template-columns:410px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:35px !important;
+  width:100% !important;
+  padding:10px 28px 28px !important;
+  box-sizing:border-box !important;
+  min-height:380px !important;
+}
+
+/* DONUT */
+.hf-status-chart > div:first-child{
+  position:relative !important;
+  width:350px !important;
+  height:350px !important;
+  min-width:350px !important;
+  min-height:350px !important;
+  margin:auto !important;
+  filter:drop-shadow(0 15px 25px rgba(15,23,42,.14)) !important;
+}
+
+/* LEGENDA */
+.hf-status-chart > div:last-child{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:9px !important;
+  width:100% !important;
+}
+
+/* LINHA DO STATUS */
+.hf-status-chart > div:last-child > div{
+  display:grid !important;
+  grid-template-columns:16px 180px 45px 55px minmax(120px,1fr) !important;
+  align-items:center !important;
+  gap:10px !important;
+  width:100% !important;
+  min-height:52px !important;
+  padding:8px 14px !important;
+  border:1px solid #edf1f6 !important;
+  border-radius:13px !important;
+  background:linear-gradient(90deg,#f9fafc,#f4f7fa) !important;
+  box-sizing:border-box !important;
+  transition:.2s ease !important;
+}
+
+/* HOVER */
+.hf-status-chart > div:last-child > div:hover{
+  background:#fff !important;
+  transform:translateX(4px) !important;
+  box-shadow:0 6px 18px rgba(15,23,42,.08) !important;
+}
+
+/* BOLINHA */
+.hf-status-chart > div:last-child > div > div:first-child{
+  width:12px !important;
+  height:12px !important;
+  min-width:12px !important;
+  min-height:12px !important;
+  border-radius:50% !important;
+  margin:0 !important;
+}
+
+/* TEXTO */
+.hf-status-chart > div:last-child > div span{
+  font-size:14px !important;
+  font-weight:600 !important;
+  color:#334155 !important;
+  white-space:nowrap !important;
+}
+
+/* NÚMERO */
+.hf-status-chart > div:last-child > div strong{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#0f172a !important;
+  text-align:right !important;
+}
+
+/* PORCENTAGEM */
+.hf-status-chart > div:last-child > div small{
+  font-size:13px !important;
+  font-weight:700 !important;
+  color:#64748b !important;
+  text-align:right !important;
+}
+
+/* BARRA DE PROGRESSO */
+.hf-status-chart > div:last-child > div::after{
+  content:"" !important;
+  display:block !important;
+  height:8px !important;
+  width:100% !important;
+  border-radius:99px !important;
+  background:#e7edf3 !important;
+}
+
+/* RESPONSIVO */
+@media(max-width:1100px){
+  .hf-status-chart{
+    grid-template-columns:320px minmax(0,1fr) !important;
+    gap:20px !important;
+  }
+
+  .hf-status-chart > div:first-child{
+    width:280px !important;
+    height:280px !important;
+    min-width:280px !important;
+    min-height:280px !important;
+  }
+
+  .hf-status-chart > div:last-child > div{
+    grid-template-columns:14px minmax(110px,1fr) 40px 45px !important;
+  }
+
+  .hf-status-chart > div:last-child > div::after{
+    display:none !important;
+  }
+}
+
+@media(max-width:750px){
+  .hf-status-chart{
+    grid-template-columns:1fr !important;
+    justify-items:center !important;
+  }
+
+  .hf-status-chart > div:first-child{
+    width:300px !important;
+    height:300px !important;
+    min-width:300px !important;
+    min-height:300px !important;
+  }
+
+  .hf-status-chart > div:last-child{
+    width:100% !important;
+  }
+}
+
+/* =========================================================
+   MODERN STATUS CHART — SAPHIRE SHEET
+   ========================================================= */
+
+.modern-status-chart{
+  display:grid !important;
+  grid-template-columns:420px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:35px !important;
+  width:100% !important;
+  padding:10px 24px 28px !important;
+  box-sizing:border-box !important;
+  min-height:390px !important;
+}
+
+.modern-status-donut-area{
+  width:360px !important;
+  height:360px !important;
+  margin:auto !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.modern-status-donut{
+  width:360px !important;
+  height:360px !important;
+  display:block !important;
+  overflow:visible !important;
+  filter:drop-shadow(0 14px 24px rgba(15,23,42,.12)) !important;
+}
+
+.modern-status-percent{
+  font-size:17px !important;
+  font-weight:800 !important;
+  fill:#fff !important;
+  paint-order:stroke !important;
+  stroke:rgba(15,23,42,.15) !important;
+  stroke-width:1px !important;
+}
+
+.modern-status-total{
+  font-size:38px !important;
+  font-weight:800 !important;
+  fill:#17233a !important;
+}
+
+.modern-status-label{
+  font-size:13px !important;
+  font-weight:500 !important;
+  fill:#94a3b8 !important;
+}
+
+.modern-status-list{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:9px !important;
+  width:100% !important;
+  min-width:0 !important;
+}
+
+.modern-status-row{
+  display:grid !important;
+  grid-template-columns:14px minmax(170px,1fr) 42px 48px minmax(100px,1fr) !important;
+  align-items:center !important;
+  gap:10px !important;
+  width:100% !important;
+  min-height:52px !important;
+  padding:8px 14px !important;
+  border:1px solid #edf1f6 !important;
+  border-radius:14px !important;
+  background:linear-gradient(90deg,#fafbfd,#f5f8fb) !important;
+  box-sizing:border-box !important;
+  transition:all .2s ease !important;
+}
+
+.modern-status-row:hover{
+  background:#fff !important;
+  transform:translateX(4px) !important;
+  box-shadow:0 7px 18px rgba(15,23,42,.08) !important;
+  border-color:#dce4ee !important;
+}
+
+.modern-status-dot{
+  width:11px !important;
+  height:11px !important;
+  min-width:11px !important;
+  border-radius:50% !important;
+  display:block !important;
+}
+
+.modern-status-name{
+  font-size:14px !important;
+  font-weight:600 !important;
+  color:#334155 !important;
+  white-space:nowrap !important;
+}
+
+.modern-status-count{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#17233a !important;
+  text-align:right !important;
+}
+
+.modern-status-percentage{
+  font-size:13px !important;
+  font-weight:700 !important;
+  color:#64748b !important;
+  text-align:right !important;
+}
+
+.modern-status-progress{
+  height:8px !important;
+  width:100% !important;
+  background:#e7edf3 !important;
+  border-radius:999px !important;
+  overflow:hidden !important;
+}
+
+.modern-status-progress-fill{
+  height:100% !important;
+  min-width:0 !important;
+  border-radius:999px !important;
+  transition:width .4s ease !important;
+}
+
+/* STATUS ZERO */
+.modern-status-row:has(.modern-status-progress-fill[style*="width: 0%"]) .modern-status-progress{
+  opacity:.55 !important;
+}
+
+/* TABLET */
+@media(max-width:1100px){
+  .modern-status-chart{
+    grid-template-columns:330px minmax(0,1fr) !important;
+    gap:20px !important;
+  }
+
+  .modern-status-donut-area,
+  .modern-status-donut{
+    width:290px !important;
+    height:290px !important;
+  }
+
+  .modern-status-row{
+    grid-template-columns:12px minmax(120px,1fr) 38px 42px !important;
+  }
+
+  .modern-status-progress{
+    grid-column:2 / -1 !important;
+    margin-top:2px !important;
+  }
+}
+
+/* MOBILE */
+@media(max-width:750px){
+  .modern-status-chart{
+    grid-template-columns:1fr !important;
+    gap:20px !important;
+    padding:10px 12px 24px !important;
+  }
+
+  .modern-status-donut-area,
+  .modern-status-donut{
+    width:300px !important;
+    height:300px !important;
+  }
+
+  .modern-status-row{
+    grid-template-columns:12px minmax(0,1fr) 40px 45px !important;
+  }
+
+  .modern-status-progress{
+    grid-column:2 / -1 !important;
+  }
+}
+
+@media(max-width:480px){
+  .modern-status-donut-area,
+  .modern-status-donut{
+    width:270px !important;
+    height:270px !important;
+  }
+
+  .modern-status-name{
+    font-size:13px !important;
+  }
+}
+
+
+/* =========================================================
+   DASHBOARD — GRÁFICO DE STATUS EM LARGURA TOTAL
+   ========================================================= */
+
+section.hf-dashboard-main-grid{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  width:100% !important;
+  gap:20px !important;
+}
+
+section.hf-dashboard-main-grid .hf-chart-panel{
+  width:100% !important;
+  min-width:0 !important;
+  min-height:470px !important;
+}
+
+.modern-status-chart{
+  display:grid !important;
+  grid-template-columns:430px minmax(0,1fr) !important;
+  align-items:center !important;
+  gap:38px !important;
+  width:100% !important;
+  min-height:390px !important;
+  padding:10px 28px 28px !important;
+  box-sizing:border-box !important;
+}
+
+.modern-status-donut-area{
+  width:360px !important;
+  height:360px !important;
+  min-width:360px !important;
+  margin:auto !important;
+}
+
+.modern-status-donut{
+  width:360px !important;
+  height:360px !important;
+}
+
+.modern-status-list{
+  width:100% !important;
+  min-width:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  gap:9px !important;
+}
+
+.modern-status-row{
+  display:grid !important;
+  grid-template-columns:16px minmax(170px,1.1fr) 55px 55px minmax(180px,1fr) !important;
+  align-items:center !important;
+  gap:12px !important;
+  width:100% !important;
+  min-height:56px !important;
+  padding:9px 16px !important;
+  box-sizing:border-box !important;
+  border:1px solid #edf1f6 !important;
+  border-radius:14px !important;
+  background:linear-gradient(90deg,#fafbfd,#f5f8fb) !important;
+}
+
+.modern-status-name{
+  font-size:14px !important;
+  font-weight:600 !important;
+  color:#334155 !important;
+  white-space:nowrap !important;
+}
+
+.modern-status-count{
+  font-size:15px !important;
+  font-weight:800 !important;
+  color:#17233a !important;
+  text-align:center !important;
+}
+
+.modern-status-percentage{
+  font-size:13px !important;
+  font-weight:700 !important;
+  color:#64748b !important;
+  text-align:center !important;
+}
+
+.modern-status-progress{
+  display:block !important;
+  width:100% !important;
+  height:9px !important;
+  background:#e6ecf2 !important;
+  border-radius:999px !important;
+  overflow:hidden !important;
+}
+
+.modern-status-progress-fill{
+  display:block !important;
+  height:100% !important;
+  border-radius:999px !important;
+}
+
+@media(max-width:1000px){
+  .modern-status-chart{
+    grid-template-columns:320px minmax(0,1fr) !important;
+    gap:25px !important;
+  }
+
+  .modern-status-donut-area,
+  .modern-status-donut{
+    width:290px !important;
+    height:290px !important;
+    min-width:290px !important;
+  }
+
+  .modern-status-row{
+    grid-template-columns:14px minmax(130px,1fr) 40px 45px !important;
+  }
+
+  .modern-status-progress{
+    grid-column:2 / -1 !important;
+  }
+}
+
+@media(max-width:700px){
+  .modern-status-chart{
+    grid-template-columns:1fr !important;
+  }
+
+  .modern-status-donut-area,
+  .modern-status-donut{
+    width:300px !important;
+    height:300px !important;
+    min-width:300px !important;
+  }
+
+  .modern-status-row{
+    grid-template-columns:14px minmax(0,1fr) 40px 45px !important;
+  }
+
+  .modern-status-progress{
+    grid-column:2 / -1 !important;
+  }
+}
+

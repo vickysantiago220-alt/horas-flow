@@ -1,3 +1,4 @@
+import ModernStatusChart from './ModernStatusChart';
 import React, { useEffect, useMemo, useState } from 'react';
 import "./styles.css";
 import DemandCalendar from './DemandCalendar';
@@ -2735,178 +2736,9 @@ const proximas = minhasDemandas
             <div className="hf-panel hf-chart-panel">
               <PanelTitle title="Demandas por status"/>
 
-              <div className="hf-status-chart" style={{
-  display:"grid",
-  gridTemplateColumns:"220px minmax(0,1fr)",
-  alignItems:"center",
-  gap:"30px",
-  width:"100%",
-  minHeight:"240px"
-}}>
-
-  <div style={{
-    width:"210px",
-    height:"210px",
-    minWidth:"210px",
-    minHeight:"210px",
-    position:"relative",
-    margin:"0 auto"
-  }}>
-
-    <div
-      style={{
-        position:"absolute",
-        inset:"0",
-        borderRadius:"50%",
-        background:(() => {
-          const total = dashboardLocalStats.totalDemands || 0;
-
-          if (!total) return "#edf1f7";
-
-          const colors:Record<string,string> = {
-            "Aguardando análise":"#94a3b8",
-            "Em análise":"#3b82f6",
-            "Analisada":"#8b5cf6",
-            "Em desenvolvimento":"#06b6d4",
-            "Em homologação":"#f59e0b",
-            "Concluída":"#22c55e"
-          };
-
-          let current = 0;
-
-          const pieces = statuses
-            .map((s) => {
-              const count = dashboardLocalStats.byStatus[s] || 0;
-              const percent = (count / total) * 100;
-              const startPercent = current;
-              const endPercent = current + percent;
-
-              current = endPercent;
-
-              return `${colors[s] || "#64748b"} ${startPercent}% ${endPercent}%`;
-            })
-            .filter(Boolean);
-
-          return `conic-gradient(${pieces.join(",")})`;
-        })()
-      }}
-    />
-
-    <div style={{
-      position:"absolute",
-      top:"50%",
-      left:"50%",
-      transform:"translate(-50%,-50%)",
-      width:"118px",
-      height:"118px",
-      borderRadius:"50%",
-      background:"#fff",
-      display:"flex",
-      flexDirection:"column",
-      alignItems:"center",
-      justifyContent:"center",
-      boxShadow:"0 2px 8px rgba(15,23,42,.06)"
-    }}>
-      <strong style={{
-        fontSize:"32px",
-        fontWeight:800,
-        lineHeight:1,
-        color:"#18243b"
-      }}>
-        {dashboardLocalStats.totalDemands}
-      </strong>
-
-      <span style={{
-        marginTop:"6px",
-        fontSize:"12px",
-        color:"#8b97a8"
-      }}>
-        demandas
-      </span>
-    </div>
-
-  </div>
-
-  <div style={{
-    display:"flex",
-    flexDirection:"column",
-    width:"100%",
-    minWidth:"0"
-  }}>
-
-    {statuses.map((s) => {
-      const count = dashboardLocalStats.byStatus[s] || 0;
-      const total = dashboardLocalStats.totalDemands || 0;
-      const percentage = total ? (count / total) * 100 : 0;
-
-      const colors:Record<string,string> = {
-        "Aguardando análise":"#94a3b8",
-        "Em análise":"#3b82f6",
-        "Analisada":"#8b5cf6",
-        "Em desenvolvimento":"#06b6d4",
-        "Em homologação":"#f59e0b",
-        "Concluída":"#22c55e"
-      };
-
-      return (
-          <div
-            title={`${s}: ${count} demandas — ${percentage.toFixed(0)}%`}
-          key={s}
-          style={{
-            display:"grid",
-            gridTemplateColumns:"minmax(0,1fr) 45px 45px",
-            alignItems:"center",
-            minHeight:"42px",
-            padding:"6px 8px",
-            boxSizing:"border-box",
-            borderBottom:"1px solid #edf0f5",
-            borderRadius:"7px"
-          }}
-        >
-
-          <div style={{
-            display:"flex",
-            alignItems:"center",
-            gap:"10px",
-            fontSize:"14px",
-            color:"#334155"
-          }}>
-            <span style={{
-              width:"10px",
-              height:"10px",
-              minWidth:"10px",
-              borderRadius:"50%",
-              background:colors[s] || "#64748b"
-            }} />
-
-            <span>{s}</span>
-          </div>
-
-          <strong style={{
-            textAlign:"right",
-            fontSize:"14px",
-            fontWeight:700,
-            color:"#18243b"
-          }}>
-            {count}
-          </strong>
-
-          <small style={{
-            textAlign:"right",
-            fontSize:"12px",
-            color:"#8b97a8"
-          }}>
-            {percentage.toFixed(0)}%
-          </small>
-
-        </div>
-      );
-    })}
-
-  </div>
-
-</div>
-            </div></section>
+              <ModernStatusChart demands={filtered} />
+            </div>
+          </section>
 
           <section className="hf-panel hf-dashboard-demand-panel hf-ultimas-demandas">
             <div className="hf-panel-title">
@@ -9937,6 +9769,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
