@@ -18,6 +18,7 @@ type DemandCalendarProps = {
   demands: any[];
   clients?: any[];
   onOpen?: (demand: any) => void;
+  period?: string;
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -33,7 +34,10 @@ const normalizeStatus = (status: any) =>
   String(status || '').trim();
 
 const getDeliveryDate = (demand: any) => {
-  const value = demand?.deliveryDate ?? demand?.delivery_date ?? '';
+  const status = String(demand?.status || '').trim().toLowerCase();
+  const value = status.includes('analisada')
+    ? (demand?.analysisMonth ?? demand?.analysis_month ?? demand?.deliveryDate ?? demand?.delivery_date ?? '')
+    : (demand?.deliveryDate ?? demand?.delivery_date ?? demand?.requestDate ?? demand?.request_date ?? '');
   if (!value) return null;
 
   const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
@@ -44,8 +48,20 @@ export default function DemandCalendar({
   demands,
   clients = [],
   onOpen,
+  period = 'Todos',
 }: DemandCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const currentMonth = useMemo(() => {
+    if (period && period !== 'Todos') {
+      const [year, month] = period.split('-').map(Number);
+      if (year && month) return new Date(year, month - 1, 1);
+    }
+
+    const firstDemandDate = demands
+      .map((demand) => getDeliveryDate(demand))
+      .find((date) => date);
+
+    return firstDemandDate ? startOfMonth(firstDemandDate) : startOfMonth(new Date());
+  }, [period, demands]);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -89,18 +105,6 @@ export default function DemandCalendar({
     return client?.name || client?.nome || 'Cliente não informado';
   };
 
-  const goPreviousMonth = () => {
-    setCurrentMonth((month) => subMonths(month, 1));
-  };
-
-  const goNextMonth = () => {
-    setCurrentMonth((month) => addMonths(month, 1));
-  };
-
-  const goToday = () => {
-    setCurrentMonth(new Date());
-  };
-
   return (
     <section className="hf-demand-calendar">
       <div className="hf-calendar-header">
@@ -117,33 +121,18 @@ export default function DemandCalendar({
           <button
             type="button"
             className="hf-secondary"
-            onClick={goToday}
+            
           >
             Hoje
           </button>
 
           <div className="hf-calendar-navigation">
-            <button
-              type="button"
-              onClick={goPreviousMonth}
-              aria-label="Mês anterior"
-            >
-              ‹
-            </button>
 
             <strong>
               {format(currentMonth, 'MMMM yyyy', {
                 locale: ptBR,
               })}
             </strong>
-
-            <button
-              type="button"
-              onClick={goNextMonth}
-              aria-label="Próximo mês"
-            >
-              ›
-            </button>
           </div>
         </div>
       </div>
@@ -228,3 +217,9 @@ export default function DemandCalendar({
     </section>
   );
 }
+
+
+
+
+
+

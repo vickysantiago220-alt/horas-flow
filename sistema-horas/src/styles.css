@@ -2626,3 +2626,1347 @@ section.hf-dashboard-hours-completed + section.hf-grid2{
   flex: 0 0 auto !important;
   white-space: nowrap !important;
 }
+
+/* ==============================
+   ROADMAP DE ENTREGAS
+   ============================== */
+
+.hf-demand-roadmap {
+  width: 100%;
+  margin-top: 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.hf-roadmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.hf-roadmap-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.hf-roadmap-header span {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.hf-roadmap-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hf-roadmap-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 4px;
+  background: #f9fafb;
+}
+
+.hf-roadmap-navigation button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.hf-roadmap-navigation button:hover {
+  background: #e5e7eb;
+}
+
+.hf-roadmap-navigation strong {
+  min-width: 130px;
+  text-align: center;
+  text-transform: capitalize;
+  font-size: 13px;
+}
+
+.hf-roadmap-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.hf-roadmap-grid {
+  display: grid;
+  min-width: 980px;
+  border-top: 0;
+}
+
+.hf-roadmap-corner,
+.hf-roadmap-day {
+  min-height: 52px;
+  padding: 8px;
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.hf-roadmap-corner {
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.hf-roadmap-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.hf-roadmap-day strong {
+  font-size: 13px;
+}
+
+.hf-roadmap-day small {
+  font-size: 10px;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+.hf-roadmap-demand {
+  grid-column: 1;
+  min-height: 76px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  border: 0;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hf-roadmap-demand:hover {
+  background: #f8fafc;
+}
+
+.hf-roadmap-demand strong {
+  font-size: 12px;
+}
+
+.hf-roadmap-demand span {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #374151;
+}
+
+.hf-roadmap-demand small {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.hf-roadmap-track {
+  grid-column: 2 / -1;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc((100% / var(--roadmap-days, 30)) - 1px),
+    #f1f5f9 calc((100% / var(--roadmap-days, 30)) - 1px),
+    #f1f5f9 calc(100% / var(--roadmap-days, 30))
+  );
+}
+
+.hf-roadmap-bar {
+  min-height: 34px;
+  margin: 0 4px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: #2563eb;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 5px rgba(0,0,0,.08);
+}
+
+.hf-roadmap-bar:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+}
+
+.hf-roadmap-bar span {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hf-roadmap-bar.completed {
+  background: #16a34a;
+}
+
+.hf-roadmap-bar.progress {
+  background: #2563eb;
+}
+
+.hf-roadmap-bar.pending {
+  background: #f59e0b;
+}
+
+.hf-roadmap-bar.approval {
+  background: #8b5cf6;
+}
+
+.hf-roadmap-bar.rejected {
+  background: #dc2626;
+}
+
+.hf-roadmap-bar.default {
+  background: #64748b;
+}
+
+.hf-roadmap-empty {
+  padding: 42px 20px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .hf-roadmap-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hf-roadmap-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .hf-roadmap-navigation {
+    flex: 1;
+  }
+
+  .hf-roadmap-navigation strong {
+    flex: 1;
+  }
+}
+
+/* =========================================================
+   ROADMAP V2 — TIMELINE / GANTT
+   ========================================================= */
+
+.hf-demand-roadmap-v2 {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.hf-roadmap-v2-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.hf-roadmap-v2-header h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.hf-roadmap-v2-header span {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #7b8495;
+}
+
+.hf-roadmap-v2-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hf-roadmap-v2-navigation {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  border: 1px solid #e3e7ee;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.hf-roadmap-v2-navigation button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: #172033;
+  font-size: 21px;
+  cursor: pointer;
+}
+
+.hf-roadmap-v2-navigation button:hover {
+  background: #f5f7fa;
+}
+
+.hf-roadmap-v2-navigation strong {
+  min-width: 150px;
+  text-align: center;
+  font-size: 13px;
+  text-transform: capitalize;
+  color: #172033;
+}
+
+/* CARDS SUPERIORES */
+
+.hf-roadmap-v2-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.hf-roadmap-v2-stat {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 82px;
+  padding: 16px 18px;
+  border: 1px solid #e4e8ef;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.hf-roadmap-v2-stat-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: #f4f6f9;
+  color: #586174;
+  font-size: 17px;
+}
+
+.hf-roadmap-v2-stat strong {
+  display: block;
+  font-size: 23px;
+  line-height: 1;
+  color: #172033;
+}
+
+.hf-roadmap-v2-stat span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #8a93a3;
+}
+
+/* LEGENDA */
+
+.hf-roadmap-v2-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  min-height: 54px;
+  padding: 10px 18px;
+  margin-bottom: 16px;
+  border: 1px solid #e4e8ef;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.hf-roadmap-v2-legend > strong {
+  margin-right: 4px;
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: #8a93a3;
+}
+
+.hf-roadmap-v2-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #596274;
+}
+
+.hf-roadmap-v2-legend i {
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.hf-roadmap-v2-legend i.completed {
+  background: #16a34a;
+}
+
+.hf-roadmap-v2-legend i.progress {
+  background: #0f9f9a;
+}
+
+.hf-roadmap-v2-legend i.pending {
+  background: #f5a900;
+}
+
+.hf-roadmap-v2-legend i.approval {
+  background: #8b5cf6;
+}
+
+.hf-roadmap-v2-legend i.open {
+  background: #64748b;
+}
+
+.hf-roadmap-v2-legend i.rejected {
+  background: #dc2626;
+}
+
+/* PAINEL DA TIMELINE */
+
+.hf-roadmap-v2-board {
+  width: 100%;
+  border: 1px solid #e2e6ed;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.hf-roadmap-v2-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.hf-roadmap-v2-grid {
+  display: grid;
+  min-width: 1500px;
+  background: #fff;
+}
+
+/* CABEÇALHO */
+
+.hf-roadmap-v2-project-header {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  min-height: 62px;
+  padding: 0 18px;
+  border-right: 1px solid #e1e5eb;
+  border-bottom: 1px solid #e1e5eb;
+  background: #fff;
+  color: #8b94a4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.hf-roadmap-v2-day-header {
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-right: 1px solid #e8ebf0;
+  border-bottom: 1px solid #e1e5eb;
+  background: #fafbfc;
+}
+
+.hf-roadmap-v2-day-header strong {
+  font-size: 12px;
+  color: #344054;
+}
+
+.hf-roadmap-v2-day-header small {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #9aa2b1;
+}
+
+/* INFORMAÇÕES DA DEMANDA */
+
+.hf-roadmap-v2-demand {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  grid-column: 1;
+  min-height: 116px;
+  width: 300px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  border-right: 1px solid #e1e5eb;
+  border-bottom: 1px solid #e8ebf0;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hf-roadmap-v2-demand:hover {
+  background: #fafbfd;
+}
+
+.hf-roadmap-v2-demand-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hf-roadmap-v2-demand-top strong {
+  font-size: 12px;
+  color: #111827;
+}
+
+.hf-roadmap-v2-demand-top span {
+  max-width: 135px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #f3f5f8;
+  color: #727b8c;
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hf-roadmap-v2-demand-title {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #3e4757;
+  font-size: 12px;
+}
+
+.hf-roadmap-v2-demand > small {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #929aa8;
+  font-size: 10px;
+}
+
+/* PROGRESSO */
+
+.hf-roadmap-v2-demand-progress {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.hf-roadmap-v2-demand-progress > div {
+  width: 155px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #edf0f3;
+}
+
+.hf-roadmap-v2-demand-progress > div span {
+  display: block;
+  width: 65%;
+  height: 100%;
+  border-radius: inherit;
+  background: #20242c;
+}
+
+.hf-roadmap-v2-demand-progress b {
+  font-size: 9px;
+  font-weight: 600;
+  color: #7c8493;
+}
+
+/* DATAS */
+
+.hf-roadmap-v2-demand-dates {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1px;
+  color: #9aa2ae;
+  font-size: 9px;
+}
+
+/* ÁREA DA TIMELINE */
+
+.hf-roadmap-v2-track {
+  position: relative;
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  border-bottom: 1px solid #e8ebf0;
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent calc(100% / 30 - 1px),
+      #edf0f4 calc(100% / 30 - 1px),
+      #edf0f4 calc(100% / 30)
+    );
+}
+
+/* BARRA DA DEMANDA */
+
+.hf-roadmap-v2-bar {
+  position: relative;
+  z-index: 2;
+  min-width: 24px;
+  height: 28px;
+  margin: 0 4px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: 7px;
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  box-shadow: none;
+}
+
+.hf-roadmap-v2-bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.hf-roadmap-v2-bar:hover {
+  transform: translateY(-1px);
+  filter: brightness(.96);
+}
+
+.hf-roadmap-v2-bar.completed {
+  background: #078b42;
+}
+
+.hf-roadmap-v2-bar.progress {
+  background: #10a7a4;
+}
+
+.hf-roadmap-v2-bar.pending {
+  background: #f2a900;
+}
+
+.hf-roadmap-v2-bar.approval {
+  background: #c22bc2;
+}
+
+.hf-roadmap-v2-bar.open {
+  background: #7c8a9b;
+}
+
+.hf-roadmap-v2-bar.rejected {
+  background: #df3434;
+}
+
+/* LINHA DE HOJE */
+
+.hf-roadmap-v2-board {
+  --today-position: 50%;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 1100px) {
+  .hf-roadmap-v2-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .hf-roadmap-v2-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hf-roadmap-v2-controls {
+    width: 100%;
+  }
+
+  .hf-roadmap-v2-navigation {
+    flex: 1;
+  }
+
+  .hf-roadmap-v2-navigation strong {
+    flex: 1;
+  }
+
+  .hf-roadmap-v2-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-roadmap-v2-legend {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* =========================================================
+   ROADMAP REAL — TIMELINE / GANTT
+   ========================================================= */
+
+.hf-demand-roadmap-real {
+  width: 100%;
+  margin-top: 18px;
+  color: #172033;
+}
+
+.hf-roadmap-real-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.hf-roadmap-real-top h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.hf-roadmap-real-top p {
+  margin: 5px 0 0;
+  color: #7b8495;
+  font-size: 13px;
+}
+
+.hf-roadmap-real-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hf-roadmap-real-month {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  border: 1px solid #e2e6ed;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.hf-roadmap-real-month button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 21px;
+  color: #344054;
+}
+
+.hf-roadmap-real-month button:hover {
+  background: #f5f7fa;
+}
+
+.hf-roadmap-real-month strong {
+  min-width: 145px;
+  text-align: center;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+/* CARDS */
+
+.hf-roadmap-real-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.hf-roadmap-real-stats > div {
+  min-height: 78px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid #e3e7ed;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.hf-roadmap-real-stats strong {
+  font-size: 25px;
+  line-height: 1;
+  color: #111827;
+}
+
+.hf-roadmap-real-stats span {
+  margin-top: 7px;
+  color: #8a93a3;
+  font-size: 11px;
+}
+
+/* LEGENDA */
+
+.hf-roadmap-real-legend {
+  min-height: 52px;
+  padding: 10px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  border: 1px solid #e3e7ed;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.hf-roadmap-real-legend > b {
+  color: #8a93a3;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.hf-roadmap-real-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #596274;
+  font-size: 11px;
+}
+
+.hf-roadmap-real-legend i {
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.hf-roadmap-real-legend i.completed {
+  background: #078b42;
+}
+
+.hf-roadmap-real-legend i.progress {
+  background: #10a7a4;
+}
+
+.hf-roadmap-real-legend i.pending {
+  background: #f2a900;
+}
+
+.hf-roadmap-real-legend i.approval {
+  background: #c22bc2;
+}
+
+.hf-roadmap-real-legend i.open {
+  background: #7c8a9b;
+}
+
+.hf-roadmap-real-legend i.rejected {
+  background: #df3434;
+}
+
+/* BOARD */
+
+.hf-roadmap-real-board {
+  width: 100%;
+  border: 1px solid #e1e5eb;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.hf-roadmap-real-header {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-width: 1200px;
+  min-height: 62px;
+  background: #fafbfc;
+  border-bottom: 1px solid #e1e5eb;
+}
+
+.hf-roadmap-real-label {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-right: 1px solid #e1e5eb;
+  color: #8992a2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.hf-roadmap-real-days {
+  display: grid;
+  grid-template-columns: repeat(31, minmax(38px, 1fr));
+}
+
+.hf-roadmap-real-days > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-right: 1px solid #e8ebf0;
+}
+
+.hf-roadmap-real-days strong {
+  font-size: 12px;
+  color: #344054;
+}
+
+.hf-roadmap-real-days small {
+  color: #9aa2b1;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+/* SCROLL */
+
+.hf-roadmap-real-board {
+  overflow-x: auto;
+}
+
+.hf-roadmap-real-row {
+  display: grid;
+  grid-template-columns: 300px minmax(900px, 1fr);
+  min-width: 1200px;
+  min-height: 116px;
+}
+
+/* INFORMAÇÕES */
+
+.hf-roadmap-real-info {
+  width: 300px;
+  min-height: 116px;
+  padding: 13px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  border-right: 1px solid #e1e5eb;
+  border-bottom: 1px solid #e8ebf0;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hf-roadmap-real-info:hover {
+  background: #fafbfd;
+}
+
+.hf-roadmap-real-number {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hf-roadmap-real-number > strong {
+  font-size: 12px;
+}
+
+.hf-roadmap-real-number > span {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #f3f5f8;
+  color: #737c8c;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.hf-roadmap-real-number > span.completed {
+  color: #078b42;
+  background: #edf9f2;
+}
+
+.hf-roadmap-real-number > span.progress {
+  color: #078e8c;
+  background: #eafafa;
+}
+
+.hf-roadmap-real-number > span.pending {
+  color: #a56d00;
+  background: #fff7df;
+}
+
+.hf-roadmap-real-number > span.approval {
+  color: #9b209b;
+  background: #fdf0fd;
+}
+
+.hf-roadmap-real-number > span.rejected {
+  color: #c52c2c;
+  background: #fff0f0;
+}
+
+.hf-roadmap-real-info > strong:not(.hf-roadmap-real-number strong) {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #3e4757;
+  font-size: 12px;
+}
+
+.hf-roadmap-real-info > small {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #929aa8;
+  font-size: 10px;
+}
+
+/* RESPONSÁVEL / HORAS */
+
+.hf-roadmap-real-progress {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  color: #7d8695;
+  font-size: 9px;
+}
+
+.hf-roadmap-real-progress span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hf-roadmap-real-progress em {
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* DATAS */
+
+.hf-roadmap-real-dates {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  color: #a0a7b3;
+  font-size: 9px;
+}
+
+/* TIMELINE */
+
+.hf-roadmap-real-timeline {
+  position: relative;
+  min-height: 116px;
+  border-bottom: 1px solid #e8ebf0;
+  background: #fff;
+  overflow: hidden;
+}
+
+.hf-roadmap-real-columns {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(31, minmax(38px, 1fr));
+  pointer-events: none;
+}
+
+.hf-roadmap-real-columns > span {
+  border-right: 1px solid #edf0f4;
+}
+
+/* BARRA */
+
+.hf-roadmap-real-bar {
+  position: absolute;
+  top: 44px;
+  height: 29px;
+  min-width: 25px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  cursor: pointer;
+  z-index: 2;
+  overflow: hidden;
+  text-align: left;
+}
+
+.hf-roadmap-real-bar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.hf-roadmap-real-bar:hover {
+  filter: brightness(.96);
+  transform: translateY(-1px);
+}
+
+.hf-roadmap-real-bar.completed {
+  background: #078b42;
+}
+
+.hf-roadmap-real-bar.progress {
+  background: #10a7a4;
+}
+
+.hf-roadmap-real-bar.pending {
+  background: #f2a900;
+}
+
+.hf-roadmap-real-bar.approval {
+  background: #c22bc2;
+}
+
+.hf-roadmap-real-bar.open {
+  background: #7c8a9b;
+}
+
+.hf-roadmap-real-bar.rejected {
+  background: #df3434;
+}
+
+/* VAZIO */
+
+.hf-roadmap-real-empty {
+  padding: 45px 20px;
+  text-align: center;
+  color: #7b8495;
+  font-size: 13px;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 900px) {
+  .hf-roadmap-real-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hf-roadmap-real-actions {
+    width: 100%;
+  }
+
+  .hf-roadmap-real-month {
+    flex: 1;
+  }
+
+  .hf-roadmap-real-month strong {
+    flex: 1;
+  }
+
+  .hf-roadmap-real-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .hf-roadmap-real-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .hf-roadmap-real-legend {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+}
+
+/* ===== CORREÇÃO FINAL - TABELA DE DEMANDAS ===== */
+.hf-table-wrap{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto !important;
+  overflow-y:visible;
+}
+
+.hf-table-wrap table{
+  width:100%;
+  min-width:1450px !important;
+  table-layout:fixed !important;
+  border-collapse:collapse;
+}
+
+.hf-table-wrap th,
+.hf-table-wrap td{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  box-sizing:border-box;
+}
+
+/* Larguras das colunas */
+.hf-table-wrap th:nth-child(1),
+.hf-table-wrap td:nth-child(1){
+  width:65px;
+}
+
+.hf-table-wrap th:nth-child(2),
+.hf-table-wrap td:nth-child(2){
+  width:150px;
+}
+
+.hf-table-wrap th:nth-child(3),
+.hf-table-wrap td:nth-child(3){
+  width:320px;
+}
+
+.hf-table-wrap th:nth-child(4),
+.hf-table-wrap td:nth-child(4){
+  width:75px;
+}
+
+.hf-table-wrap th:nth-child(5),
+.hf-table-wrap td:nth-child(5){
+  width:105px;
+}
+
+.hf-table-wrap th:nth-child(6),
+.hf-table-wrap td:nth-child(6){
+  width:125px;
+}
+
+.hf-table-wrap th:nth-child(7),
+.hf-table-wrap td:nth-child(7){
+  width:110px;
+}
+
+.hf-table-wrap th:nth-child(8),
+.hf-table-wrap td:nth-child(8){
+  width:145px;
+}
+
+.hf-table-wrap th:nth-child(9),
+.hf-table-wrap td:nth-child(9){
+  width:130px;
+}
+
+.hf-table-wrap th:nth-child(10),
+.hf-table-wrap td:nth-child(10){
+  width:140px;
+}
+
+.hf-table-wrap th:nth-child(11),
+.hf-table-wrap td:nth-child(11){
+  width:130px;
+}
+
+.hf-table-wrap th:nth-child(12),
+.hf-table-wrap td:nth-child(12){
+  width:100px;
+}
+
+.hf-table-wrap th{
+  overflow:visible;
+  text-overflow:clip;
+  white-space:nowrap;
+}
+
+.hf-table-wrap .actions-head{
+  min-width:100px !important;
+  width:100px !important;
+}
+
+.hf-table-wrap .hf-action-menu{
+  white-space:nowrap;
+}
+
+/* Scrollbar da tabela */
+.hf-table-wrap::-webkit-scrollbar{
+  height:10px;
+}
+
+.hf-table-wrap::-webkit-scrollbar-thumb{
+  background:#aeb7c5;
+  border-radius:10px;
+}
+
+.hf-table-wrap::-webkit-scrollbar-track{
+  background:#eef1f5;
+  border-radius:10px;
+}
+
+
+/* ===== GANTT DE DEMANDAS ===== */
+.hf-demand-gantt{width:100%;background:#fff;border:1px solid #e6eaf0;border-radius:14px;overflow:hidden}
+.hf-gantt-header{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 14px}
+.hf-gantt-header h3{margin:0;font-size:19px;color:#172033}
+.hf-gantt-header p{margin:5px 0 0;color:#7b8798;font-size:13px}
+.hf-gantt-month{font-size:15px;font-weight:700;color:#243b63}
+.hf-gantt-legend{display:flex;flex-wrap:wrap;gap:14px;padding:8px 22px 16px;border-bottom:1px solid #edf0f4}
+.hf-gantt-legend span{display:flex;align-items:center;gap:6px;color:#667085;font-size:12px}
+.hf-gantt-legend i{width:8px;height:8px;border-radius:50%}
+.hf-gantt-scroll{position:relative;width:100%;overflow-x:auto;overflow-y:hidden}
+.hf-gantt-grid{display:grid;min-width:1650px;position:relative}
+.hf-gantt-corner{min-height:50px;display:flex;align-items:center;padding:0 12px;background:#fafbfc;border-right:1px solid #e8ecf2;border-bottom:1px solid #e8ecf2;color:#718096;font-size:10px;font-weight:700}
+.hf-gantt-day{min-width:34px;min-height:50px;display:flex;align-items:center;justify-content:center;border-right:1px solid #edf0f4;border-bottom:1px solid #e8ecf2;background:#fafbfc;color:#718096}
+.hf-gantt-day strong{font-size:11px;color:#46556d}
+.hf-gantt-day.today{background:#fff3f3}
+.hf-gantt-demand{min-height:58px;width:100%;display:flex;align-items:center;gap:8px;padding:0 12px;border:0;border-right:1px solid #edf0f4;border-bottom:1px solid #edf0f4;background:#fff;text-align:left;cursor:pointer;color:#27364d;overflow:hidden}
+.hf-gantt-demand:hover{background:#f7f9fc}
+.hf-gantt-demand>span:last-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.hf-gantt-number{flex:none;color:#7a879a;font-size:11px;font-weight:700}
+.hf-gantt-approved{min-height:58px;display:flex;align-items:center;padding:0 12px;border-right:1px solid #edf0f4;border-bottom:1px solid #edf0f4;color:#536176;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.hf-gantt-status{min-height:58px;display:flex;align-items:center;padding:0 10px;border-right:1px solid #edf0f4;border-bottom:1px solid #edf0f4}
+.hf-gantt-status span{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border-radius:999px;font-size:10px;font-weight:600;white-space:nowrap}
+.hf-gantt-status i{width:6px;height:6px;border-radius:50%}
+.hf-gantt-timeline{position:relative;grid-column:4/-1;min-height:58px;display:flex;border-bottom:1px solid #edf0f4;background:#fff}
+.hf-gantt-cell{flex:1 1 0;min-width:34px;border-right:1px solid #edf0f4}
+.hf-gantt-cell.today-column{background:#fff8f8}
+.hf-gantt-bar{position:absolute;top:15px;height:28px;min-width:22px;padding:0;border:1px solid;border-radius:7px;overflow:hidden;cursor:pointer;background:transparent}
+.hf-gantt-bar>span{position:absolute;top:0;left:0;bottom:0;opacity:.95}
+.hf-gantt-bar strong{position:relative;z-index:2;display:flex;align-items:center;height:100%;padding:0 8px;color:#fff;font-size:10px}
+.hf-gantt-today-line{position:absolute;top:50px;bottom:0;width:2px;background:#ef4444;z-index:10;pointer-events:none}
+.hf-gantt-today-line span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);padding:3px 7px;border-radius:999px;background:#ef4444;color:#fff;font-size:9px;font-weight:700}
+.hf-gantt-empty{padding:50px;text-align:center;color:#8490a3}

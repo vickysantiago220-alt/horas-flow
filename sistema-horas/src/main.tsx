@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import "./styles.css";
 import DemandCalendar from './DemandCalendar';
+import DemandGantt from './DemandGantt';
 import { createRoot } from 'react-dom/client';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -153,7 +154,7 @@ const formatPeriod = (period:string) => {
   const [demandClientFilter,setDemandClientFilter]=useState('Todos');
   const [demandPeriod,setDemandPeriod]=useState('Todos');
   const [demandPage,setDemandPage]=useState(1);
-  const [demandView,setDemandView]=useState<'table'|'calendar'>('table');
+  const [demandView,setDemandView]=useState<'table'|'calendar'|'gantt'>('table');
   const demandPageSize=10;
   const [historyDemand,setHistoryDemand]=useState<Demand|null>(null);
   const [historyLoading,setHistoryLoading]=useState(false);
@@ -1467,7 +1468,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
-        (demandPeriod==='Todos'||getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date)===demandPeriod)
+        (demandPeriod==='Todos'||(normalizeStatus(d.status)==='Analisada' ? String(d.analysisMonth||'').slice(0,7)===demandPeriod : getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date || d.requestDate || d.criadoEm)===demandPeriod))
     });
 
     // Mais recente primeiro: número maior = demanda mais nova.
@@ -2946,6 +2947,9 @@ const proximas = minhasDemandas
   <button type="button" className={demandView==='calendar'?'active':''} onClick={()=>setDemandView('calendar')}>
     <span>📅</span> Calendário
   </button>
+  <button type="button" className={demandView==='gantt'?'active':''} onClick={()=>setDemandView('gantt')}>
+    <span>📊</span> Gantt
+  </button>
 </div><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==='table'?<><DemandTable
         demands={paginatedDemands}
         remove={removeDemand}
@@ -2956,7 +2960,7 @@ const proximas = minhasDemandas
         onEdit={openEditDemand}
         isClient={isClient}
         clients={clients}
-      /><div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div></> : <DemandCalendar demands={filtered} clients={clients} onOpen={openEditDemand}/>}<div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
+      /><div className="hf-pagination"><span>Mostrando {filtered.length ? ((demandPage-1)*demandPageSize)+1 : 0}-{Math.min(demandPage*demandPageSize,filtered.length)} de {filtered.length}</span><div><button className="hf-page-btn" disabled={demandPage<=1} onClick={()=>setDemandPage(p=>Math.max(1,p-1))}>Anterior</button>{Array.from({length:demandPageCount},(_,i)=>i+1).slice(Math.max(0,demandPage-3),Math.min(demandPageCount,demandPage+2)).map(page=><button key={page} className={`hf-page-btn ${page===demandPage?'active':''}`} onClick={()=>setDemandPage(page)}>{page}</button>)}<button className="hf-page-btn" disabled={demandPage>=demandPageCount} onClick={()=>setDemandPage(p=>Math.min(demandPageCount,p+1))}>Próxima</button></div></div></> : demandView==='calendar' ? <DemandCalendar demands={filtered} clients={clients} onOpen={openEditDemand} period={demandPeriod}/> : <DemandGantt demands={filtered} onEdit={openEditDemand} period={demandPeriod}/>}<div className="hf-totals"><strong>Totais</strong><span>{filtered.length} demandas</span><span>Análise: <b>{totalAnalysis}h</b></span><span>Necessárias: <b>{totalNeeded}h</b></span><span>Total: <b>{totalHours}h</b></span></div></section>}
       </>}
     </main>
 
@@ -9933,6 +9937,15 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
 
 
 
