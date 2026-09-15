@@ -5,6 +5,7 @@ import DemandCalendar from './DemandCalendar';
 import DemandGantt from './DemandGantt';
 import { createRoot } from 'react-dom/client';
 import { jsPDF } from 'jspdf';
+import { drawStatusReportGantt } from './statusReportGantt';
 import autoTable from 'jspdf-autotable';
 import {
   BarChart3, CheckCircle2, Clock3, Filter, History, LayoutDashboard,
@@ -598,7 +599,7 @@ const markNotificationAsRead = (id:string) => {
 
 
   const exportStatusReport = async () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('landscape','mm','a4');
 
     const logoData = await new Promise<string>((resolve, reject) => {
       const img = new Image();
@@ -713,6 +714,44 @@ const markNotificationAsRead = (id:string) => {
       analysisHours + finishedHours;
 
     // =================================================
+    // STATUS DO RELATÓRIO
+    // =================================================
+
+    const reportStatusConfig = [
+      { key: 'Aguardando análise', color: [148, 163, 184] },
+      { key: 'Em análise', color: [59, 130, 246] },
+      { key: 'Analisada', color: [139, 92, 246] },
+      { key: 'Em desenvolvimento', color: [6, 182, 212] },
+      { key: 'Em homologação', color: [245, 158, 11] },
+      { key: 'Concluída', color: [34, 197, 94] }
+    ];
+
+    const reportDemands = demands.filter(d => {
+      if (!clientMatches(d)) return false;
+      if (dashboardPeriod === 'Todos') return true;
+      if (normalizeStatus(d.status) === 'Analisada') {
+        return String(d.analysisMonth || '').slice(0, 7) === dashboardPeriod;
+      }
+      return getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date || d.requestDate || d.criadoEm) === dashboardPeriod;
+    });
+
+    const ganttPeriod = dashboardPeriod;
+
+    const reportStatusData = reportStatusConfig.map(status => {
+      const count = reportDemands.filter(
+        d => normalizeStatus(d.status) === status.key
+      ).length;
+
+      return {
+        ...status,
+        count,
+        percentage: reportDemands.length
+          ? Math.round((count / reportDemands.length) * 100)
+          : 0
+      };
+    });
+
+    // =================================================
     // INDICADORES GERAIS
     // =================================================
 
@@ -764,26 +803,20 @@ const markNotificationAsRead = (id:string) => {
     // =================================================
 
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 30, 'F');
+    doc.rect(0, 0, 297, 30, 'F');
 
-    doc.addImage(logoData, 'PNG', 154, 5, 42, 18);
+    doc.addImage(logoData, 'PNG', 14, 5, 42, 18);
 
 
 
     doc.setTextColor(255, 255, 255);
-doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
     doc.text(
       'STATUS REPORT EXECUTIVO',
-      14,
-      20
-    );
-
-    doc.setFontSize(7.5);
-    doc.text(
-      `${periodLabel}  •  ${clientName}`,
-      14,
-      26
+      283,
+      13,
+      { align: 'right' }
     );
 
     doc.setTextColor(22, 35, 59);
@@ -868,6 +901,99 @@ doc.setFont('helvetica', 'normal');
     };
 
     // =================================================
+    // GRÁFICO DE STATUS
+    // =================================================
+
+    const drawStatusDonut = (
+      cx: number,
+      cy: number,
+      radius: number,
+      thickness: number
+    ) => {
+      const total = reportStatusData.reduce(
+        (sum, item) => sum + item.count,
+        0
+      );
+
+      doc.setDrawColor(238, 242, 247);
+      doc.setLineWidth(thickness);
+      doc.circle(cx, cy, radius, 'S');
+
+      if (!total) return;
+
+      let angle = -90;
+
+      reportStatusData
+        .filter(item => item.count > 0)
+        .forEach(item => {
+          const sweep = (item.count / total) * 360;
+          const steps = Math.max(8, Math.ceil(sweep / 4));
+
+          const points: [number, number][] = [];
+
+          for (let i = 0; i <= steps; i++) {
+            const a =
+              (angle + (sweep * i) / steps) *
+              Math.PI / 180;
+
+            points.push([
+              cx + radius * Math.cos(a),
+              cy + radius * Math.sin(a)
+            ]);
+          }
+
+          doc.setDrawColor(
+            item.color[0],
+            item.color[1],
+            item.color[2]
+          );
+
+          doc.setLineWidth(thickness);
+
+          for (let i = 1; i < points.length; i++) {
+            doc.line(
+              points[i - 1][0],
+              points[i - 1][1],
+              points[i][0],
+              points[i][1]
+            );
+          }
+
+          angle += sweep;
+        });
+
+      doc.setFillColor(255, 255, 255);
+      doc.circle(
+        cx,
+        cy,
+        radius - thickness / 2 - 2,
+        'F'
+      );
+
+      doc.setTextColor(22, 35, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+
+      doc.text(
+        String(total),
+        cx,
+        cy + 2,
+        { align: 'center' }
+      );
+
+      doc.setTextColor(108, 122, 142);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+
+      doc.text(
+        'demandas',
+        cx,
+        cy + 9,
+        { align: 'center' }
+      );
+    };
+
+    // =================================================
     // HORAS DO PERÍODO
     // =================================================
 
@@ -897,158 +1023,120 @@ doc.setFont('helvetica', 'normal');
     // DEMANDAS ANALISADAS
     // =================================================
 
-    let analyzedStartY = 106;
-
     doc.setTextColor(22, 35, 59);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
+    doc.text('STATUS DAS DEMANDAS', 108, 112);
 
-    doc.text(
-      `DEMANDAS ANALISADAS NO PERÍODO  •  ${analyzedDemands.length}`,
-      14,
-      analyzedStartY
-    );
+    drawStatusDonut(88, 145, 28, 9);
 
-    const analyzedTable =
-      analyzedDemands.map(d => [
-        String(d.numero).padStart(3, '0'),
-        d.problema || '-',
-        `${Number(d.horasAnalise || 0)}h`,
-        d.responsavel || '-'
-      ]);
-
-    autoTable(doc, {
-      startY: analyzedStartY + 6,
-
-      head: [[
-        'Nº',
-        'Demanda',
-        'Horas',
-        'Responsável'
-      ]],
-
-      body:
-        analyzedTable.length
-          ? analyzedTable
-          : [[
-              '-',
-              'Nenhuma demanda analisada no período.',
-              '-',
-              '-'
-            ]],
-
-      theme: 'grid',
-
-      styles: {
-        font: 'helvetica',
-        fontSize: 7.2,
-        cellPadding: 3,
-        overflow: 'linebreak',
-        textColor: [45, 55, 72],
-        lineColor: [226, 232, 240],
-        lineWidth: 0.25
-      },
-
-      headStyles: {
-        fillColor: [15, 23, 42],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-
-      columnStyles: {
-        0: { cellWidth: 14 },
-        1: { cellWidth: 105 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 41 }
-      },
-
-      margin: {
-        left: 14,
-        right: 14
-      }
+    let statusLegendY = 122;
+    reportStatusData.forEach(item => {
+      doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+      doc.circle(143, statusLegendY - 1.5, 1.4, 'F');
+      doc.setTextColor(45, 55, 72);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.8);
+      doc.text(item.key, 148, statusLegendY);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(item.count) + '  •  ' + String(item.percentage) + '%', 205, statusLegendY);
+      statusLegendY += 6;
     });
 
     // =================================================
-    // DEMANDAS CONCLUÍDAS
+    // LISTAGEM COMPLETA DE DEMANDAS
     // =================================================
 
-    let completedStartY =
-      ((doc as any).lastAutoTable?.finalY || 155) + 14;
+    doc.addPage();
 
-    if (completedStartY > 250) {
-      doc.addPage();
-      completedStartY = 22;
-    }
+    const formatPdfDate = (value: unknown) => {
+      if (!value) return '-';
+      const text = String(value).slice(0, 10);
+      const parts = text.split('-');
+      if (parts.length !== 3) return String(value);
+      return parts[2] + '/' + parts[1] + '/' + parts[0];
+    };
 
     doc.setTextColor(22, 35, 59);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
+    doc.setFontSize(12);
+    doc.text('LISTAGEM DE DEMANDAS', 14, 18);
 
-    doc.text(
-      `DEMANDAS CONCLUÍDAS NO PERÍODO  •  ${completedDemands.length}`,
-      14,
-      completedStartY
-    );
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(108, 122, 142);
+    doc.text(String(reportDemands.length) + ' demandas • ' + periodLabel + ' • ' + clientName, 14, 25);
 
-    const completedTable =
-      completedDemands.map(d => [
-        String(d.numero).padStart(3, '0'),
-        d.problema || '-',
-        `${(
-          Number(d.horasAnalise || 0) +
-          Number(d.horasNecessarias || 0)
-        )}h`,
-        d.responsavel || '-'
-      ]);
+    const reportDemandTable = reportDemands.map(d => [
+      String(d.numero).padStart(3, '0'),
+      d.problema || '-',
+      normalizeStatus(d.status),
+      d.aprovadoPor || '-',
+      String(Number(d.horasAnalise || 0)) + 'h',
+      String(Number(d.horasNecessarias || 0)) + 'h',
+      formatPdfDate(d.requestDate || (d as any).request_date || d.criadoEm),
+      formatPdfDate(d.deliveryDate || (d as any).delivery_date)
+    ]);
 
     autoTable(doc, {
-      startY: completedStartY + 6,
-
+      startY: 31,
       head: [[
         'Nº',
         'Demanda',
-        'Horas',
-        'Responsável'
+        'Status',
+        'Aprovado por',
+        'Horas analisadas',
+        'Horas necessárias',
+        'Solicitação',
+        'Entrega'
       ]],
-
-      body:
-        completedTable.length
-          ? completedTable
-          : [[
-              '-',
-              'Nenhuma demanda concluída no período.',
-              '-',
-              '-'
-            ]],
-
+      body: reportDemandTable.length ? reportDemandTable : [[
+        '-',
+        'Nenhuma demanda encontrada para os filtros selecionados.',
+        '-', '-', '-', '-', '-', '-'
+      ]],
       theme: 'grid',
-
       styles: {
         font: 'helvetica',
-        fontSize: 7.2,
-        cellPadding: 3,
+        fontSize: 6.5,
+        cellPadding: 2.5,
         overflow: 'linebreak',
         textColor: [45, 55, 72],
         lineColor: [226, 232, 240],
         lineWidth: 0.25
       },
-
       headStyles: {
-        fillColor: [37, 99, 235],
+        fillColor: [15, 23, 42],
         textColor: [255, 255, 255],
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        fontSize: 6.5
       },
-
       columnStyles: {
-        0: { cellWidth: 14 },
-        1: { cellWidth: 105 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 41 }
+        0: { cellWidth: 12 },
+        1: { cellWidth: 73 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 25 },
+        6: { cellWidth: 27 },
+        7: { cellWidth: 27 }
       },
-
-      margin: {
-        left: 14,
-        right: 14
+      margin: { left: 14, right: 14 },
+      didParseCell: (data: any) => {
+        if (data.section === 'body' && data.column.index === 2) {
+          const status = String(data.cell.raw || '');
+          const colors: Record<string, number[]> = {
+            'Aguardando análise': [148, 163, 184],
+            'Em análise': [59, 130, 246],
+            'Analisada': [139, 92, 246],
+            'Em desenvolvimento': [6, 182, 212],
+            'Em homologação': [245, 158, 11],
+            'Concluída': [34, 197, 94]
+          };
+          const color = colors[status] || [108, 122, 142];
+          data.cell.styles.textColor = color;
+          data.cell.styles.fontStyle = 'bold';
+        }
       }
     });
 
@@ -1074,7 +1162,7 @@ doc.setFont('helvetica', 'normal');
       doc.line(
         14,
         pageHeight - 17,
-        196,
+        283,
         pageHeight - 17
       );
 
@@ -1090,7 +1178,7 @@ doc.setFont('helvetica', 'normal');
 
       doc.text(
         `Página ${page} de ${pageCount}`,
-        196,
+        283,
         pageHeight - 10,
         { align: 'right' }
       );
@@ -9765,6 +9853,34 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
