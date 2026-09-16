@@ -107,7 +107,7 @@ function App(){
   const [loginLoading,setLoginLoading]=useState(false);
   const [loginError,setLoginError]=useState('');
 
-  const [tab,setTab]=useState<'meu-dia'|'dashboard'|'demandas'|'usuarios'|'clientes'>('meu-dia');
+  const [tab,setTab]=useState<'meu-dia'|'dashboard'|'demandas'|'usuarios'|'clientes'>('dashboard');
   const [demands,setDemands]=useState<Demand[]>([]);
   const [users,setUsers]=useState<User[]>([]);
   const [clients,setClients]=useState<Client[]>([]);
@@ -1269,10 +1269,10 @@ doc.setFont('helvetica', 'bold');
 
   const logout=()=>{localStorage.removeItem('horaflow-token');localStorage.removeItem('horaflow-user');setToken(null);setUser(null);setTab('dashboard')};
 
-  // Após login ou restauração da sessão, iniciar sempre no Meu Dia.
+  // Após login ou restauração da sessão, iniciar sempre no Dashboard.
   useEffect(()=>{
     if(token && user){
-      setTab('meu-dia');
+      setTab('dashboard');
     }
   },[token,user]);
 
@@ -1783,7 +1783,7 @@ const dashboardDemands=useMemo(()=>{
               onClick={()=>{
                 setCommandCenterOpen(false);
                 setCommandSearch('');
-                setTab('meu-dia');
+                setTab('dashboard');
               }}
             >
               <CalendarDays size={18}/>
@@ -9853,6 +9853,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
