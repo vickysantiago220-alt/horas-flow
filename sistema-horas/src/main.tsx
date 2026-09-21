@@ -904,7 +904,7 @@ doc.setFont('helvetica', 'bold');
     // GRÁFICO DE STATUS
     // =================================================
 
-    const drawStatusDonut = (
+    const drawStatusDonut = async (
       cx: number,
       cy: number,
       radius: number,
@@ -915,84 +915,84 @@ doc.setFont('helvetica', 'bold');
         0
       );
 
-      doc.setDrawColor(238, 242, 247);
-      doc.setLineWidth(thickness);
-      doc.circle(cx, cy, radius, 'S');
-
       if (!total) return;
 
-      let angle = -90;
+      const canvas = document.createElement('canvas');
+      const size = 420;
+      const scale = 3;
+
+      canvas.width = size * scale;
+      canvas.height = size * scale;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.scale(scale, scale);
+
+      const center = size / 2;
+      const outer = 150;
+      const inner = outer - 48;
+
+      ctx.clearRect(0, 0, size, size);
+
+      let angle = -Math.PI / 2;
 
       reportStatusData
         .filter(item => item.count > 0)
         .forEach(item => {
-          const sweep = (item.count / total) * 360;
-          const steps = Math.max(8, Math.ceil(sweep / 4));
+          const sweep = (item.count / total) * Math.PI * 2;
 
-          const points: [number, number][] = [];
+          ctx.beginPath();
+          ctx.arc(center, center, outer, angle, angle + sweep);
+          ctx.arc(center, center, inner, angle + sweep, angle, true);
+          ctx.closePath();
 
-          for (let i = 0; i <= steps; i++) {
-            const a =
-              (angle + (sweep * i) / steps) *
-              Math.PI / 180;
+          ctx.fillStyle = `rgb(${item.color[0]},${item.color[1]},${item.color[2]})`;
+          ctx.fill();
 
-            points.push([
-              cx + radius * Math.cos(a),
-              cy + radius * Math.sin(a)
-            ]);
-          }
+          if (item.percentage >= 5) {
+            const mid = angle + sweep / 2;
+            const labelRadius = (outer + inner) / 2;
 
-          doc.setDrawColor(
-            item.color[0],
-            item.color[1],
-            item.color[2]
-          );
+            const lx = center + labelRadius * Math.cos(mid);
+            const ly = center + labelRadius * Math.sin(mid);
 
-          doc.setLineWidth(thickness);
-
-          for (let i = 1; i < points.length; i++) {
-            doc.line(
-              points[i - 1][0],
-              points[i - 1][1],
-              points[i][0],
-              points[i][1]
-            );
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${item.percentage}%`, lx, ly);
           }
 
           angle += sweep;
         });
 
-      doc.setFillColor(255, 255, 255);
-      doc.circle(
-        cx,
-        cy,
-        radius - thickness / 2 - 2,
-        'F'
-      );
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(center, center, inner, 0, Math.PI * 2);
+      ctx.fill();
 
-      doc.setTextColor(22, 35, 59);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
+      ctx.fillStyle = '#16233B';
+      ctx.font = '700 42px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(total), center, center - 5);
 
-      doc.text(
-        String(total),
-        cx,
-        cy + 2,
-        { align: 'center' }
-      );
+      ctx.fillStyle = '#6C7A8E';
+      ctx.font = '400 18px Arial';
+      ctx.fillText('demandas', center, center + 30);
 
-      doc.setTextColor(108, 122, 142);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      const image = canvas.toDataURL('image/png');
 
-      doc.text(
-        'demandas',
-        cx,
-        cy + 9,
-        { align: 'center' }
+      doc.addImage(
+        image,
+        'PNG',
+        cx - radius - 5,
+        cy - radius - 5,
+        (radius + 5) * 2,
+        (radius + 5) * 2
       );
     };
-
     // =================================================
     // HORAS DO PERÍODO
     // =================================================
@@ -1028,19 +1028,32 @@ doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.text('STATUS DAS DEMANDAS', 108, 112);
 
-    drawStatusDonut(88, 145, 28, 9);
+    await drawStatusDonut(65, 132, 32, 10);
 
-    let statusLegendY = 122;
+    let statusLegendY = 106;
     reportStatusData.forEach(item => {
+      doc.setFillColor(248,250,252);
+      doc.setDrawColor(231,236,243);
+      doc.roundedRect(108, statusLegendY, 171, 10.5, 3, 3, 'FD');
       doc.setFillColor(item.color[0], item.color[1], item.color[2]);
-      doc.circle(143, statusLegendY - 1.5, 1.4, 'F');
-      doc.setTextColor(45, 55, 72);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.8);
-      doc.text(item.key, 148, statusLegendY);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(item.count) + '  •  ' + String(item.percentage) + '%', 205, statusLegendY);
-      statusLegendY += 6;
+      doc.circle(115, statusLegendY + 5.25, 1.7, 'F');
+      doc.setTextColor(45,55,72);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(7);
+      doc.text(item.key, 121, statusLegendY + 6.2);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(7);
+      doc.text(String(item.count), 207, statusLegendY + 6.2, {align:'right'});
+      doc.setTextColor(108,122,142);
+      doc.setFont('helvetica','normal');
+      doc.text(String(item.percentage)+'%', 222, statusLegendY + 6.2);
+      doc.setFillColor(226,232,240);
+      doc.roundedRect(232, statusLegendY + 3.2, 40, 4, 2, 2, 'F');
+      if(item.percentage > 0){
+        doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+        doc.roundedRect(232, statusLegendY + 3.2, Math.max(1.5, 40 * item.percentage / 100), 4, 2, 2, 'F');
+      }
+      statusLegendY += 12;
     });
 
     // =================================================
@@ -9855,6 +9868,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
