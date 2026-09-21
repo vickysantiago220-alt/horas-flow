@@ -1515,6 +1515,8 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const openApproval=async(d:Demand,approved=true)=>{
     if(!isAdmin&&!isClient)return;
+    setDemandModal(false);
+    setEditingDemand(null);
     setApprovalDemand(d);
     setApprovalReason('');
     setApprovalMonth('');
@@ -3140,7 +3142,7 @@ function DemandTable({demands,remove,approve,history,canEdit,canApprove,onEdit,i
 </td>
     <td><span className={`hf-priority-pill priority-${slug(d.prioridade)}`}>{d.prioridade}</span></td>
     <td><span className={`hf-status-pill status-${slug(normalizeStatus(d.status))}`}>{normalizeStatus(d.status)}</span></td>
-    <td>{d.aprovacao==='Aprovada'?<span className="hf-pill approved">Aprovada</span>:d.aprovacao==='Reprovada'?<span className="hf-pill rejected">Reprovada</span>:canApprove?<div className="hf-approval-actions"><button className="hf-approve" onClick={()=>approve(d,true)}>Aprovar</button><button className="hf-reject" onClick={()=>approve(d,false)}>Reprovar</button></div>:<span className="hf-pill pending">Pendente</span>}</td>
+    <td>{d.aprovacao==='Aprovada'?<span className="hf-pill approved">Aprovada</span>:d.aprovacao==='Reprovada'?<span className="hf-pill rejected">Reprovada</span>:canApprove?<div className="hf-approval-actions"><button className="hf-approve" onClick={(e)=>{e.stopPropagation();approve(d,true)}}>Aprovar</button><button className="hf-reject" onClick={(e)=>{e.stopPropagation();approve(d,false)}}>Reprovar</button></div>:<span className="hf-pill pending">Pendente</span>}</td>
     <td>{d.aprovadoPor||'—'}</td>
     <td>{d.aprovacao==='Reprovada'?<span className="hf-rejection-reason" title={d.rejectionReason||'Sem motivo informado'}>{d.rejectionReason||'Sem motivo informado'}</span>:<span className="hf-muted">—</span>}</td>
     <td><span className={d.deliveryDate?'hf-execution':'hf-muted'}>{formatDate(d.deliveryDate || (d as any).delivery_date)}</span></td>
@@ -9853,6 +9855,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
