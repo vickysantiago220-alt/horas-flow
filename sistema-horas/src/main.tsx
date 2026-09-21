@@ -2876,12 +2876,12 @@ const proximas = minhasDemandas
     <span>☷</span> Tabela
   </button>
   <button type="button" className={demandView==='calendar'?'active':''} onClick={()=>setDemandView('calendar')}>
-    <span>📅</span> Calendário
+    Calendário
   </button>
   <button type="button" className={demandView==='gantt'?'active':''} onClick={()=>setDemandView('gantt')}>
-    <span>📊</span> Gantt
+    Gantt
   </button>
-</div><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions"><button className="hf-secondary" onClick={copyTable}><Clipboard size={15}/>{copied?'Copiado!':'Copiar tabela'}</button>{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==='table'?<><DemandTable
+</div><p className="hf-muted">{filtered.length} demandas • {totalHours}h totais</p></div><div className="hf-actions">{isInternal&&<button className="hf-primary compact" onClick={openNewDemand}><Plus size={16}/> Nova</button>}</div></div>{demandView==='table'?<><DemandTable
         demands={paginatedDemands}
         remove={removeDemand}
         approve={approve}
@@ -9868,6 +9868,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
