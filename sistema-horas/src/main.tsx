@@ -38,7 +38,7 @@ type Demand = {
   aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; requesterUserId?:number|string; criadoEm:string; history:HistoryItem[];
 };
 
-const API = 'http://localhost:3001/api';
+const API = 'https://horas-flow.onrender.com/api';
 
 const statuses:Status[] = ['Aguardando análise','Em análise','Analisada','Em desenvolvimento','Em homologação','Concluída'];
 const priorities:Priority[] = ['Baixa','Média','Alta','Urgente'];
@@ -10053,6 +10053,7 @@ const styles = `
   }
 }
 `
+
 
 
 
