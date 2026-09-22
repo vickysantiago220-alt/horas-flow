@@ -149,6 +149,7 @@ const formatPeriod = (period:string) => {
   const [loading,setLoading]=useState(false);
   const [apiError,setApiError]=useState('');
   const [demandSearch,setDemandSearch]=useState('');
+  const [demandOpenId,setDemandOpenId]=useState<number|null>(null);
   const [demandFiltersOpen,setDemandFiltersOpen]=useState(false);
   const [demandStatusFilter,setDemandStatusFilter]=useState('Todos');
   const [demandApprovalFilter,setDemandApprovalFilter]=useState('Todas');
@@ -1633,13 +1634,14 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const approve=async(d:Demand,approved=true)=>openApproval(d,approved);
 
-  useEffect(()=>{setDemandPage(1)},[demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod]);
+  useEffect(()=>{setDemandPage(1)},[demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod,demandOpenId]);
 
   const filtered=useMemo(()=>{
     const result=demands.filter(d=>{
       const text=`${d.numero} ${d.problema} ${d.tratamento} ${d.responsavel}`.toLowerCase();
       const demandClientId = (d as any).clientId ?? (d as any).client_id ?? ''; const matchesClient = demandClientFilter==='Todos' || String(demandClientId)===String(demandClientFilter);
-      return text.includes(demandSearch.toLowerCase()) &&
+      return (demandOpenId===null || String(d.id)===String(demandOpenId)) &&
+        text.includes(demandSearch.toLowerCase()) &&
         matchesClient &&
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
@@ -1649,7 +1651,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
     // Mais recente primeiro: número maior = demanda mais nova.
     return result.sort((a,b)=>Number(b.numero||0)-Number(a.numero||0));
-  },[demands,demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod]);
+  },[demands,demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod,demandOpenId]);
 
   const demandPageCount=Math.max(1,Math.ceil(filtered.length/demandPageSize));
   const paginatedDemands=useMemo(()=>{
@@ -2412,8 +2414,16 @@ const proximas = minhasDemandas
                               <button
                                 className="hf-secondary"
                                 onClick={() => {
+                                  setDemandOpenId(Number(d.id));
+                                  setDemandStatusFilter('Todos');
+                                  setDemandApprovalFilter('Todas');
+                                  setDemandPriorityFilter('Todas');
+                                  setDemandClientFilter('Todos');
+                                  setDemandPeriod('Todos');
+                                  setDemandPage(1);
+                                  setDemandSearch('');
+                                  setDemandView('table');
                                   setTab('demandas');
-                                  setDemandSearch(String(d.numero));
                                 }}
                               >
                                 Abrir
@@ -9940,6 +9950,12 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
 
 
 
