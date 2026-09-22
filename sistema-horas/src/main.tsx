@@ -38,7 +38,7 @@ type Demand = {
   aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; requesterUserId?:number|string; criadoEm:string; history:HistoryItem[];
 };
 
-const API = 'https://horas-flow.onrender.com/api';
+const API = 'http://localhost:3001/api';
 
 const statuses:Status[] = ['Aguardando análise','Em análise','Analisada','Em desenvolvimento','Em homologação','Concluída'];
 const priorities:Priority[] = ['Baixa','Média','Alta','Urgente'];
@@ -3821,6 +3821,21 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
             <textarea
               value={commentText}
               onChange={e=>setCommentText(e.target.value)}
+              onPaste={e=>{
+                const pasted=Array.from(e.clipboardData.files||[]).filter(file=>file.type.startsWith('image/'));
+                if(pasted.length){
+                  e.preventDefault();
+                  setFiles([...files,...pasted].slice(0,5));
+                }
+              }}
+              onDragOver={e=>e.preventDefault()}
+              onDrop={e=>{
+                e.preventDefault();
+                const dropped=Array.from(e.dataTransfer.files||[]).filter(file=>file.type.startsWith('image/'));
+                if(dropped.length){
+                  setFiles([...files,...dropped].slice(0,5));
+                }
+              }}
               placeholder="Escreva um comentário sobre esta demanda..."
               rows={3}
               disabled={commentSaving}
@@ -7799,6 +7814,50 @@ const styles = `
   font-size:10px;
 }
 
+.hf-selected-files{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+  width:100%;
+}
+.hf-selected-file{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:8px 10px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  box-sizing:border-box;
+}
+.hf-selected-file span{
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#334155;
+  font-size:12px;
+}
+.hf-selected-file small{
+  color:#94a3b8;
+  white-space:nowrap;
+  font-size:11px;
+}
+.hf-selected-file button{
+  border:0;
+  background:transparent;
+  color:#94a3b8;
+  cursor:pointer;
+  font-size:18px;
+  line-height:1;
+  padding:2px 4px;
+}
+.hf-selected-file button:hover{
+  color:#ef4444;
+}
 .hf-comment-files{
   display:flex;
   flex-direction:column;
@@ -7947,6 +8006,50 @@ const styles = `
   font-size:10px;
 }
 
+.hf-selected-files{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+  width:100%;
+}
+.hf-selected-file{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:8px 10px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  box-sizing:border-box;
+}
+.hf-selected-file span{
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#334155;
+  font-size:12px;
+}
+.hf-selected-file small{
+  color:#94a3b8;
+  white-space:nowrap;
+  font-size:11px;
+}
+.hf-selected-file button{
+  border:0;
+  background:transparent;
+  color:#94a3b8;
+  cursor:pointer;
+  font-size:18px;
+  line-height:1;
+  padding:2px 4px;
+}
+.hf-selected-file button:hover{
+  color:#ef4444;
+}
 .hf-comment-files{
   display:flex;
   flex-direction:column;
@@ -9950,6 +10053,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
