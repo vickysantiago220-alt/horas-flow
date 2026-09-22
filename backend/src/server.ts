@@ -3424,6 +3424,23 @@ async function startServer() {
       );
     }
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_id BIGINT NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        demand_id BIGINT NULL,
+        read_at DATETIME NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_notifications_user_created (user_id, created_at),
+        KEY idx_notifications_demand (demand_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log('Tabela notifications criada/verificada com sucesso.');
     app.listen(
       PORT,
       () => {
@@ -3443,6 +3460,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
