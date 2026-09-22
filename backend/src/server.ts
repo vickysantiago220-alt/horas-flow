@@ -2508,7 +2508,7 @@ app.post(
 
         if (uploadError) {
           console.error('Erro ao enviar anexo para o Supabase:', uploadError);
-          continue;
+          throw new Error("Falha no upload do anexo: " + uploadError.message);
         }
 
         const { data: publicUrlData } = supabase.storage
@@ -3460,6 +3460,9 @@ async function startServer() {
 }
 
 startServer();
+
+
+
 
 
 
