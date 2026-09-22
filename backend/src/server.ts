@@ -2227,6 +2227,166 @@ app.get(
   }
 );
 
+app.get(
+  '/api/notifications',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado.'
+        });
+      }
+
+      const [rows] = await pool.query(
+        `
+          SELECT
+            id,
+            type,
+            title,
+            description,
+            demand_id AS demandId,
+            read_at AS readAt,
+            created_at AS createdAt
+          FROM notifications
+          WHERE user_id = ?
+          ORDER BY created_at DESC
+          LIMIT 100
+        `,
+        [req.user.id]
+      );
+
+      return res.json({
+        success: true,
+        data: rows
+      });
+    } catch (error) {
+      console.error('Erro ao buscar notificações:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar notificações.'
+      });
+    }
+  }
+);
+app.patch(
+  '/api/notifications/:id/read',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado.'
+        });
+      }
+
+      const notificationId = Number(req.params.id);
+
+      if (!Number.isInteger(notificationId) || notificationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Notificação inválida.'
+        });
+      }
+
+      await pool.execute(
+        "UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+        [notificationId, req.user.id]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Notificação marcada como lida.'
+      });
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao marcar notificação como lida.'
+      });
+    }
+  }
+);
+app.patch(
+  '/api/notifications/:id/read',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado.'
+        });
+      }
+
+      const notificationId = Number(req.params.id);
+
+      if (!Number.isInteger(notificationId) || notificationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Notificação inválida.'
+        });
+      }
+
+      await pool.execute(
+        "UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+        [notificationId, req.user.id]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Notificação marcada como lida.'
+      });
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao marcar notificação como lida.'
+      });
+    }
+  }
+);
+app.patch(
+  '/api/notifications/:id/read',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuário não autenticado.'
+        });
+      }
+
+      const notificationId = Number(req.params.id);
+
+      if (!Number.isInteger(notificationId) || notificationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Notificação inválida.'
+        });
+      }
+
+      await pool.execute(
+        "UPDATE notifications SET read_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+        [notificationId, req.user.id]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Notificação marcada como lida.'
+      });
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao marcar notificação como lida.'
+      });
+    }
+  }
+);
 app.post(
   '/api/demands/:id/comments',
   upload.array('attachments', 5),
@@ -2295,6 +2455,44 @@ app.post(
 
       const commentId = (result as any).insertId;
 
+      const [responsibleRows] = await pool.query(
+        "SELECT u.id AS userId, u.name AS userName FROM demands d INNER JOIN users u ON LOWER(TRIM(u.name)) = LOWER(TRIM(d.responsible)) WHERE d.id = ? AND d.responsible IS NOT NULL AND TRIM(d.responsible) <> '' AND u.active = 1 LIMIT 1",
+        [demandId]
+      );
+
+      const responsibleUser = (responsibleRows as any[])[0];
+
+      if (
+        responsibleUser &&
+        Number(responsibleUser.userId) !== Number(req.user.id)
+      ) {
+        const [demandNumberRows] = await pool.query(
+          "SELECT number FROM demands WHERE id = ? LIMIT 1",
+          [demandId]
+        );
+
+        const demandNumber =
+          Number((demandNumberRows as any[])[0]?.number || demandId);
+
+        const [commenterRows] = await pool.query(
+          "SELECT name FROM users WHERE id = ? LIMIT 1",
+          [req.user.id]
+        );
+
+        const commenterName =
+          String((commenterRows as any[])[0]?.name || "Usuário");
+
+        await pool.execute(
+          "INSERT INTO notifications (user_id, type, title, description, demand_id) VALUES (?, ?, ?, ?, ?)",
+          [
+            responsibleUser.userId,
+            "comment",
+            "Novo comentário na demanda #" + String(demandNumber).padStart(3, "0"),
+            commenterName + " adicionou um comentário.",
+            demandId
+          ]
+        );
+      }
       const files = ((req as any).files || []) as Express.Multer.File[];
 
       for (const file of files) {
@@ -3245,6 +3443,13 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
+
+
 
 
 
