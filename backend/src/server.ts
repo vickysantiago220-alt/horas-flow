@@ -1559,6 +1559,7 @@ app.get(
 // CRIAR CHAMADO
 app.post(
   '/api/tickets',
+  authenticate,
   authorize('CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
