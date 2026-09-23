@@ -112,6 +112,8 @@ function App(){
   const [tickets,setTickets]=useState<any[]>([]);
   const [ticketModal,setTicketModal]=useState(false);
   const [selectedTicket,setSelectedTicket]=useState<any|null>(null);
+  const [openTicketActionId,setOpenTicketActionId]=useState<number|null>(null);
+  const [ticketActionMenuPosition,setTicketActionMenuPosition]=useState<{top:number;left:number}|null>(null);
   const [ticketForm,setTicketForm]=useState({problem:'',priority:'Média',requestDate:new Date().toISOString().slice(0,10)});
   const [ticketSaving,setTicketSaving]=useState(false);
   const [ticketError,setTicketError]=useState('');
@@ -1384,6 +1386,24 @@ doc.setFont('helvetica', 'bold');
     }
   };
 
+  const deleteTicket=async(ticket:any)=>{
+    if(!isAdmin)return;
+
+    const confirmed=window.confirm(
+      `Deseja excluir o chamado #${ticket.number}?`
+    );
+
+    if(!confirmed)return;
+
+    try{
+      await request(`/tickets/${ticket.id}`,{method:'DELETE'});
+      setSelectedTicket(null);
+      await loadTickets();
+    }catch(error:any){
+      window.alert(error.message||'Não foi possível excluir o chamado.');
+    }
+  };
+
   const loadDashboard=async(clientIdOverride?:string)=>{
     try{
       setDashboardLoading(true);
@@ -2133,7 +2153,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
                     <th>Prioridade</th>
                     <th>Solicitação</th>
                     <th>Status</th>
-                    {(isAdmin||isInternal)&&<th>Ação</th>}
+                    {isAdmin&&<th>Ação</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -2154,6 +2174,91 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
                       <td>{ticket.priority}</td>
                       <td>{ticket.requestDate ? new Date(ticket.requestDate).toLocaleDateString('pt-BR') : '-'}</td>
                       <td>{ticket.status}</td>
+                      {isAdmin&&(
+                        <td>
+                          <div
+                            className="hf-action-menu"
+                            onClick={(e)=>e.stopPropagation()}
+                            style={{position:"relative",display:"inline-block",zIndex:1001}}
+                          >
+                            <button
+                              type="button"
+                              className="hf-action-btn"
+                              onClick={(e)=>{
+                                const rect=e.currentTarget.getBoundingClientRect();
+                                const menuWidth=170;
+                                setTicketActionMenuPosition({
+                                  top:Math.max(8,rect.top),
+                                  left:Math.max(8,rect.left-menuWidth-8)
+                                });
+                                setOpenTicketActionId(
+                                  openTicketActionId===ticket.id ? null : ticket.id
+                                );
+                              }}
+                              title="Ações"
+                            >
+                              <span>⋮</span>
+                              <span>Ações</span>
+                            </button>
+
+                            {openTicketActionId===ticket.id&&(
+                              <div
+                                style={{
+                                  position:"fixed",
+                                  top:ticketActionMenuPosition?.top??0,
+                                  left:ticketActionMenuPosition?.left??0,
+                                  zIndex:99999,
+                                  width:170,
+                                  display:"flex",
+                                  flexDirection:"column",
+                                  gap:4,
+                                  background:"#fff",
+                                  border:"1px solid #e5e7eb",
+                                  borderRadius:10,
+                                  boxShadow:"0 12px 30px rgba(0,0,0,.16)",
+                                  padding:6
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  className="hf-action-btn primary"
+                                  style={{
+                                    width:"100%",
+                                    display:"flex",
+                                    justifyContent:"flex-start",
+                                    alignItems:"center"
+                                  }}
+                                  onClick={()=>{
+                                    setSelectedTicket(ticket);
+                                    setOpenTicketActionId(null);
+                                  }}
+                                >
+                                  <Eye size={15}/>
+                                  <span>Visualizar</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="hf-action-btn danger"
+                                  style={{
+                                    width:"100%",
+                                    display:"flex",
+                                    justifyContent:"flex-start",
+                                    alignItems:"center"
+                                  }}
+                                  onClick={()=>{
+                                    deleteTicket(ticket);
+                                    setOpenTicketActionId(null);
+                                  }}
+                                >
+                                  <Trash2 size={15}/>
+                                  <span>Excluir</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )}
 
                     </tr>
                   ))}

@@ -1716,6 +1716,68 @@ app.get(
 
 
 // =====================================================
+
+
+// EXCLUIR CHAMADO
+// ADMIN
+app.delete(
+  '/api/tickets/:id',
+  authenticate,
+  authorize('ADMIN'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const ticketId = getId(req.params.id);
+
+      const [rows] = await pool.query(
+        `
+        SELECT
+          id,
+          demand_id AS demandId
+        FROM tickets
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [ticketId]
+      );
+
+      const ticket = (rows as any[])[0];
+
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chamado não encontrado.',
+        });
+      }
+
+      if (ticket.demandId) {
+        return res.status(409).json({
+          success: false,
+          message: 'Não é possível excluir um chamado que já foi convertido em demanda.',
+          demandId: ticket.demandId,
+        });
+      }
+
+      await pool.query(
+        'DELETE FROM tickets WHERE id = ?',
+        [ticketId]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Chamado excluído com sucesso.',
+      });
+    } catch (error: any) {
+      console.error('ERRO AO EXCLUIR CHAMADO:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao excluir chamado.',
+        error: error?.message,
+      });
+    }
+  }
+);
+
 // EDITAR DEMANDA
 // ADMIN / INTERNO
 // =====================================================
