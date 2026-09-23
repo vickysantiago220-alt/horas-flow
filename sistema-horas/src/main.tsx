@@ -111,6 +111,7 @@ function App(){
   const [demands,setDemands]=useState<Demand[]>([]);
   const [tickets,setTickets]=useState<any[]>([]);
   const [ticketModal,setTicketModal]=useState(false);
+  const [selectedTicket,setSelectedTicket]=useState<any|null>(null);
   const [ticketForm,setTicketForm]=useState({problem:'',priority:'Média',requestDate:new Date().toISOString().slice(0,10)});
   const [ticketSaving,setTicketSaving]=useState(false);
   const [ticketError,setTicketError]=useState('');
@@ -1527,6 +1528,23 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     loadDemandComments(d.id);
   };
 
+  const openLinkedDemandFromTicket=(ticket:any)=>{
+    if(!ticket?.demandId)return;
+
+    const linkedDemand=demands.find(
+      (d:any)=>Number(d.id)===Number(ticket.demandId)
+    );
+
+    if(linkedDemand){
+      setSelectedTicket(null);
+      openEditDemand(linkedDemand);
+      return;
+    }
+
+    setSelectedTicket(null);
+    setDemandError('Demanda vinculada não encontrada na listagem.');
+  };
+
   const openDemandFromTicket=(ticket:any)=>{
 
     if(!isInternal)return;
@@ -1552,6 +1570,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
     setDemandComments([]);
     setDemandCommentText('');
+    setSelectedTicket(null);
     setDemandModal(true);
   };
 
@@ -2119,7 +2138,11 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
                 </thead>
                 <tbody>
                   {tickets.map((ticket:any)=>(
-                    <tr key={ticket.id}>
+                    <tr
+                      key={ticket.id}
+                      onClick={()=>setSelectedTicket(ticket)}
+                      style={{cursor:'pointer'}}
+                    >
                       <td>
                         <strong>#{String(ticket.number).padStart(4,'0')}</strong>
                       </td>
@@ -2131,23 +2154,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
                       <td>{ticket.priority}</td>
                       <td>{ticket.requestDate ? new Date(ticket.requestDate).toLocaleDateString('pt-BR') : '-'}</td>
                       <td>{ticket.status}</td>
-                      {(isAdmin||isInternal)&&(
-                        <td>
-                          {ticket.status==='Convertido em demanda' ? (
-                            <span className="hf-muted">
-                              Demanda #{ticket.demandId}
-                            </span>
-                          ) : (
-                            <button
-                              className="hf-secondary"
-                              type="button"
-                              onClick={()=>openDemandFromTicket(ticket)}
-                            >
-                              Criar demanda
-                            </button>
-                          )}
-                        </td>
-                      )}
+
                     </tr>
                   ))}
                 </tbody>
@@ -3172,6 +3179,14 @@ const proximas = minhasDemandas
       }}
     />}
 
+    {selectedTicket&&<TicketDetailsModal
+      ticket={selectedTicket}
+      isAdmin={isAdmin}
+      close={()=>setSelectedTicket(null)}
+      createDemand={()=>openDemandFromTicket(selectedTicket)}
+      viewDemand={()=>openLinkedDemandFromTicket(selectedTicket)}
+    />}
+
     {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment} files={demandCommentFiles} setFiles={setDemandCommentFiles}/>}
   </div>;
 }
@@ -3818,6 +3833,114 @@ function TicketModal({value,setValue,error,saving,close,save}:{value:{problem:st
           <button type="button" className="hf-primary" disabled={saving} onClick={save}>
             {saving?'Abrindo chamado...':'Abrir chamado'}
           </button>
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
+
+function TicketDetailsModal({
+  ticket,
+  isAdmin,
+  close,
+  createDemand,
+  viewDemand,
+}:{
+  ticket:any;
+  isAdmin:boolean;
+  close:()=>void;
+  createDemand:()=>void;
+  viewDemand:()=>void;
+}){
+  const converted=ticket.status==='Convertido em demanda';
+
+  return <div className="hf-modal-backdrop">
+    <div className="hf-modal user-modal">
+      <div className="hf-modal-head">
+        <div>
+          <span className="hf-eyebrow">Solicitação de suporte</span>
+          <h2>Chamado #{String(ticket.number).padStart(4,'0')}</h2>
+          <p>Confira os detalhes da solicitação enviada pelo cliente.</p>
+        </div>
+        <button type="button" onClick={close}>
+          <X size={20}/>
+        </button>
+      </div>
+
+      <div className="hf-form">
+        <div className="hf-form-section">
+          <div className="hf-section-title">
+            <span>01</span>
+            <div>
+              <strong>Detalhes do chamado</strong>
+              <small>Informações registradas na solicitação.</small>
+            </div>
+          </div>
+
+          <label>
+            Problema / solicitação
+            <textarea
+              value={ticket.problem||''}
+              readOnly
+              rows={7}
+            />
+          </label>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            <label>
+              Prioridade
+              <input value={ticket.priority||'-'} readOnly />
+            </label>
+
+            <label>
+              Data da solicitação
+              <input
+                value={ticket.requestDate ? new Date(ticket.requestDate).toLocaleDateString('pt-BR') : '-'}
+                readOnly
+              />
+            </label>
+          </div>
+
+          <label>
+            Status
+            <input value={ticket.status||'-'} readOnly />
+          </label>
+        </div>
+
+        {converted && (
+          <div className="hf-form-section">
+            <div className="hf-section-title">
+              <span>02</span>
+              <div>
+                <strong>Demanda vinculada</strong>
+                <small>Este chamado já foi convertido em demanda.</small>
+              </div>
+            </div>
+
+            <div className="hf-action-success" style={{margin:0}}>
+              <strong>Demanda #{ticket.demandId}</strong>
+              <span>O chamado já está vinculado a uma demanda.</span>
+            </div>
+          </div>
+        )}
+
+        <div className="hf-form-actions">
+          <button type="button" className="hf-secondary" onClick={close}>
+            Fechar
+          </button>
+
+          {converted ? (
+            <button type="button" className="hf-primary" onClick={viewDemand}>
+              Ver demanda
+            </button>
+          ) : (
+            isAdmin && (
+              <button type="button" className="hf-primary" onClick={createDemand}>
+                Criar demanda
+              </button>
+            )
+          )}
         </div>
       </div>
     </div>
