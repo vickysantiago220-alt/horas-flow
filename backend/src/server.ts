@@ -153,6 +153,91 @@ const DEMAND_SELECT = `
 
 // =====================================================
 
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'E-mail e senha são obrigatórios.',
+      });
+    }
+
+    const [rows] = await pool.query(`
+      SELECT
+        id,
+        name,
+        email,
+        password_hash AS passwordHash,
+        role,
+        client_id AS clientId,
+        active
+      FROM users
+      WHERE email = ?
+      LIMIT 1
+    `, [String(email).trim().toLowerCase()]);
+
+    const user = (rows as any[])[0];
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'E-mail ou senha inválidos.',
+      });
+    }
+
+    if (!user.active) {
+      return res.status(403).json({
+        success: false,
+        message: 'Usuário inativo.',
+      });
+    }
+
+    const validPassword = comparePassword(password, user.passwordHash);
+
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'E-mail ou senha inválidos.',
+      });
+    }
+
+    const authUser = {
+      id: Number(user.id),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      clientId:
+        user.clientId !== null &&
+        user.clientId !== undefined
+          ? Number(user.clientId)
+          : null,
+    };
+
+    const token = createToken(authUser);
+
+    return res.json({
+      success: true,
+      message: 'Login realizado com sucesso.',
+      data: {
+        token,
+        user: authUser,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('ERRO LOGIN:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao realizar login.',
+      error: error?.message,
+      code: error?.code,
+    });
+  }
+});
+
 app.get('/api/health', async (_req, res) => {
   try {
     const [rows] = await pool.query(
