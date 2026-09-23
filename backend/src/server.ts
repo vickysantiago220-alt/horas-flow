@@ -1517,8 +1517,8 @@ app.get(
         SELECT
           t.id,
           t.number,
-          t.client_id AS clientId,
-          t.requester_user_id AS requesterUserId,
+          u.client_id AS clientId,
+          c.name AS clientName,
           t.problem,
           t.priority,
           t.request_date AS requestDate,
@@ -1527,12 +1527,14 @@ app.get(
           t.created_at AS createdAt,
           t.updated_at AS updatedAt
         FROM tickets t
-      `;
+        LEFT JOIN users u ON u.id = t.requester_user_id
+        LEFT JOIN clients c ON c.id = u.client_id
+        `;
 
       const params: any[] = [];
 
       if (req.user?.role === 'CLIENTE') {
-        query += ' WHERE t.client_id = ?';
+        query += ' WHERE u.client_id = ?';
         params.push(req.user.clientId);
       }
 
@@ -1664,7 +1666,7 @@ app.get(
         SELECT
           t.id,
           t.number,
-          t.client_id AS clientId,
+          u.client_id AS clientId,
           t.requester_user_id AS requesterUserId,
           t.problem,
           t.priority,
@@ -3603,6 +3605,8 @@ async function startServer() {
 }
 
 startServer();
+
+
 
 
 

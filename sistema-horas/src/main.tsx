@@ -2148,8 +2148,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
               <table>
                 <thead>
                   <tr>
-                    <th>Chamado</th>
-                    <th>Problema</th>
+                    <th>Chamado</th><th>Cliente</th><th>Problema</th>
                     <th>Prioridade</th>
                     <th>Solicitação</th>
                     <th>Status</th>
@@ -2166,6 +2165,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
                       <td>
                         <strong>#{String(ticket.number).padStart(4,'0')}</strong>
                       </td>
+                      <td>{ticket.clientName||'—'}</td>
                       <td>
                         <div style={{maxWidth:420}}>
                           <strong>{ticket.problem}</strong>
@@ -10518,6 +10518,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
