@@ -107,8 +107,13 @@ function App(){
   const [loginLoading,setLoginLoading]=useState(false);
   const [loginError,setLoginError]=useState('');
 
-  const [tab,setTab]=useState<'meu-dia'|'dashboard'|'demandas'|'usuarios'|'clientes'>('dashboard');
+  const [tab,setTab]=useState<'meu-dia'|'dashboard'|'demandas'|'usuarios'|'clientes'|'chamados'>('dashboard');
   const [demands,setDemands]=useState<Demand[]>([]);
+  const [tickets,setTickets]=useState<any[]>([]);
+  const [ticketModal,setTicketModal]=useState(false);
+  const [ticketForm,setTicketForm]=useState({problem:'',priority:'Média',requestDate:new Date().toISOString().slice(0,10)});
+  const [ticketSaving,setTicketSaving]=useState(false);
+  const [ticketError,setTicketError]=useState('');
   const [users,setUsers]=useState<User[]>([]);
   const [clients,setClients]=useState<Client[]>([]);
   const [dashboard,setDashboard]=useState<DashboardSummary>({
@@ -1368,6 +1373,16 @@ doc.setFont('helvetica', 'bold');
     finally{setLoading(false)}
   };
 
+  const loadTickets=async()=>{
+    try{
+      const data=await request('/tickets');
+      setTickets(data.data||[]);
+    }catch(error:any){
+      console.error('Erro ao carregar chamados:',error);
+      setTickets([]);
+    }
+  };
+
   const loadDashboard=async(clientIdOverride?:string)=>{
     try{
       setDashboardLoading(true);
@@ -1415,6 +1430,7 @@ doc.setFont('helvetica', 'bold');
     if(token){
       loadDemands();
       loadDashboard();
+      loadTickets();
       if(isAdmin)loadClients();
     }
   },[token,isAdmin]);
@@ -1463,7 +1479,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const emptyDemand=()=>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
-    status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',requesterUserId:'',
+    status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',requesterUserId:'',ticketId:null,
     analysisMonth:'',requestDate:'',deliveryDate:''
   });
   const openNewDemand=()=>{
@@ -1511,6 +1527,34 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     loadDemandComments(d.id);
   };
 
+  const openDemandFromTicket=(ticket:any)=>{
+
+    if(!isInternal)return;
+
+    const today=new Date();
+    const currentMonth=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0')].join('-');
+
+    setDemandError('');
+    setDemandSuccess('');
+    setEditingDemand(null);
+
+    setDemandForm({
+      ...emptyDemand(),
+      problema:String(ticket.problem||''),
+      prioridade:String(ticket.priority||'Média'),
+      status:'Aguardando análise',
+      clientId:String(ticket.clientId||''),
+      requesterUserId:String(ticket.requesterUserId||''),
+      requestDate:String(ticket.requestDate||'').slice(0,10),
+      analysisMonth:currentMonth,
+      ticketId:String(ticket.id||'')
+    });
+
+    setDemandComments([]);
+    setDemandCommentText('');
+    setDemandModal(true);
+  };
+
   const saveDemand=async(e:React.FormEvent)=>{
     e.preventDefault();setDemandError('');
 
@@ -1547,7 +1591,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
         analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
-        clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||'',requesterUserId:Number(demandForm.requesterUserId)||null
+        clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||'',requesterUserId:Number(demandForm.requesterUserId)||null,ticketId:demandForm.ticketId||null
       };
       const creatingDemand = !editingDemand;
 
@@ -1580,6 +1624,10 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
       );
 
       await loadDemands();
+
+      if(creatingDemand && demandForm.ticketId){
+        await loadTickets();
+      }
 
       setTimeout(()=>{
 
@@ -1951,6 +1999,8 @@ const dashboardDemands=useMemo(()=>{
         <Nav active={tab==='dashboard'} icon={<LayoutDashboard size={18}/>} text="Dashboard" onClick={()=>{setTab('dashboard');setMobileMenu(false)}}/>
         <Nav active={tab==='meu-dia'} icon={<CalendarDays size={18}/>} text="Meu Dia" onClick={()=>{setTab('meu-dia');setMobileMenu(false)}}/>
         <Nav active={tab==='demandas'} icon={<BarChart3 size={18}/>} text="Demandas" onClick={()=>{setTab('demandas');setMobileMenu(false)}}/>
+        <Nav active={tab==='chamados'} icon={<Clipboard size={18}/>} text="Chamados" 
+onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
         {(isAdmin||isInternal)&&<Nav active={tab==='clientes'} icon={<Building2 size={18}/>} text="Clientes" onClick={()=>{setTab('clientes');setMobileMenu(false)}}/>}
         <Nav active={tab==='usuarios'} icon={<Users size={18}/>} text="Usuários" onClick={()=>{if(isAdmin){setTab('usuarios');setMobileMenu(false)}}} disabled={!isAdmin}/>
       </nav>
@@ -2023,6 +2073,90 @@ const dashboardDemands=useMemo(()=>{
 
       {tab==='usuarios'&&<UsersPage users={users} clients={clients} loading={loading} onNew={openUserModal} onRefresh={loadUsers} isAdmin={isAdmin}/>}
       {tab==='clientes'&&<ClientsPage clients={clients} demands={demands} isAdmin={isAdmin} onNew={()=>openClientModal()} onEdit={openClientModal} onDemand={openEditDemand}/>}
+      {tab==='chamados'&&<>
+        <section className="hf-panel">
+          <div className="hf-panel-title">
+            <div>
+              <h2>Chamados</h2>
+              <p className="hf-muted">Acompanhe solicitações e transforme chamados em demandas.</p>
+            </div>
+            {isClient&&(
+              <button
+                className="hf-primary"
+                onClick={()=>{
+                  setTicketError('');
+                  setTicketForm({
+                    problem:'',
+                    priority:'Média',
+                    requestDate:new Date().toISOString().slice(0,10)
+                  });
+                  setTicketModal(true);
+                }}
+              >
+                <Plus size={17}/> Novo chamado
+              </button>
+            )}
+          </div>
+
+          {!tickets.length ? (
+            <div className="hf-empty-page">
+              <Clipboard size={40}/>
+              <h3>Nenhum chamado encontrado</h3>
+              <p>Os chamados abertos pelos clientes aparecerão aqui.</p>
+            </div>
+          ) : (
+            <div className="hf-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Chamado</th>
+                    <th>Problema</th>
+                    <th>Prioridade</th>
+                    <th>Solicitação</th>
+                    <th>Status</th>
+                    {(isAdmin||isInternal)&&<th>Ação</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((ticket:any)=>(
+                    <tr key={ticket.id}>
+                      <td>
+                        <strong>#{String(ticket.number).padStart(4,'0')}</strong>
+                      </td>
+                      <td>
+                        <div style={{maxWidth:420}}>
+                          <strong>{ticket.problem}</strong>
+                        </div>
+                      </td>
+                      <td>{ticket.priority}</td>
+                      <td>{ticket.requestDate ? new Date(ticket.requestDate).toLocaleDateString('pt-BR') : '-'}</td>
+                      <td>{ticket.status}</td>
+                      {(isAdmin||isInternal)&&(
+                        <td>
+                          {ticket.status==='Convertido em demanda' ? (
+                            <span className="hf-muted">
+                              Demanda #{ticket.demandId}
+                            </span>
+                          ) : (
+                            <button
+                              className="hf-secondary"
+                              type="button"
+                              onClick={()=>openDemandFromTicket(ticket)}
+                            >
+                              Criar demanda
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </>}
+
       {tab==='meu-dia'?<>
           {(() => {
             const hoje = new Date();
@@ -2998,6 +3132,46 @@ const proximas = minhasDemandas
       setClearedIds={setNotificationClearedIds}
       notificationStorageKey={notificationStorageKey}
     />}
+    {ticketModal&&<TicketModal
+      value={ticketForm}
+      setValue={setTicketForm}
+      error={ticketError}
+      saving={ticketSaving}
+      close={()=>setTicketModal(false)}
+      save={async()=>{
+        try{
+          setTicketSaving(true);
+          setTicketError('');
+
+          if(!ticketForm.problem.trim()){
+            setTicketError('Descreva o problema ou a solicitação.');
+            return;
+          }
+
+          await request('/tickets',{
+            method:'POST',
+            body:JSON.stringify({
+              problem:ticketForm.problem.trim(),
+              priority:ticketForm.priority,
+              requestDate:ticketForm.requestDate
+            })
+          });
+
+          setTicketModal(false);
+          setTicketForm({
+            problem:'',
+            priority:'Média',
+            requestDate:new Date().toISOString().slice(0,10)
+          });
+          await loadTickets();
+        }catch(error:any){
+          setTicketError(error.message||'Não foi possível abrir o chamado.');
+        }finally{
+          setTicketSaving(false);
+        }
+      }}
+    />}
+
     {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment} files={demandCommentFiles} setFiles={setDemandCommentFiles}/>}
   </div>;
 }
@@ -3584,6 +3758,69 @@ function NotificationsModal({
 
     </div>
 
+  </div>;
+}
+
+function TicketModal({value,setValue,error,saving,close,save}:{value:{problem:string;priority:string;requestDate:string};setValue:(v:any)=>void;error:string;saving:boolean;close:()=>void;save:()=>void}){
+  return <div className="hf-modal-backdrop">
+    <div className="hf-modal user-modal">
+      <div className="hf-modal-head">
+        <div>
+          <span className="hf-eyebrow">Solicitação de suporte</span>
+          <h2>Novo chamado</h2>
+          <p>Descreva o problema para que nossa equipe possa analisar.</p>
+        </div>
+        <button type="button" onClick={close}><X size={20}/></button>
+      </div>
+
+      <div className="hf-form">
+        <label>
+          Problema / solicitação
+          <textarea
+            value={value.problem}
+            onChange={e=>setValue({...value,problem:e.target.value})}
+            placeholder="Descreva o problema ou o que você precisa."
+            rows={6}
+            required
+          />
+        </label>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+          <label>
+            Prioridade
+            <select
+              value={value.priority}
+              onChange={e=>setValue({...value,priority:e.target.value})}
+            >
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+              <option value="Urgente">Urgente</option>
+            </select>
+          </label>
+
+          <label>
+            Data da solicitação
+            <input
+              type="date"
+              value={value.requestDate}
+              onChange={e=>setValue({...value,requestDate:e.target.value})}
+            />
+          </label>
+        </div>
+
+        {error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}
+
+        <div className="hf-form-actions">
+          <button type="button" className="hf-secondary" onClick={close}>
+            Cancelar
+          </button>
+          <button type="button" className="hf-primary" disabled={saving} onClick={save}>
+            {saving?'Abrindo chamado...':'Abrir chamado'}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>;
 }
 
@@ -10053,6 +10290,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 

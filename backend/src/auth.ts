@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 export const JWT_SECRET =
   process.env.JWT_SECRET || 'horaflow-segredo-local-dev';
 
-export type UserRole = 'ADMIN' | 'INTERNAL' | 'CLIENT';
+export type UserRole = 'ADMIN' | 'INTERNO' | 'CLIENTE';
 
 export interface AuthUser {
   id: number;

@@ -53,8 +53,9 @@ function getUser(req: AuthenticatedRequest) {
   return req.user;
 }
 
-function getId(value: string | undefined): number | null {
-  const id = Number(value);
+function getId(value: string | string[] | undefined): number | null {
+  const normalizedValue = Array.isArray(value) ? value[0] : value;
+  const id = Number(normalizedValue);
 
   if (!Number.isInteger(id) || id <= 0) {
     return null;
@@ -67,12 +68,13 @@ async function clientExists(clientId: number | null): Promise<boolean> {
   if (!clientId) return false;
 
   const [rows] = await pool.query(
-    `SELECT id FROM clients WHERE id = ? AND active = 1 LIMIT 1`,
+    'SELECT id FROM clients WHERE id = ? LIMIT 1',
     [clientId]
   );
 
   return (rows as any[]).length > 0;
 }
+
 
 async function recordDemandHistory(
   demandId: number,
@@ -115,6 +117,7 @@ async function recordDemandHistory(
   );
 }
 
+
 const DEMAND_SELECT = `
   SELECT
     id,
@@ -123,8 +126,6 @@ const DEMAND_SELECT = `
     treatment,
     analysis_hours AS analysisHours,
     analysis_month AS analysisMonth,
-    request_date AS requestDate,
-    delivery_date AS deliveryDate,
     required_hours AS requiredHours,
     priority,
     status,
@@ -133,331 +134,23 @@ const DEMAND_SELECT = `
     approved_by_user_id AS approvedByUserId,
     approved_at AS approvedAt,
     rejection_reason AS rejectionReason,
+    execution_month AS executionMonth,
     responsible,
-    requester_user_id AS requesterUserId,
     client_id AS clientId,
     paid,
     created_at AS createdAt,
-    updated_at AS updatedAt
+    updated_at AS updatedAt,
+    request_date AS requestDate,
+    delivery_date AS deliveryDate,
+    requester_user_id AS requesterUserId
   FROM demands
 `;
 
 
-
-app.post(
-  '/api/ai/chat',
-  authenticate,
-  async (
-    req: AuthenticatedRequest,
-    res: Response
-  ) => {
-    try {
-      const {
-        message,
-        clientId: requestedClientId,
-        period: requestedPeriod,
-      } = req.body;
-
-      if (
-        !message ||
-        typeof message !== 'string' ||
-        !message.trim()
-      ) {
-        return res.status(400).json({
-          isSuccess: false,
-          message: 'Mensagem é obrigatória.',
-        });
-      }
-
-      const scope = resolveSaphireScope(
-        req,
-        requestedClientId,
-        requestedPeriod
-      );
-
-      const saphireContext =
-        await getSaphireContext(scope);
-
-      const metrics =
-        calculateSaphireMetrics(
-          saphireContext.summary as Record<string, unknown>
-        );
-
-      const analyticsContext = {
-        scope: saphireContext.scope,
-        metrics,
-        summary: saphireContext.summary,
-        byStatus: saphireContext.byStatus,
-        byResponsible: saphireContext.byResponsible,
-        byClient: saphireContext.byClient,
-        overdueDemands: saphireContext.overdueDemands,
-        upcomingDemands: saphireContext.upcomingDemands,
-      };
-
-      const prompt = `
-Você é a Saphire IA, assistente inteligente do Saphire Sheet.
-
-Sua função é analisar os dados reais e autorizados fornecidos pelo sistema e ajudar o usuário a entender demandas, horas, clientes, responsáveis, status, prazos, produtividade, pendências, atrasos, tendências e indicadores de gestão.
-
-REGRAS DE SEGURANÇA:
-
-- Utilize SOMENTE os dados fornecidos em DADOS AUTORIZADOS.
-- Nunca tente acessar banco de dados, APIs, endpoints ou sistemas externos.
-- Nunca invente informações, números, nomes ou datas.
-- Nunca revele senhas, tokens, chaves ou credenciais.
-- Nunca tente descobrir dados que não estejam no contexto recebido.
-- Respeite rigorosamente o escopo de cliente e período informado.
-- Não suponha que o usuário tenha acesso a outro cliente.
-- Não extrapole dados de um cliente para outro.
-- Se os dados disponíveis não forem suficientes, diga isso claramente.
-
-REGRAS DE LINGUAGEM:
-
-- Responda sempre em português do Brasil.
-- Fale de forma simples, clara, profissional e natural.
-- A Saphire é uma assistente de gestão.
-- Não é uma assistente de programação.
-- Não mencione Gemini.
-- Não mencione Hora Flow.
-- O produto se chama Saphire Sheet.
-- Não mencione SQL, query, JSON, banco de dados ou estruturas internas.
-- Não revele nomes técnicos de campos ao usuário.
-- Traduza informações técnicas para linguagem de negócio.
-- Responda primeiro a conclusão principal.
-- Para perguntas simples, seja objetiva.
-- Para análises complexas, organize com títulos e listas.
-- Destaque números e conclusões importantes.
-
-INTERPRETAÇÃO OFICIAL DAS HORAS:
-
-- Demandas com status "Analisada": considere somente as horas de análise.
-- Demandas com status "Concluída": considere horas de análise mais horas necessárias para execução.
-- Demandas com qualquer outro status: considere 0 horas no total produtivo.
-- Uma demanda "Analisada" pertence ao mês da análise.
-- Uma demanda "Concluída" pertence à data de conclusão.
-- Nunca considere horas necessárias de uma demanda que não esteja concluída.
-- Utilize as métricas calculadas pelo sistema como fonte oficial.
-
-COMO RESPONDER:
-
-- Responda primeiro a conclusão principal.
-- Explique de forma simples.
-- Mostre os dados relevantes que sustentam a conclusão.
-- Em comparações, informe claramente os períodos ou grupos comparados.
-- Não invente dados ausentes.
-- Não crie fórmulas próprias quando o sistema já forneceu o indicador.
-
-DADOS AUTORIZADOS:
-
-${JSON.stringify(analyticsContext, null, 2)}
-
-PERGUNTA DO USUÁRIO:
-
-${message.trim()}
-
-Responda diretamente à pergunta do usuário.
-`;
-
-      const response =
-        await askGemini(prompt);
-
-      return res.json({
-        isSuccess: true,
-        message: response,
-      });
-
-    } catch (error: any) {
-      console.error(
-        'ERRO SAPHIRE IA:',
-        error
-      );
-
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : '';
-
-      if (
-        errorMessage.includes('sem permissão') ||
-        errorMessage.includes('Período inválido') ||
-        errorMessage.includes('Cliente inválido') ||
-        errorMessage.includes('Usuário cliente')
-      ) {
-        return res.status(403).json({
-          isSuccess: false,
-          message:
-            'Você não possui permissão para acessar esses dados.',
-        });
-      }
-
-      return res.status(500).json({
-        isSuccess: false,
-        message:
-          'Não foi possível analisar os dados do Saphire Sheet no momento.',
-      });
-    }
-  });
-// LOGIN
-// =====================================================
-
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'E-mail e senha sÃ£o obrigatÃ³rios.',
-      });
-    }
-
-    const [rows] = await pool.query(
-      `
-      SELECT
-        id,
-        name,
-        email,
-        password_hash AS passwordHash,
-        role,
-        client_id AS clientId,
-        active
-      FROM users
-      WHERE email = ?
-      LIMIT 1
-      `,
-      [String(email).trim().toLowerCase()]
-    );
-
-    const user = (rows as any[])[0];
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'E-mail ou senha invÃ¡lidos.',
-      });
-    }
-
-    if (!user.active) {
-      return res.status(403).json({
-        success: false,
-        message: 'UsuÃ¡rio inativo.',
-      });
-    }
-
-    const validPassword = comparePassword(
-      password,
-      user.passwordHash
-    );
-
-    if (!validPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'E-mail ou senha invÃ¡lidos.',
-      });
-    }
-
-    const authUser = {
-      id: Number(user.id),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      clientId:
-        user.clientId !== null &&
-        user.clientId !== undefined
-          ? Number(user.clientId)
-          : null,
-    };
-
-    const token = createToken(authUser);
-
-    return res.json({
-      success: true,
-      message: 'Login realizado com sucesso.',
-      data: {
-        token,
-        user: authUser,
-      },
-    });
-
-  } catch (error: any) {
-    console.error('ERRO LOGIN:', error);
-
-    return res.status(500).json({
-      success: false,
-      message: 'Erro ao realizar login.',
-      error: error?.message,
-      code: error?.code,
-    });
-  }
-});
-
-
-// =====================================================
-// USUÃRIO LOGADO
-// =====================================================
-
-app.get(
-  '/api/auth/me',
-  authenticate,
-  async (req: AuthenticatedRequest, res) => {
-    try {
-      const user = getUser(req);
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'UsuÃ¡rio nÃ£o autenticado.',
-        });
-      }
-
-      const [rows] = await pool.query(
-        `
-        SELECT
-          id,
-          name,
-          email,
-          role,
-          client_id AS clientId,
-          active,
-          created_at AS createdAt,
-          updated_at AS updatedAt
-        FROM users
-        WHERE id = ?
-        LIMIT 1
-        `,
-        [user.id]
-      );
-
-      const currentUser = (rows as any[])[0];
-
-      if (!currentUser) {
-        return res.status(404).json({
-          success: false,
-          message: 'UsuÃ¡rio nÃ£o encontrado.',
-        });
-      }
-
-      return res.json({
-        success: true,
-        data: currentUser,
-      });
-
-    } catch (error: any) {
-      console.error('ERRO AUTH ME:', error);
-
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao buscar usuÃ¡rio.',
-        error: error?.message,
-        code: error?.code,
-      });
-    }
-  }
-);
-
-
 // =====================================================
 // HEALTH CHECK
+// =====================================================
+
 // =====================================================
 
 app.get('/api/health', async (_req, res) => {
@@ -1481,6 +1174,7 @@ app.post(
         clientId = null,
         responsible = null,
         requesterUserId = null,
+        ticketId = null,
       } = req.body;
 
       if (
@@ -1622,6 +1316,72 @@ app.post(
       const id =
         insertResult.insertId;
 
+      if (ticketId) {
+        const normalizedTicketId = Number(ticketId);
+
+        if (!Number.isInteger(normalizedTicketId) || normalizedTicketId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Chamado inválido.',
+          });
+        }
+
+        const [ticketRows] = await pool.query(
+          `
+          SELECT
+            id,
+            client_id AS clientId,
+            demand_id AS demandId
+          FROM tickets
+          WHERE id = ?
+          LIMIT 1
+          `,
+          [normalizedTicketId]
+        );
+
+        const ticket = (ticketRows as any[])[0];
+
+        if (!ticket) {
+          return res.status(404).json({
+            success: false,
+            message: 'Chamado não encontrado.',
+          });
+        }
+
+        if (ticket.demandId) {
+          return res.status(409).json({
+            success: false,
+            message: 'Este chamado já foi convertido em uma demanda.',
+            demandId: ticket.demandId,
+          });
+        }
+
+        if (
+          clientId !== null &&
+          clientId !== undefined &&
+          clientId !== '' &&
+          Number(ticket.clientId) !== Number(clientId)
+        ) {
+          return res.status(403).json({
+            success: false,
+            message: 'O chamado não pertence ao cliente informado na demanda.',
+          });
+        }
+
+        await pool.execute(
+          `
+          UPDATE tickets
+          SET
+            demand_id = ?,
+            status = 'Convertido em demanda',
+            updated_at = NOW()
+          WHERE id = ?
+            AND demand_id IS NULL
+          `,
+          [id, normalizedTicketId]
+        );
+      }
+
       const [rows] =
         await pool.query(
           `
@@ -1652,6 +1412,215 @@ app.post(
         error: error?.message,
         code: error?.code,
         sqlMessage: error?.sqlMessage,
+      });
+    }
+  }
+);
+
+
+//// =====================================================
+// CHAMADOS
+// =====================================================
+
+app.get(
+  '/api/tickets',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      let query = `
+        SELECT
+          t.id,
+          t.number,
+          t.client_id AS clientId,
+          t.requester_user_id AS requesterUserId,
+          t.problem,
+          t.priority,
+          t.request_date AS requestDate,
+          t.status,
+          t.demand_id AS demandId,
+          t.created_at AS createdAt,
+          t.updated_at AS updatedAt
+        FROM tickets t
+      `;
+
+      const params: any[] = [];
+
+      if (req.user?.role === 'CLIENTE') {
+        query += ' WHERE t.client_id = ?';
+        params.push(req.user.clientId);
+      }
+
+      query += ' ORDER BY t.created_at DESC';
+
+      const [rows] = await pool.query(query, params);
+
+      return res.json({
+        success: true,
+        data: rows,
+      });
+    } catch (error: any) {
+      console.error('ERRO AO LISTAR CHAMADOS:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar chamados.',
+        error: error?.message,
+      });
+    }
+  }
+);
+
+
+// CRIAR CHAMADO
+app.post(
+  '/api/tickets',
+  authorize('CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const {
+        problem,
+        priority = 'Média',
+        requestDate,
+      } = req.body;
+
+      if (!problem?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Problema é obrigatório.',
+        });
+      }
+
+      if (!req.user?.id || !req.user?.clientId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Usuário não está vinculado a um cliente.',
+        });
+      }
+
+      const validPriorities = [
+        'Baixa',
+        'Média',
+        'Alta',
+        'Urgente',
+      ];
+
+      if (!validPriorities.includes(priority)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Prioridade inválida.',
+        });
+      }
+
+      const [lastRows] = await pool.query(`
+        SELECT COALESCE(MAX(number), 0) + 1 AS nextNumber
+        FROM tickets
+      `);
+
+      const nextNumber = Number(
+        (lastRows as any[])[0]?.nextNumber || 1
+      );
+
+      const [result] = await pool.execute(
+        `
+        INSERT INTO tickets (
+          number,
+          client_id,
+          requester_user_id,
+          problem,
+          priority,
+          request_date,
+          status
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'Aberto')
+        `,
+        [
+          nextNumber,
+          Number(req.user.clientId),
+          Number(req.user.id),
+          problem.trim(),
+          priority,
+          requestDate
+            ? String(requestDate)
+            : new Date().toISOString().slice(0, 10),
+        ]
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Chamado criado com sucesso.',
+        data: { id: (result as any).insertId, number: nextNumber, problem: problem.trim(), priority, requestDate: requestDate ? String(requestDate) : new Date().toISOString().slice(0, 10), status: 'Aberto', clientId: Number(req.user.clientId), requesterUserId: Number(req.user.id) },
+      });
+    } catch (error: any) {
+      console.error('ERRO AO CRIAR CHAMADO:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao criar chamado.',
+        error: error?.message,
+      });
+    }
+  }
+);
+
+
+// BUSCAR CHAMADO
+app.get(
+  '/api/tickets/:id',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const ticketId = getId(req.params.id);
+
+      const [rows] = await pool.query(
+        `
+        SELECT
+          t.id,
+          t.number,
+          t.client_id AS clientId,
+          t.requester_user_id AS requesterUserId,
+          t.problem,
+          t.priority,
+          t.request_date AS requestDate,
+          t.status,
+          t.demand_id AS demandId,
+          t.created_at AS createdAt,
+          t.updated_at AS updatedAt
+        FROM tickets t
+        WHERE t.id = ?
+        `,
+        [ticketId]
+      );
+
+      const ticket = (rows as any[])[0];
+
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chamado não encontrado.',
+        });
+      }
+
+      if (
+        req.user?.role === 'CLIENTE' &&
+        Number(ticket.clientId) !== Number(req.user.clientId)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Acesso negado.',
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: ticket,
+      });
+    } catch (error: any) {
+      console.error('ERRO AO BUSCAR CHAMADO:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar chamado.',
+        error: error?.message,
       });
     }
   }
@@ -3341,9 +3310,9 @@ app.use(
 app.use(
   (
     error: any,
-    _req,
+    _req: import('express').Request,
     res: Response,
-    _next
+    _next: import('express').NextFunction
   ) => {
     console.error(
       'ERRO GLOBAL:',
@@ -3460,6 +3429,11 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
 
 
 

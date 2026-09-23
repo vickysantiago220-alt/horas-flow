@@ -1,5 +1,12 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "src/**/*.backup-*.ts",
+    "check-notifications.ts",
+    "create-notifications.ts"
+  ],
   "compilerOptions": {
     // File Layout
     // "rootDir": "./src",
