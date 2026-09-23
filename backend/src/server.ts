@@ -1509,6 +1509,7 @@ app.post(
 
 app.get(
   '/api/tickets',
+  authenticate,
   authorize('ADMIN', 'INTERNO', 'CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
@@ -1652,6 +1653,7 @@ app.post(
 // BUSCAR CHAMADO
 app.get(
   '/api/tickets/:id',
+  authenticate,
   authorize('ADMIN', 'INTERNO', 'CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
