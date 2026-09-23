@@ -3480,6 +3480,30 @@ async function startServer() {
     }
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS tickets (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        number INT NOT NULL,
+        client_id BIGINT NULL,
+        requester_user_id BIGINT NULL,
+        problem TEXT NOT NULL,
+        priority VARCHAR(30) NOT NULL,
+        request_date DATE NOT NULL,
+        status VARCHAR(40) NOT NULL,
+        demand_id BIGINT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_tickets_number (number),
+        KEY idx_tickets_client (client_id),
+        KEY idx_tickets_requester (requester_user_id),
+        KEY idx_tickets_status (status),
+        KEY idx_tickets_demand (demand_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log('Tabela tickets criada/verificada com sucesso.');
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         user_id BIGINT NOT NULL,
