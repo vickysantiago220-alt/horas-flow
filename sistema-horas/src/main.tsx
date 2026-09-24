@@ -209,6 +209,20 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [clientForm,setClientForm]=useState({name:'',email:''});
 
   const [demandModal,setDemandModal]=useState(false);
+  useEffect(()=>{
+    const modalOpen=demandModal||!!selectedTicket;
+    if(modalOpen){
+      document.body.style.overflow='hidden';
+      document.documentElement.style.overflow='hidden';
+    }else{
+      document.body.style.overflow='';
+      document.documentElement.style.overflow='';
+    }
+    return()=>{
+      document.body.style.overflow='';
+      document.documentElement.style.overflow='';
+    };
+  },[demandModal,selectedTicket]);
   const [approvalDemand,setApprovalDemand]=useState<Demand|null>(null);
   const [approvalMonth,setApprovalMonth]=useState('');
   const [approvalReason,setApprovalReason]=useState('');
@@ -10518,6 +10532,7 @@ const styles = `
   }
 }
 `
+
 
 
 
