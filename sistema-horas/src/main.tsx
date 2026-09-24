@@ -1643,7 +1643,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         problem:demandForm.problema.trim(),
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
-        analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||null,
+        analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||((demandForm.status==='Concluída')?(()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')})():null),
         clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||'',requesterUserId:Number(demandForm.requesterUserId)||null,ticketId:demandForm.ticketId||null
       };
       const creatingDemand = !editingDemand;
@@ -10532,6 +10532,7 @@ const styles = `
   }
 }
 `
+
 
 
 
