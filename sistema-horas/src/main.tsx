@@ -745,7 +745,10 @@ const markNotificationAsRead = async (id:string) => {
 
     const clientName =
       selectedClient?.name ||
-      (isClient ? user?.name : 'Todos os clientes');
+      (isClient
+        ? (clients.find(c => String(c.id) === String(user?.clientId))?.name ||
+           'Cliente não informado')
+        : 'Todos os clientes');
 
     const clientMatches = (d: Demand) => {
       if (dashboardClientFilter === 'Todos') return true;
