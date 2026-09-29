@@ -1323,7 +1323,10 @@ doc.setFont('helvetica', 'bold');
     }else{
       headers.set('Content-Type','application/json');
     }
-    if(token)headers.set('Authorization',`Bearer ${token}`);
+    const currentToken=localStorage.getItem('horaflow-token') || token;
+    if(currentToken){
+      headers.set('Authorization',`Bearer ${currentToken}`);
+    }
     const response=await fetch(`${API}${path}`,{...options,headers});
     const data=await response.json().catch(()=>({success:false,message:'Resposta inválida do servidor.'}));
     if(!response.ok||data.success===false)throw new Error(data.message||'Erro na API.');
@@ -1332,7 +1335,7 @@ doc.setFont('helvetica', 'bold');
   const loadTicketComments=async(ticketId:string|number)=>{
     setTicketCommentsLoading(true);
     try{
-      const data=await request('/tickets//comments');
+      const data=await request('/tickets/' + ticketId + '/comments');
       setTicketComments(Array.isArray(data.data)?data.data:[]);
     }catch(error:any){
       console.error('Erro ao carregar comentários do chamado:',error);
@@ -1367,7 +1370,7 @@ doc.setFont('helvetica', 'bold');
         formData.append('attachments',file);
       });
 
-      await request('/tickets//comments',{
+      await request('/tickets/' + selectedTicket.id + '/comments',{
         method:'POST',
         body:formData
       });
@@ -10833,6 +10836,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
