@@ -2738,9 +2738,21 @@ app.delete(
       if (!demand) {
         return res.status(404).json({
           success: false,
-          message: 'Demanda nÃ£o encontrada.',
+          message: 'Demanda não encontrada.',
         });
       }
+
+      const [ticketRows] = await pool.query(
+        `
+          SELECT id
+          FROM tickets
+          WHERE demand_id = ?
+          LIMIT 1
+        `,
+        [id]
+      );
+
+      const linkedTicket = (ticketRows as any[])[0];
 
       await pool.execute(
         `
@@ -2750,6 +2762,15 @@ app.delete(
         [id]
       );
 
+      if (linkedTicket) {
+        await pool.execute(
+          `
+            DELETE FROM tickets
+            WHERE id = ?
+          `,
+          [linkedTicket.id]
+        );
+      }
       return res.json({
         success: true,
         message: 'Demanda excluÃ­da com sucesso.',
@@ -3605,6 +3626,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
