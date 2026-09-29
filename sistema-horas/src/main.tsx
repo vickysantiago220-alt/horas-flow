@@ -4089,6 +4089,15 @@ function TicketModal({
               />
               <span className="hf-secondary">Anexar arquivos</span>
             </label>
+            <button
+              type="button"
+              className="hf-primary"
+              onClick={save}
+              disabled={!commentText.trim()&&!files.length}
+              style={{marginTop:10}}
+            >
+              Enviar comentário
+            </button>
 
             {files.length>0&&(
               <div style={{display:'grid',gap:6,marginTop:10}}>
