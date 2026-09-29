@@ -1999,13 +1999,26 @@ app.delete(
           message: 'Chamado não encontrado.',
         });
       }
-
       if (ticket.demandId) {
-        return res.status(409).json({
-          success: false,
-          message: 'Não é possível excluir um chamado que já foi convertido em demanda.',
-          demandId: ticket.demandId,
-        });
+        const [demandRows] = await pool.query(
+          `
+          SELECT id
+          FROM demands
+          WHERE id = ?
+          LIMIT 1
+          `,
+          [ticket.demandId]
+        );
+
+        const demandExists = (demandRows as any[]).length > 0;
+
+        if (demandExists) {
+          return res.status(409).json({
+            success: false,
+            message: 'Não é possível excluir um chamado que já possui uma demanda existente.',
+            demandId: ticket.demandId,
+          });
+        }
       }
 
       await pool.query(
@@ -3904,54 +3917,4 @@ async function startServer() {
 }
 
 startServer();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
