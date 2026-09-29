@@ -2122,7 +2122,9 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
         ? 'Demandas'
         : tab==='clientes'
           ? 'Clientes'
-          : 'Usuários'}
+          : tab==='chamados'
+            ? 'Chamados'
+            : 'Usuários'}
 </h1><p>
   {tab==='meu-dia'
     ? 'Organize seu trabalho e veja o que precisa da sua atenção.'
@@ -2130,7 +2132,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
       ? 'Cadastre usuários e controle o acesso ao sistema.'
       : tab==='clientes'
         ? 'Gerencie empresas e vincule suas demandas.'
-        : 'Acompanhe demandas, aprovações e horas desempenhadas.'}
+        : 'Gerencie as solicitações recebidas e acompanhe seu andamento.'}
 </p></div>
         <div className="hf-top-actions">{(tab==='demandas'||tab==='dashboard')&&isInternal&&<button className="hf-primary" onClick={openNewDemand}><Plus size={17}/> Nova demanda</button>}{tab==='clientes'&&isAdmin&&<button className="hf-primary" onClick={()=>openClientModal()}><Plus size={17}/> Novo cliente</button>}<button
   type="button"
@@ -10836,6 +10838,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
