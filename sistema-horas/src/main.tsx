@@ -3349,7 +3349,10 @@ const proximas = minhasDemandas
               formData.append('attachments',file);
             });
 
-
+            await request('/tickets/' + createdTicket.id + '/comments',{
+              method:'POST',
+              body:formData
+            });
           }
 
           setTicketModal(false);
@@ -10838,6 +10841,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
