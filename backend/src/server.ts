@@ -1722,6 +1722,253 @@ app.get(
 
 // EXCLUIR CHAMADO
 // ADMIN
+app.get(
+  '/api/tickets/:id/comments',
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const ticketId = Number(req.params.id);
+
+      if (!Number.isInteger(ticketId) || ticketId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Chamado inválido.',
+        });
+      }
+
+      const [ticketRows] = await pool.query(
+        `
+          SELECT id, client_id AS clientId
+          FROM tickets
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [ticketId]
+      );
+
+      const ticket = (ticketRows as any[])[0];
+
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chamado não encontrado.',
+        });
+      }
+
+      if (
+        req.user?.role === 'CLIENTE' &&
+        Number(ticket.clientId) !== Number(req.user.clientId)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Você não possui acesso a este chamado.',
+        });
+      }
+
+      const [rows] = await pool.query(
+        `
+          SELECT
+            c.id,
+            c.ticket_id AS ticketId,
+            c.user_id AS userId,
+            u.name AS userName,
+            c.comment,
+            c.created_at AS createdAt,
+            COALESCE(
+              (
+                SELECT JSON_ARRAYAGG(
+                  JSON_OBJECT(
+                    'id', a.id,
+                    'fileName', a.file_name,
+                    'fileUrl', a.file_url,
+                    'fileType', a.file_type,
+                    'fileSize', a.file_size
+                  )
+                )
+                FROM ticket_comment_attachments a
+                WHERE a.comment_id = c.id
+              ),
+              JSON_ARRAY()
+            ) AS attachments
+          FROM ticket_comments c
+          LEFT JOIN users u ON u.id = c.user_id
+          WHERE c.ticket_id = ?
+          ORDER BY c.created_at ASC, c.id ASC
+        `,
+        [ticketId]
+      );
+
+      return res.json({
+        success: true,
+        data: rows,
+      });
+    } catch (error: any) {
+      console.error('ERRO AO CARREGAR COMENTÁRIOS DO CHAMADO:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao carregar comentários do chamado.',
+      });
+    }
+  }
+);
+app.post(
+  '/api/tickets/:id/comments',
+  upload.array('attachments', 5),
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const ticketId = Number(req.params.id);
+      const comment = String(req.body?.comment || '').trim();
+
+      if (!Number.isInteger(ticketId) || ticketId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Chamado inválido.',
+        });
+      }
+
+      if (!comment && !((req as any).files || []).length) {
+        return res.status(400).json({
+          success: false,
+          message: 'Adicione um comentário ou pelo menos um anexo.',
+        });
+      }
+
+      const [ticketRows] = await pool.query(
+        `
+          SELECT id, client_id AS clientId, number
+          FROM tickets
+          WHERE id = ?
+          LIMIT 1
+        `,
+        [ticketId]
+      );
+
+      const ticket = (ticketRows as any[])[0];
+
+      if (!ticket) {
+        return res.status(404).json({
+          success: false,
+          message: 'Chamado não encontrado.',
+        });
+      }
+
+      if (
+        req.user?.role === 'CLIENTE' &&
+        Number(ticket.clientId) !== Number(req.user.clientId)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: 'Você não possui acesso a este chamado.',
+        });
+      }
+
+      const [result] = await pool.execute(
+        `
+          INSERT INTO ticket_comments (
+            ticket_id,
+            user_id,
+            comment
+          )
+          VALUES (?, ?, ?)
+        `,
+        [ticketId, req.user!.id, comment]
+      );
+
+      const commentId = (result as any).insertId;
+
+      const files = ((req as any).files || []) as Express.Multer.File[];
+
+      for (const file of files) {
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `tickets/${ticketId}/comments/${commentId}/${Date.now()}-${safeName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET)
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('Erro ao enviar anexo do chamado para o Supabase:', uploadError);
+          throw new Error(
+            'Falha no upload do anexo: ' + uploadError.message
+          );
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from(SUPABASE_STORAGE_BUCKET)
+          .getPublicUrl(filePath);
+
+        await pool.execute(
+          `
+            INSERT INTO ticket_comment_attachments (
+              comment_id,
+              file_name,
+              file_url,
+              file_type,
+              file_size
+            )
+            VALUES (?, ?, ?, ?, ?)
+          `,
+          [
+            commentId,
+            file.originalname,
+            publicUrlData.publicUrl,
+            file.mimetype,
+            file.size,
+          ]
+        );
+      }
+
+      const [rows] = await pool.query(
+        `
+          SELECT
+            c.id,
+            c.ticket_id AS ticketId,
+            c.user_id AS userId,
+            u.name AS userName,
+            c.comment,
+            c.created_at AS createdAt,
+            COALESCE(
+              (
+                SELECT JSON_ARRAYAGG(
+                  JSON_OBJECT(
+                    'id', a.id,
+                    'fileName', a.file_name,
+                    'fileUrl', a.file_url,
+                    'fileType', a.file_type,
+                    'fileSize', a.file_size
+                  )
+                )
+                FROM ticket_comment_attachments a
+                WHERE a.comment_id = c.id
+              ),
+              JSON_ARRAY()
+            ) AS attachments
+          FROM ticket_comments c
+          LEFT JOIN users u ON u.id = c.user_id
+          WHERE c.id = ?
+          LIMIT 1
+        `,
+        [commentId]
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Comentário adicionado com sucesso.',
+        data: (rows as any[])[0],
+      });
+    } catch (error: any) {
+      console.error('ERRO AO ADICIONAR COMENTÁRIO DO CHAMADO:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao adicionar comentário ao chamado.',
+      });
+    }
+  }
+);
 app.delete(
   '/api/tickets/:id',
   authenticate,
@@ -3589,6 +3836,35 @@ async function startServer() {
     `);
 
     console.log('Tabela tickets criada/verificada com sucesso.');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_comments (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ticket_id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT NOT NULL,
+        comment TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_ticket_comments_ticket (ticket_id),
+        KEY idx_ticket_comments_user (user_id),
+        KEY idx_ticket_comments_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ticket_comment_attachments (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        comment_id BIGINT UNSIGNED NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        file_url TEXT NOT NULL,
+        file_type VARCHAR(150) NULL,
+        file_size BIGINT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_ticket_comment_attachments_comment (comment_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log('Tabelas de comentários de chamados criadas/verificadas com sucesso.');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS notifications (
@@ -3626,6 +3902,10 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
 
 
 

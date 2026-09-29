@@ -117,6 +117,13 @@ function App(){
   const [ticketForm,setTicketForm]=useState({problem:'',priority:'Média',requestDate:new Date().toISOString().slice(0,10)});
   const [ticketSaving,setTicketSaving]=useState(false);
   const [ticketError,setTicketError]=useState('');
+  const [ticketComments,setTicketComments]=useState<any[]>([]);
+  const [ticketCommentsLoading,setTicketCommentsLoading]=useState(false);
+  const [ticketCommentText,setTicketCommentText]=useState('');
+  const [ticketCommentSaving,setTicketCommentSaving]=useState(false);
+  const [ticketCommentFiles,setTicketCommentFiles]=useState<File[]>([]);
+  const [ticketNewCommentText,setTicketNewCommentText]=useState('');
+  const [ticketNewCommentFiles,setTicketNewCommentFiles]=useState<File[]>([]);
   const [users,setUsers]=useState<User[]>([]);
   const [clients,setClients]=useState<Client[]>([]);
   const [dashboard,setDashboard]=useState<DashboardSummary>({
@@ -1322,6 +1329,19 @@ doc.setFont('helvetica', 'bold');
     if(!response.ok||data.success===false)throw new Error(data.message||'Erro na API.');
     return data;
   };
+  const loadTicketComments=async(ticketId:string|number)=>{
+    setTicketCommentsLoading(true);
+    try{
+      const data=await request('/tickets//comments');
+      setTicketComments(Array.isArray(data.data)?data.data:[]);
+    }catch(error:any){
+      console.error('Erro ao carregar comentários do chamado:',error);
+      setTicketComments([]);
+    }finally{
+      setTicketCommentsLoading(false);
+    }
+  };
+
   const loadDemandComments=async(demandId:string|number)=>{
     setDemandCommentsLoading(true);
     try{
@@ -1332,6 +1352,33 @@ doc.setFont('helvetica', 'bold');
       setDemandComments([]);
     }finally{
       setDemandCommentsLoading(false);
+    }
+  };
+
+  const sendTicketComment=async()=>{
+    if(!selectedTicket||(!ticketCommentText.trim()&&!ticketCommentFiles.length)||ticketCommentSaving)return;
+
+    setTicketCommentSaving(true);
+    try{
+      const formData=new FormData();
+      formData.append('comment',ticketCommentText.trim());
+
+      ticketCommentFiles.forEach(file=>{
+        formData.append('attachments',file);
+      });
+
+      await request('/tickets//comments',{
+        method:'POST',
+        body:formData
+      });
+
+      setTicketCommentText('');
+      setTicketCommentFiles([]);
+      await loadTicketComments(selectedTicket.id);
+    }catch(error:any){
+      setTicketError(error.message||'Não foi possível enviar o comentário.');
+    }finally{
+      setTicketCommentSaving(false);
     }
   };
 
@@ -2173,7 +2220,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
                   {tickets.map((ticket:any)=>(
                     <tr
                       key={ticket.id}
-                      onClick={()=>setSelectedTicket(ticket)}
+                      onClick={()=>{setSelectedTicket(ticket);setTicketComments([]);setTicketCommentText('');setTicketCommentFiles([]);loadTicketComments(ticket.id)}}
                       style={{cursor:'pointer'}}
                     >
                       <td>
@@ -3261,6 +3308,10 @@ const proximas = minhasDemandas
     {ticketModal&&<TicketModal
       value={ticketForm}
       setValue={setTicketForm}
+      commentText={ticketNewCommentText}
+      setCommentText={setTicketNewCommentText}
+      files={ticketNewCommentFiles}
+      setFiles={setTicketNewCommentFiles}
       error={ticketError}
       saving={ticketSaving}
       close={()=>setTicketModal(false)}
@@ -3274,7 +3325,7 @@ const proximas = minhasDemandas
             return;
           }
 
-          await request('/tickets',{
+          const ticketResponse=await request('/tickets',{
             method:'POST',
             body:JSON.stringify({
               problem:ticketForm.problem.trim(),
@@ -3283,12 +3334,27 @@ const proximas = minhasDemandas
             })
           });
 
+          const createdTicket=ticketResponse.data;
+
+          if(createdTicket?.id&&(ticketNewCommentText.trim()||ticketNewCommentFiles.length)){
+            const formData=new FormData();
+            formData.append('comment',ticketNewCommentText.trim());
+
+            ticketNewCommentFiles.forEach(file=>{
+              formData.append('attachments',file);
+            });
+
+
+          }
+
           setTicketModal(false);
           setTicketForm({
             problem:'',
             priority:'Média',
             requestDate:new Date().toISOString().slice(0,10)
           });
+          setTicketNewCommentText('');
+          setTicketNewCommentFiles([]);
           await loadTickets();
         }catch(error:any){
           setTicketError(error.message||'Não foi possível abrir o chamado.');
@@ -3304,6 +3370,14 @@ const proximas = minhasDemandas
       close={()=>setSelectedTicket(null)}
       createDemand={()=>openDemandFromTicket(selectedTicket)}
       viewDemand={()=>openLinkedDemandFromTicket(selectedTicket)}
+      comments={ticketComments}
+      commentsLoading={ticketCommentsLoading}
+      commentText={ticketCommentText}
+      setCommentText={setTicketCommentText}
+      commentSaving={ticketCommentSaving}
+      sendComment={sendTicketComment}
+      files={ticketCommentFiles}
+      setFiles={setTicketCommentFiles}
     />}
 
     {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment} files={demandCommentFiles} setFiles={setDemandCommentFiles}/>}
@@ -3895,7 +3969,34 @@ function NotificationsModal({
   </div>;
 }
 
-function TicketModal({value,setValue,error,saving,close,save}:{value:{problem:string;priority:string;requestDate:string};setValue:(v:any)=>void;error:string;saving:boolean;close:()=>void;save:()=>void}){
+function TicketModal({
+  value,
+  setValue,
+  commentText,
+  setCommentText,
+  files,
+  setFiles,
+  error,
+  saving,
+  close,
+  save
+}:{
+  value:{problem:string;priority:string;requestDate:string};
+  setValue:(v:any)=>void;
+  commentText:string;
+  setCommentText:(v:string)=>void;
+  files:File[];
+  setFiles:(v:File[])=>void;
+  error:string;
+  saving:boolean;
+  close:()=>void;
+  save:()=>void;
+}){
+  const handleFiles=(selected:FileList|null)=>{
+    if(!selected)return;
+    setFiles([...files,...Array.from(selected)].slice(0,5));
+  };
+
   return <div className="hf-modal-backdrop">
     <div className="hf-modal user-modal">
       <div className="hf-modal-head">
@@ -3943,6 +4044,65 @@ function TicketModal({value,setValue,error,saving,close,save}:{value:{problem:st
           </label>
         </div>
 
+        <div className="hf-form-section">
+          <div className="hf-section-title">
+            <span>02</span>
+            <div>
+              <strong>Comentário inicial</strong>
+              <small>Adicione informações complementares e arquivos, se necessário.</small>
+            </div>
+          </div>
+
+          <label>
+            Comentário
+            <textarea
+              value={commentText}
+              onChange={e=>setCommentText(e.target.value)}
+              placeholder="Adicione mais detalhes sobre o problema..."
+              rows={4}
+            />
+          </label>
+
+          <div
+            style={{
+              marginTop:10,
+              padding:14,
+              border:'1px dashed #cbd5e1',
+              borderRadius:14,
+              background:'#f8fafc'
+            }}
+          >
+            <label style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:8}}>
+              <input
+                type="file"
+                multiple
+                onChange={e=>handleFiles(e.target.files)}
+                style={{display:'none'}}
+              />
+              <span className="hf-secondary">Anexar arquivos</span>
+            </label>
+
+            {files.length>0&&(
+              <div style={{display:'grid',gap:6,marginTop:10}}>
+                {files.map((file,index)=>(
+                  <div
+                    key={`${file.name}-${index}`}
+                    style={{display:'flex',justifyContent:'space-between',gap:10,fontSize:13}}
+                  >
+                    <span>{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={()=>setFiles(files.filter((_,i)=>i!==index))}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}
 
         <div className="hf-form-actions">
@@ -3957,22 +4117,41 @@ function TicketModal({value,setValue,error,saving,close,save}:{value:{problem:st
     </div>
   </div>;
 }
-
-
 function TicketDetailsModal({
   ticket,
   isAdmin,
   close,
   createDemand,
   viewDemand,
+  comments,
+  commentsLoading,
+  commentText,
+  setCommentText,
+  commentSaving,
+  sendComment,
+  files,
+  setFiles,
 }:{
   ticket:any;
   isAdmin:boolean;
   close:()=>void;
   createDemand:()=>void;
   viewDemand:()=>void;
+  comments:any[];
+  commentsLoading:boolean;
+  commentText:string;
+  setCommentText:(v:string)=>void;
+  commentSaving:boolean;
+  sendComment:()=>void;
+  files:File[];
+  setFiles:(v:File[])=>void;
 }){
   const converted=ticket.status==='Convertido em demanda';
+
+  const handleFiles=(selected:FileList|null)=>{
+    if(!selected)return;
+    setFiles([...files,...Array.from(selected)].slice(0,5));
+  };
 
   return <div className="hf-modal-backdrop">
     <div className="hf-modal user-modal">
@@ -3999,11 +4178,7 @@ function TicketDetailsModal({
 
           <label>
             Problema / solicitação
-            <textarea
-              value={ticket.problem||''}
-              readOnly
-              rows={7}
-            />
+            <textarea value={ticket.problem||''} readOnly rows={7}/>
           </label>
 
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
@@ -4027,10 +4202,137 @@ function TicketDetailsModal({
           </label>
         </div>
 
+        <div className="hf-form-section">
+          <div className="hf-section-title">
+            <span>02</span>
+            <div>
+              <strong>Comentários</strong>
+              <small>Histórico de interações deste chamado.</small>
+            </div>
+          </div>
+
+          {commentsLoading ? (
+            <div className="hf-empty-state">
+              Carregando comentários...
+            </div>
+          ) : comments.length===0 ? (
+            <div className="hf-empty-state">
+              Nenhum comentário registrado neste chamado.
+            </div>
+          ) : (
+            <div style={{display:'grid',gap:12}}>
+              {comments.map((comment:any)=>(
+                <div
+                  key={comment.id}
+                  style={{
+                    padding:14,
+                    border:'1px solid #e5e7eb',
+                    borderRadius:14,
+                    background:'#f8fafc'
+                  }}
+                >
+                  <div style={{display:'flex',justifyContent:'space-between',gap:12,marginBottom:8}}>
+                    <strong>{comment.userName||'Usuário'}</strong>
+                    <small>
+                      {comment.createdAt
+                        ? new Date(comment.createdAt).toLocaleString('pt-BR')
+                        : ''}
+                    </small>
+                  </div>
+
+                  {comment.comment&&(
+                    <div style={{whiteSpace:'pre-wrap',lineHeight:1.5}}>
+                      {comment.comment}
+                    </div>
+                  )}
+
+                  {Array.isArray(comment.attachments)&&comment.attachments.length>0&&(
+                    <div style={{display:'grid',gap:6,marginTop:10}}>
+                      {comment.attachments.map((file:any)=>(
+                        <a
+                          key={file.id}
+                          href={file.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{fontSize:13}}
+                        >
+                          {file.fileName}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{marginTop:16}}>
+            <label>
+              Novo comentário
+              <textarea
+                value={commentText}
+                onChange={e=>setCommentText(e.target.value)}
+                rows={4}
+                placeholder="Escreva uma atualização sobre este chamado..."
+              />
+            </label>
+
+            <div
+              style={{
+                marginTop:10,
+                padding:14,
+                border:'1px dashed #cbd5e1',
+                borderRadius:14,
+                background:'#f8fafc'
+              }}
+            >
+              <label style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:8}}>
+                <input
+                  type="file"
+                  multiple
+                  onChange={e=>handleFiles(e.target.files)}
+                  style={{display:'none'}}
+                />
+                <span className="hf-secondary">Anexar arquivos</span>
+              </label>
+
+              {files.length>0&&(
+                <div style={{display:'grid',gap:6,marginTop:10}}>
+                  {files.map((file,index)=>(
+                    <div
+                      key={`${file.name}-${index}`}
+                      style={{display:'flex',justifyContent:'space-between',gap:10,fontSize:13}}
+                    >
+                      <span>{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={()=>setFiles(files.filter((_,i)=>i!==index))}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{display:'flex',justifyContent:'flex-end',marginTop:12}}>
+              <button
+                type="button"
+                className="hf-primary"
+                onClick={sendComment}
+                disabled={commentSaving||(!commentText.trim()&&!files.length)}
+              >
+                {commentSaving?'Enviando...':'Enviar comentário'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {converted && (
           <div className="hf-form-section">
             <div className="hf-section-title">
-              <span>02</span>
+              <span>03</span>
               <div>
                 <strong>Demanda vinculada</strong>
                 <small>Este chamado já foi convertido em demanda.</small>
@@ -4065,7 +4367,6 @@ function TicketDetailsModal({
     </div>
   </div>;
 }
-
 function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve,comments,commentsLoading,commentText,setCommentText,commentSaving,sendComment,files,setFiles}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void;comments:any[];commentsLoading:boolean;commentText:string;setCommentText:(v:string)=>void;commentSaving:boolean;sendComment:()=>void;files:File[];setFiles:(v:File[])=>void}){
   const readonly=isClient;
   const demandForApproval=editing;
@@ -10532,6 +10833,19 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
