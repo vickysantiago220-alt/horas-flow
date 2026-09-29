@@ -1724,6 +1724,7 @@ app.get(
 // ADMIN
 app.get(
   '/api/tickets/:id/comments',
+  authenticate,
   authorize('ADMIN', 'INTERNO', 'CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
@@ -1814,6 +1815,7 @@ app.get(
 app.post(
   '/api/tickets/:id/comments',
   upload.array('attachments', 5),
+  authenticate,
   authorize('ADMIN', 'INTERNO', 'CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
@@ -3902,6 +3904,10 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
 
 
 
