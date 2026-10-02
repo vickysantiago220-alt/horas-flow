@@ -3338,7 +3338,8 @@ const proximas = minhasDemandas
             body:JSON.stringify({
               problem:ticketForm.problem.trim(),
               priority:ticketForm.priority,
-              requestDate:ticketForm.requestDate
+              requestDate:ticketForm.requestDate,
+              requesterUserId:user?.id||null
             })
           });
 
