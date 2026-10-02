@@ -1519,6 +1519,7 @@ app.get(
           t.number,
           u.client_id AS clientId,
           c.name AS clientName,
+          t.requester_user_id AS requesterUserId,
           t.problem,
           t.priority,
           t.request_date AS requestDate,
