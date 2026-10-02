@@ -40,7 +40,7 @@ type Demand = {
 
 const API = 'https://horas-flow.onrender.com/api';
 
-const statuses:Status[] = ['Aguardando análise','Em análise','Analisada','Em desenvolvimento','Em homologação','Concluída'];
+const statuses:Status[] = ['Aguardando análise','Em análise','Analisada','Em desenvolvimento','Em homologação','Aguardando aprovação','Concluída'];
 const priorities:Priority[] = ['Baixa','Média','Alta','Urgente'];
 const uid = () => crypto.randomUUID();
 
