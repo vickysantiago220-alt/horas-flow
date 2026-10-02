@@ -138,12 +138,20 @@ const availablePeriods = useMemo(() => {
   const periods = new Set<string>();
 
   demands.forEach(d => {
-    const month = getDeliveryMonthKey(
+    const analysisMonth = String(
+      d.analysisMonth || (d as any).analysis_month || ""
+    ).slice(0, 7);
+
+    const deliveryMonth = getDeliveryMonthKey(
       d.deliveryDate || (d as any).delivery_date
     );
 
-    if(month){
-      periods.add(month);
+    if (analysisMonth) {
+      periods.add(analysisMonth);
+    }
+
+    if (deliveryMonth) {
+      periods.add(deliveryMonth);
     }
   });
 
@@ -1800,7 +1808,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
-        (demandPeriod==='Todos'||(normalizeStatus(d.status)==='Analisada' ? String(d.analysisMonth||'').slice(0,7)===demandPeriod : getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date || d.requestDate || d.criadoEm)===demandPeriod))
+        demandMatchesPeriod(d,demandPeriod)
     });
 
     // Mais recente primeiro: número maior = demanda mais nova.
@@ -1941,8 +1949,7 @@ const dashboardDemands=useMemo(()=>{
       const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
       const matchesClient=dashboardClientFilter==='Todos' ||
         String(demandClientId)===String(dashboardClientFilter);
-      const matchesPeriod=dashboardPeriod==='Todos' ||
-        getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date)===dashboardPeriod;
+      const matchesPeriod=demandMatchesPeriod(d,dashboardPeriod);
       return matchesClient && matchesPeriod;
     }).slice(0,5);
   },[demands,dashboardClientFilter,dashboardPeriod]);
@@ -3480,6 +3487,18 @@ function getDeliveryMonthKey(value:any){
   const br=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if(br)return `${br[3]}-${br[2]}`;
   return '';
+}
+
+function getDemandPeriodKeys(d:any){
+  const analysisMonth=String(d.analysisMonth || (d as any).analysis_month || '').slice(0,7);
+  const deliveryMonth=getDeliveryMonthKey(d.deliveryDate || (d as any).delivery_date);
+  return {analysisMonth,deliveryMonth};
+}
+
+function demandMatchesPeriod(d:any,period:string){
+  if(!period || period==='Todos') return true;
+  const {analysisMonth,deliveryMonth}=getDemandPeriodKeys(d);
+  return analysisMonth===period || deliveryMonth===period;
 }
 
 function roleLabel(r:Role){return r==='ADMIN'?'Administrador':r==='INTERNO'?'Interno':'Cliente'}
@@ -10854,6 +10873,9 @@ const styles = `
   }
 }
 `
+
+
+
 
 
 
