@@ -10,6 +10,7 @@ const statusConfig: Record<string, { color: string; bg: string; label: string }>
   'Aguardando análise': { color: '#e5a11a', bg: '#fff5df', label: 'Aguardando análise' },
   'Em análise': { color: '#3b82f6', bg: '#eaf2ff', label: 'Em análise' },
   'Analisada': { color: '#6366f1', bg: '#eef0ff', label: 'Analisada' },
+  'Aguardando aprovação': { color: '#7b55c7', bg: '#f4efff', label: 'Aguardando aprovação' },
   'Em desenvolvimento': { color: '#8b5cf6', bg: '#f2ebff', label: 'Em desenvolvimento' },
   'Em homologação': { color: '#f59e0b', bg: '#fff4df', label: 'Em homologação' },
   'Concluída': { color: '#22a06b', bg: '#e8f8f1', label: 'Concluída' },
@@ -21,6 +22,7 @@ const normalizeStatus = (value: any) => {
   if (text.includes('aguardando análise')) return 'Aguardando análise';
   if (text.includes('em análise')) return 'Em análise';
   if (text.includes('analisada')) return 'Analisada';
+  if (text.includes('aguardando aprovação')) return 'Aguardando aprovação';
   if (text.includes('em desenvolvimento')) return 'Em desenvolvimento';
   if (text.includes('em homologação')) return 'Em homologação';
   if (text.includes('conclu')) return 'Concluída';
@@ -148,6 +150,7 @@ const DemandGantt: React.FC<DemandGanttProps> = ({ demands, onEdit, period }) =>
     if (status === 'Aguardando análise') return 30;
     if (status === 'Em análise') return 60;
     if (status === 'Analisada') return 70;
+    if (status === 'Aguardando aprovação') return 80;
     if (status === 'Em desenvolvimento') return 40;
     if (status === 'Em homologação') return 80;
     if (status === 'Concluída') return 100;
