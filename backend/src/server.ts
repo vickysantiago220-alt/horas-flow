@@ -1531,8 +1531,7 @@ app.post(
         responsible = null,
         requesterUserId = null,
         ticketId = null,
-        categoryId = null,
-      } = req.body;
+        } = req.body;
 
       if (
         !problem?.trim()
@@ -4367,6 +4366,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
