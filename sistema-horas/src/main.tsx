@@ -409,15 +409,18 @@ const [serverNotifications,setServerNotifications]=useState<Array<{
   title:string;
   description:string;
   demandId:number|null;
+  ticketId:number|null;
   readAt:string|null;
   createdAt:string;
 }>>([]);
 
 const [commentPopup,setCommentPopup]=useState<{
   id:string;
+  type:'comment'|'ticket';
   title:string;
   description:string;
   demandId:number|null;
+  ticketId:number|null;
 }|null>(null);
 
 const seenCommentNotificationIds=useRef<Set<string>>(new Set());
@@ -446,14 +449,17 @@ useEffect(()=>{
     return;
   }
 
-  const newComment=serverNotifications.find(
+  const newNotification=serverNotifications.find(
     (notification:any)=>
       !notification.readAt &&
       !seenCommentNotificationIds.current.has(String(notification.id)) &&
       (
         String(notification.type||'').toLowerCase()==='comment' ||
         String(notification.type||'').toLowerCase()==='comentario' ||
-        String(notification.title||'').toLowerCase().includes('coment')
+        String(notification.title||'').toLowerCase().includes('coment') ||
+        String(notification.type||'').toLowerCase()==='ticket' ||
+        String(notification.type||'').toLowerCase()==='chamado' ||
+        String(notification.title||'').toLowerCase().includes('chamado')
       )
   );
 
@@ -461,12 +467,29 @@ useEffect(()=>{
     seenCommentNotificationIds.current.add(String(notification.id));
   });
 
-  if(newComment){
+  if(newNotification){
+    const notificationType =
+      (
+        String(newNotification.type||'').toLowerCase()==='ticket' ||
+        String(newNotification.type||'').toLowerCase()==='chamado' ||
+        String(newNotification.title||'').toLowerCase().includes('chamado')
+      )
+        ? 'ticket'
+        : 'comment';
+
     setCommentPopup({
-      id:String(newComment.id),
-      title:newComment.title||'Nova interação na demanda',
-      description:newComment.description||'A demanda recebeu um novo comentário.',
-      demandId:newComment.demandId ?? null
+      id:String(newNotification.id),
+      type:notificationType,
+      title:newNotification.title||
+        (notificationType==='ticket'
+          ? 'Novo chamado recebido'
+          : 'Nova interação na demanda'),
+      description:newNotification.description||
+        (notificationType==='ticket'
+          ? 'Um cliente abriu um novo chamado.'
+          : 'A demanda recebeu um novo comentário.'),
+      demandId:newNotification.demandId ?? null,
+      ticketId:newNotification.ticketId ?? null
     });
   }
 },[serverNotifications,token,user]);
@@ -705,8 +728,24 @@ useEffect(() => {
 ]);
 
 const allNotifications = useMemo(() => {
-  const commentNotifications = serverNotifications
+  const serverNotificationItems = serverNotifications
     .map(notification => {
+      const isTicket =
+        String(notification.type||'').toLowerCase()==='ticket' ||
+        String(notification.type||'').toLowerCase()==='chamado' ||
+        String(notification.title||'').toLowerCase().includes('chamado');
+
+      if(isTicket){
+        return {
+          id:`server-${notification.id}`,
+          type:'ticket' as const,
+          title:notification.title,
+          description:notification.description,
+          ticketId:notification.ticketId ?? null,
+          demand:null
+        };
+      }
+
       const demand = demands.find(
         d => String(d.id) === String(notification.demandId)
       );
@@ -718,18 +757,20 @@ const allNotifications = useMemo(() => {
         type:'comment' as const,
         title:notification.title,
         description:notification.description,
+        ticketId:null,
         demand
       };
     })
     .filter(Boolean) as Array<{
       id:string;
-      type:'approval'|'assigned'|'deadline'|'info'|'comment';
+      type:'approval'|'assigned'|'deadline'|'info'|'comment'|'ticket';
       title:string;
       description:string;
-      demand:Demand;
+      ticketId:number|null;
+      demand:Demand|null;
     }>;
 
-  return [...notifications,...commentNotifications];
+  return [...notifications,...serverNotificationItems];
 },[notifications,serverNotifications,demands]);
 const unreadNotifications =
   notificationInitialized
@@ -3709,7 +3750,30 @@ const proximas = minhasDemandas
               {commentPopup.description}
             </div>
 
-            {commentPopup.demandId&&(
+            {commentPopup.type==='ticket'&&commentPopup.ticketId ? (
+              <button
+                type="button"
+                className="hf-primary"
+                style={{marginTop:10}}
+                onClick={()=>{
+                  const ticket=tickets.find(
+                    t=>String(t.id)===String(commentPopup.ticketId)
+                  );
+
+                  setCommentPopup(null);
+
+                  if(ticket){
+                    setSelectedTicket(ticket);
+                    setTicketComments([]);
+                    setTicketCommentText('');
+                    setTicketCommentFiles([]);
+                    loadTicketComments(ticket.id);
+                  }
+                }}
+              >
+                Ver chamado
+              </button>
+            ) : commentPopup.demandId ? (
               <button
                 type="button"
                 className="hf-primary"
@@ -3728,7 +3792,7 @@ const proximas = minhasDemandas
               >
                 Ver demanda
               </button>
-            )}
+            ) : null}
           </div>
 
           <button
