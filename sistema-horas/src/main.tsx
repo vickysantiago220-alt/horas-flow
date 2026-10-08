@@ -133,6 +133,7 @@ function App(){
   });
   const [dashboardLoading,setDashboardLoading]=useState(false);
   const [dashboardClientFilter,setDashboardClientFilter]=useState('Todos');
+  const [dashboardCategoryFilter,setDashboardCategoryFilter]=useState('Todas');
   const [dashboardPeriod,setDashboardPeriod]=useState('Todos');
 
 const availablePeriods = useMemo(() => {
@@ -179,6 +180,7 @@ const formatPeriod = (period:string) => {
   const [demandApprovalFilter,setDemandApprovalFilter]=useState('Todas');
   const [demandPriorityFilter,setDemandPriorityFilter]=useState('Todas');
   const [demandClientFilter,setDemandClientFilter]=useState('Todos');
+  const [demandCategoryFilter,setDemandCategoryFilter]=useState('Todas');
   const [demandPeriod,setDemandPeriod]=useState('Todos');
   const [demandPage,setDemandPage]=useState(1);
   const [demandView,setDemandView]=useState<'table'|'calendar'|'gantt'>('table');
@@ -225,6 +227,31 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [clientForm,setClientForm]=useState({name:'',email:'',categories:[] as string[]});
   const [clientCategories,setClientCategories]=useState<any[]>([]);
   const [demandClientCategories,setDemandClientCategories]=useState<any[]>([]);
+  const dashboardCategoryOptions = useMemo(() => {
+    if (dashboardClientFilter === 'Todos') return [];
+
+    return (clientCategories || [])
+      .filter((category:any) =>
+        Boolean(category.active) &&
+        String(category.clientId) === String(dashboardClientFilter)
+      )
+      .sort((a:any,b:any) =>
+        String(a.name || '').localeCompare(String(b.name || ''))
+      );
+  }, [clientCategories, dashboardClientFilter]);
+
+  const demandCategoryOptions = useMemo(() => {
+    if (demandClientFilter === 'Todos') return [];
+
+    return (clientCategories || [])
+      .filter((category:any) =>
+        Boolean(category.active) &&
+        String(category.clientId) === String(demandClientFilter)
+      )
+      .sort((a:any,b:any) =>
+        String(a.name || '').localeCompare(String(b.name || ''))
+      );
+  }, [clientCategories, demandClientFilter]);
 
   const [demandModal,setDemandModal]=useState(false);
   useEffect(()=>{
@@ -1844,9 +1871,14 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     const result=demands.filter(d=>{
       const text=`${d.numero} ${d.problema} ${d.tratamento} ${d.responsavel}`.toLowerCase();
       const demandClientId = (d as any).clientId ?? (d as any).client_id ?? ''; const matchesClient = demandClientFilter==='Todos' || String(demandClientId)===String(demandClientFilter);
+      const categoryId = (d as any).categoryId ?? (d as any).category_id ?? '';
+      const matchesCategory =
+        demandCategoryFilter==='Todas' ||
+        String(categoryId)===String(demandCategoryFilter);
       return (demandOpenId===null || String(d.id)===String(demandOpenId)) &&
         text.includes(demandSearch.toLowerCase()) &&
         matchesClient &&
+        matchesCategory &&
         (demandStatusFilter==='Todos'||normalizeStatus(d.status)===demandStatusFilter) &&
         (demandApprovalFilter==='Todas'||normalizeApproval(d.aprovacao)===demandApprovalFilter) &&
         (demandPriorityFilter==='Todas'||String(d.prioridade).trim().toLowerCase()===String(demandPriorityFilter).trim().toLowerCase()) &&
@@ -1855,7 +1887,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
     // Mais recente primeiro: número maior = demanda mais nova.
     return result.sort((a,b)=>Number(b.numero||0)-Number(a.numero||0));
-  },[demands,demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandPeriod,demandOpenId]);
+  },[demands,demandSearch,demandStatusFilter,demandApprovalFilter,demandPriorityFilter,demandClientFilter,demandCategoryFilter,demandPeriod,demandOpenId]);
 
   const demandPageCount=Math.max(1,Math.ceil(filtered.length/demandPageSize));
   const paginatedDemands=useMemo(()=>{
@@ -1866,7 +1898,22 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   useEffect(()=>{if(demandPage>demandPageCount)setDemandPage(demandPageCount)},[demandPage,demandPageCount]);
 
-  const dashboardFilteredDemands=useMemo(()=>{
+  const dashboardCategoryMatches=(d:Demand)=>{
+  if(dashboardCategoryFilter==='Todas') return true;
+
+  const categoryId=(d as any).categoryId ?? (d as any).category_id ?? '';
+
+  return String(categoryId)===String(dashboardCategoryFilter);
+};
+
+const demandCategoryMatches=(d:Demand)=>{
+  if(demandCategoryFilter==='Todas') return true;
+
+  const categoryId=(d as any).categoryId ?? (d as any).category_id ?? '';
+
+  return String(categoryId)===String(demandCategoryFilter);
+};
+const dashboardFilteredDemands=useMemo(()=>{
     return demands.filter(d=>{
       const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
       const matchesClient=dashboardClientFilter==='Todos' ||
@@ -1877,9 +1924,9 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
           d.deliveryDate || (d as any).delivery_date
         )===dashboardPeriod;
 
-      return matchesClient && matchesPeriod;
+      return matchesClient && dashboardCategoryMatches(d) && matchesPeriod;
     });
-  },[demands,dashboardClientFilter,dashboardPeriod]);
+  },[demands,dashboardClientFilter,dashboardCategoryFilter,dashboardPeriod]);
 
   const dashboardLocalStats=useMemo(()=>{
     const list=dashboardFilteredDemands;
@@ -2613,7 +2660,8 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
   setDemandApprovalFilter('Todas');
   setDemandPriorityFilter('Todas');
   setDemandClientFilter('Todos');
-  setDemandPeriod('Todos');
+  setDemandCategoryFilter('Todas');
+                    setDemandPeriod('Todos');
   setDemandPage(1);
   setDemandFiltersOpen(false);
   setTab('demandas');
@@ -3037,7 +3085,39 @@ const proximas = minhasDemandas
         {(tab==='dashboard'||tab==='demandas')&&<>
         {tab==='dashboard' ? (
           <section className="hf-filters hf-filters-clean">
-            {isAdmin&&<select value={dashboardClientFilter} onChange={e=>setDashboardClientFilter(e.target.value)}><option value="Todos">Todos os clientes</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>}
+            {isAdmin&&<>
+  <select
+    value={dashboardClientFilter}
+    onChange={e=>{
+      setDashboardClientFilter(e.target.value);
+      setDashboardCategoryFilter('Todas');
+    }}
+  >
+    <option value="Todos">Todos os clientes</option>
+    {clients.map(c=>
+      <option key={c.id} value={c.id}>{c.name}</option>
+    )}
+  </select>
+
+  {dashboardClientFilter!=='Todos'&&(
+    <select
+      value={dashboardCategoryFilter}
+      onChange={e=>setDashboardCategoryFilter(e.target.value)}
+    >
+      <option value="Todas">Todas as categorias</option>
+      {(clientCategories||[])
+        .filter((category:any)=>
+          Boolean(category.active) &&
+          String(category.clientId)===String(dashboardClientFilter)
+        )
+        .map((category:any)=>
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        )}
+    </select>
+  )}
+</>}
             <select
   value={dashboardPeriod}
   onChange={e=>setDashboardPeriod(e.target.value)}
@@ -3151,7 +3231,10 @@ const proximas = minhasDemandas
                   <span>Cliente</span>
                     <select
                       value={demandClientFilter}
-                      onChange={e=>setDemandClientFilter(e.target.value)}
+                      onChange={e=>{
+  setDemandClientFilter(e.target.value);
+  setDemandCategoryFilter('Todas');
+}}
                     >
                       <option value="Todos">Clientes</option>
                       {clients.map(c=>
@@ -3159,6 +3242,22 @@ const proximas = minhasDemandas
                       )}
                     </select>
                   </label>
+                {demandClientFilter!=='Todos'&&demandCategoryOptions.length>0&&(
+                  <label>
+                    <span>Categoria</span>
+                    <select
+                      value={demandCategoryFilter}
+                      onChange={e=>setDemandCategoryFilter(e.target.value)}
+                    >
+                      <option value="Todas">Todas as categorias</option>
+                      {demandCategoryOptions.map((category:any)=>
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      )}
+                    </select>
+                  </label>
+                )}
 
                 <label>
                   <span>Períodos</span>
@@ -6772,8 +6871,9 @@ const styles = `
 /* Largura das colunas de Categoria e Problema */
 .hf-table-wrap table th:nth-child(3),
 .hf-table-wrap table td:nth-child(3){
-  width:80px;
-  max-width:80px;
+  width:75px !important;
+  min-width:75px !important;
+  max-width:75px !important;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -6781,8 +6881,9 @@ const styles = `
 
 .hf-table-wrap table th:nth-child(4),
 .hf-table-wrap table td:nth-child(4){
-  min-width:320px;
-  width:35%;
+  width:380px !important;
+  min-width:380px !important;
+  max-width:500px;
 }
 
 .hf-table-wrap table td:nth-child(4) .hf-demand-text{
@@ -11264,6 +11365,23 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
