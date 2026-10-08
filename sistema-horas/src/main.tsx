@@ -1,5 +1,5 @@
 import ModernStatusChart from './ModernStatusChart';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import "./styles.css";
 import DemandCalendar from './DemandCalendar';
 import DemandGantt from './DemandGantt';
@@ -413,6 +413,14 @@ const [serverNotifications,setServerNotifications]=useState<Array<{
   createdAt:string;
 }>>([]);
 
+const [commentPopup,setCommentPopup]=useState<{
+  id:string;
+  title:string;
+  description:string;
+  demandId:number|null;
+}|null>(null);
+
+const seenCommentNotificationIds=useRef<Set<string>>(new Set());
 const loadServerNotifications=async()=>{
   try{
     const data=await request('/notifications');
@@ -428,6 +436,40 @@ useEffect(()=>{
   const interval=setInterval(loadServerNotifications,15000);
   return()=>clearInterval(interval);
 },[token,user]);
+useEffect(()=>{
+  if(!token||!user)return;
+
+  if(seenCommentNotificationIds.current.size===0){
+    serverNotifications.forEach((notification:any)=>{
+      seenCommentNotificationIds.current.add(String(notification.id));
+    });
+    return;
+  }
+
+  const newComment=serverNotifications.find(
+    (notification:any)=>
+      !notification.readAt &&
+      !seenCommentNotificationIds.current.has(String(notification.id)) &&
+      (
+        String(notification.type||'').toLowerCase()==='comment' ||
+        String(notification.type||'').toLowerCase()==='comentario' ||
+        String(notification.title||'').toLowerCase().includes('coment')
+      )
+  );
+
+  serverNotifications.forEach((notification:any)=>{
+    seenCommentNotificationIds.current.add(String(notification.id));
+  });
+
+  if(newComment){
+    setCommentPopup({
+      id:String(newComment.id),
+      title:newComment.title||'Nova interação na demanda',
+      description:newComment.description||'A demanda recebeu um novo comentário.',
+      demandId:newComment.demandId ?? null
+    });
+  }
+},[serverNotifications,token,user]);
 const notifications = useMemo(() => {
 
   const result: Array<{
@@ -3615,7 +3657,98 @@ const proximas = minhasDemandas
       clientId={dashboardClientFilter}
       period={dashboardPeriod}
       onApproveDemand={createDemandFromSaphire}
-    />}    {notificationsOpen&&<NotificationsModal
+    />}    {commentPopup&&(
+      <div
+        style={{
+          position:'fixed',
+          top:20,
+          right:20,
+          zIndex:9999,
+          width:'min(390px,calc(100vw - 40px))',
+          background:'#fff',
+          border:'1px solid #e3e8f0',
+          borderRadius:14,
+          padding:16,
+          boxShadow:'0 18px 50px rgba(15,23,42,.18)'
+        }}
+      >
+        <div style={{
+          display:'flex',
+          alignItems:'flex-start',
+          gap:12
+        }}>
+          <div style={{
+            width:38,
+            height:38,
+            borderRadius:10,
+            background:'#eef3ff',
+            color:'#315efb',
+            display:'grid',
+            placeItems:'center',
+            flex:'none',
+            fontSize:18
+          }}>
+            💬
+          </div>
+
+          <div style={{flex:1,minWidth:0}}>
+            <strong style={{
+              display:'block',
+              fontSize:14,
+              color:'#27344b',
+              marginBottom:4
+            }}>
+              {commentPopup.title}
+            </strong>
+
+            <div style={{
+              fontSize:12,
+              color:'#69758a',
+              lineHeight:1.5
+            }}>
+              {commentPopup.description}
+            </div>
+
+            {commentPopup.demandId&&(
+              <button
+                type="button"
+                className="hf-primary"
+                style={{marginTop:10}}
+                onClick={()=>{
+                  const demand=demands.find(
+                    d=>String(d.id)===String(commentPopup.demandId)
+                  );
+
+                  setCommentPopup(null);
+
+                  if(demand){
+                    openEditDemand(demand);
+                  }
+                }}
+              >
+                Ver demanda
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={()=>setCommentPopup(null)}
+            style={{
+              border:0,
+              background:'transparent',
+              color:'#8b96a8',
+              cursor:'pointer',
+              fontSize:18
+            }}
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    )}
+    {notificationsOpen&&<NotificationsModal
       notifications={notifications}
       close={()=>setNotificationsOpen(false)}
       openDemand={openEditDemand}
@@ -11444,6 +11577,10 @@ const styles = `
   }
 }
 `
+
+
+
+
 
 
 
