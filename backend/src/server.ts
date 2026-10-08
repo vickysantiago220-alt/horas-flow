@@ -1922,50 +1922,6 @@ app.post(
         FROM tickets
       `);
 
-      if (categoryId !== null && categoryId !== undefined && categoryId !== '') {
-        const normalizedCategoryId = Number(categoryId);
-        const normalizedClientId = Number(clientId);
-
-        if (!Number.isInteger(normalizedCategoryId) || normalizedCategoryId <= 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'Categoria inválida.'
-          });
-        }
-
-        if (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'Cliente é obrigatório para selecionar uma categoria.'
-          });
-        }
-
-        const [categoryRows] = await pool.query(
-          `
-          SELECT id
-          FROM client_categories
-          WHERE id = ?
-            AND client_id = ?
-            AND active = 1
-          LIMIT 1
-          `,
-          [
-            normalizedCategoryId,
-            normalizedClientId
-          ]
-        );
-
-        if (!(categoryRows as any[]).length) {
-          return res.status(400).json({
-            success: false,
-            message: 'A categoria selecionada não pertence ao cliente informado.'
-          });
-        }
-      }
-      const nextNumber = Number(
-        (lastRows as any[])[0]?.nextNumber || 1
-      );
-
       const [result] = await pool.execute(
         `
         INSERT INTO tickets (
@@ -4366,6 +4322,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
