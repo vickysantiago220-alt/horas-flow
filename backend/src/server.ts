@@ -1921,6 +1921,10 @@ app.post(
         SELECT COALESCE(MAX(number), 0) + 1 AS nextNumber
         FROM tickets
       `);
+      const nextNumber = Number(
+        (lastRows as any[])[0]?.nextNumber || 1
+      );
+
 
       const [result] = await pool.execute(
         `
