@@ -433,180 +433,19 @@ app.post(
         [insertResult.insertId]
       );
 
+
       return res.status(201).json({
         success: true,
-        message: 'UsuÃ¡rio cadastrado com sucesso.',
+        message: 'Usuário cadastrado com sucesso.',
         data: (rows as any[])[0],
       });
 
     } catch (error: any) {
-      console.error('ERRO CADASTRAR USUÃRIO:', error);
+      console.error('ERRO CADASTRAR USUÁRIO:', error);
 
       return res.status(500).json({
         success: false,
-        message: 'Erro ao cadastrar usuÃ¡rio.',
-        error: error?.message,
-        code: error?.code,
-        sqlMessage: error?.sqlMessage,
-      });
-    }
-  }
-);
-
-
-// EDITAR USUÃRIO
-
-app.put(
-  '/api/users/:id',
-  authenticate,
-  authorize('ADMIN'),
-  async (req, res) => {
-    try {
-      const id = getId(req.params.id);
-
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          message: 'ID do usuÃ¡rio invÃ¡lido.',
-        });
-      }
-
-      const {
-        name,
-        email,
-        role,
-        clientId = null,
-        active = true,
-        password,
-      } = req.body;
-
-      if (
-        !name?.trim() ||
-        !email?.trim() ||
-        !role
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Nome, e-mail e perfil sÃ£o obrigatÃ³rios.',
-        });
-      }
-
-      const validRoles = [
-        'ADMIN',
-        'INTERNO',
-        'CLIENTE',
-      ];
-
-      if (!validRoles.includes(role)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Perfil invÃ¡lido.',
-        });
-      }
-
-      if (
-        role === 'CLIENTE' &&
-        !clientId
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'UsuÃ¡rio CLIENTE precisa estar vinculado a um cliente.',
-        });
-      }
-
-      if (password?.trim()) {
-        const passwordHash = hashPassword(password);
-
-        await pool.execute(
-          `
-          UPDATE users
-          SET
-            name = ?,
-            email = ?,
-            password_hash = ?,
-            role = ?,
-            client_id = ?,
-            active = ?,
-            updated_at = NOW()
-          WHERE id = ?
-          `,
-          [
-            name.trim(),
-            email.trim().toLowerCase(),
-            passwordHash,
-            role,
-            clientId
-              ? Number(clientId)
-              : null,
-            active ? 1 : 0,
-            id,
-          ]
-        );
-
-      } else {
-        await pool.execute(
-          `
-          UPDATE users
-          SET
-            name = ?,
-            email = ?,
-            role = ?,
-            client_id = ?,
-            active = ?,
-            updated_at = NOW()
-          WHERE id = ?
-          `,
-          [
-            name.trim(),
-            email.trim().toLowerCase(),
-            role,
-            clientId
-              ? Number(clientId)
-              : null,
-            active ? 1 : 0,
-            id,
-          ]
-        );
-      }
-
-      const [rows] = await pool.query(
-        `
-        SELECT
-          id,
-          name,
-          email,
-          role,
-          client_id AS clientId,
-          active,
-          created_at AS createdAt,
-          updated_at AS updatedAt
-        FROM users
-        WHERE id = ?
-        `,
-        [id]
-      );
-
-      if ((rows as any[]).length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'UsuÃ¡rio nÃ£o encontrado.',
-        });
-      }
-
-      return res.json({
-        success: true,
-        message: 'UsuÃ¡rio atualizado com sucesso.',
-        data: (rows as any[])[0],
-      });
-
-    } catch (error: any) {
-      console.error('ERRO EDITAR USUÃRIO:', error);
-
-      return res.status(500).json({
-        success: false,
-        message: 'Erro ao editar usuÃ¡rio.',
+        message: 'Erro ao cadastrar usuário.',
         error: error?.message,
         code: error?.code,
       });
@@ -614,10 +453,7 @@ app.put(
   }
 );
 
-
-// ATIVAR / INATIVAR USUÃRIO
-
-app.patch(
+      app.patch(
   '/api/users/:id/status',
   authenticate,
   authorize('ADMIN'),
@@ -1951,7 +1787,61 @@ app.post(
         ]
       );
 
-      return res.status(201).json({
+            try {
+        const [clientRows] = await pool.query(
+          `
+          SELECT name
+          FROM clients
+          WHERE id = ?
+          LIMIT 1
+          `,
+          [Number(req.user.clientId)]
+        );
+
+        const clientName =
+          String((clientRows as any[])[0]?.name || 'Cliente');
+
+        await pool.execute(
+          `
+          INSERT INTO notifications (
+            user_id,
+            type,
+            title,
+            description,
+            demand_id,
+            ticket_id
+          )
+          SELECT
+            u.id,
+            'ticket',
+            'Novo chamado recebido',
+            ?,
+            NULL,
+            ?
+          FROM users u
+          WHERE u.active = 1
+            AND UPPER(TRIM(u.role)) IN ('ADMIN', 'INTERNO')
+          `,
+          [
+            clientName +
+              ' abriu o chamado #' +
+              String(nextNumber).padStart(3, '0') +
+              '.',
+            Number((result as any).insertId)
+          ]
+        );
+
+        console.log(
+          'Notificacoes do novo chamado criadas para ADMIN/INTERNO.'
+        );
+      } catch (notificationError: any) {
+        console.error(
+          'ERRO AO CRIAR NOTIFICACOES DO CHAMADO:',
+          notificationError
+        );
+      }
+
+return res.status(201).json({
         success: true,
         message: 'Chamado criado com sucesso.',
         data: { id: (result as any).insertId, number: nextNumber, problem: problem.trim(), priority, requestDate: requestDate ? String(requestDate) : new Date().toISOString().slice(0, 10), status: 'Aberto', clientId: Number(req.user.clientId), requesterUserId: Number(req.user.id) },
@@ -2992,6 +2882,7 @@ app.get(
             title,
             description,
             demand_id AS demandId,
+            ticket_id AS ticketId,
             read_at AS readAt,
             created_at AS createdAt
           FROM notifications
@@ -4299,6 +4190,7 @@ async function startServer() {
         title VARCHAR(255) NOT NULL,
         description TEXT NULL,
         demand_id BIGINT NULL,
+        ticket_id BIGINT NULL,
         read_at DATETIME NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
@@ -4306,6 +4198,40 @@ async function startServer() {
         KEY idx_notifications_demand (demand_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    const [notificationTicketColumns] = await pool.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'notifications'
+        AND COLUMN_NAME = 'ticket_id'
+    `);
+
+    if ((notificationTicketColumns as any[]).length === 0) {
+      await pool.query(`
+        ALTER TABLE notifications
+        ADD COLUMN ticket_id BIGINT NULL
+      `);
+
+      console.log('Coluna ticket_id adicionada em notifications.');
+    }
+
+    const [notificationTicketIndexes] = await pool.query(`
+      SELECT INDEX_NAME
+      FROM INFORMATION_SCHEMA.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'notifications'
+        AND INDEX_NAME = 'idx_notifications_ticket'
+    `);
+
+    if ((notificationTicketIndexes as any[]).length === 0) {
+      await pool.query(`
+        CREATE INDEX idx_notifications_ticket
+        ON notifications (ticket_id)
+      `);
+    }
+
+    console.log('Coluna ticket_id verificada com sucesso.');
 
     console.log('Tabela notifications criada/verificada com sucesso.');
     app.listen(
@@ -4327,6 +4253,12 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
+
 
 
 
