@@ -221,7 +221,9 @@ const [notificationsOpen,setNotificationsOpen]=useState(false);
   const [clientSaving,setClientSaving]=useState(false);
   const [clientError,setClientError]=useState('');
   const [editingClient,setEditingClient]=useState<Client|null>(null);
-  const [clientForm,setClientForm]=useState({name:'',email:''});
+  const [clientForm,setClientForm]=useState({name:'',email:'',categories:[] as string[]});
+  const [clientCategories,setClientCategories]=useState<any[]>([]);
+  const [demandClientCategories,setDemandClientCategories]=useState<any[]>([]);
 
   const [demandModal,setDemandModal]=useState(false);
   useEffect(()=>{
@@ -1517,6 +1519,17 @@ doc.setFont('helvetica', 'bold');
     catch(error:any){setUserError(error.message)}
   };
 
+  const loadClientCategories=async(clientId?:number|string)=>{
+    try{
+      const query=clientId?`/client-categories?clientId=${clientId}`:'/client-categories';
+      const data=await request(query);
+      setClientCategories(data.data||[]);
+      return data.data||[];
+    }catch(error:any){
+      setClientCategories([]);
+      return [];
+    }
+  };
   const loadClients=async()=>{
     try{const data=await request('/clients');setClients(data.data||[])}
     catch(error:any){setClients([]);setApiError(error.message||'Não foi possível carregar os clientes.')}
@@ -1527,7 +1540,7 @@ doc.setFont('helvetica', 'bold');
       loadDemands();
       loadDashboard();
       loadTickets();
-      if(isAdmin)loadClients();
+      if(isAdmin||isInternal){loadClients();loadClientCategories();}
     }
   },[token,isAdmin]);
 
@@ -1575,7 +1588,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   const emptyDemand=()=>({
     problema:'',tratamento:'',horasAnalise:0,horasNecessarias:0,prioridade:'Média',
-    status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',responsavel:'',requesterUserId:'',ticketId:null,
+    status:'Aguardando análise',clientId:isClient?String(user?.clientId||''):'',categoryId:'',responsavel:'',requesterUserId:'',ticketId:null,
     analysisMonth:'',requestDate:'',deliveryDate:''
   });
   const openNewDemand=()=>{
@@ -1609,20 +1622,48 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
     setDemandModal(true);
   };
 
-  const openEditDemand=(d:Demand)=>{
+  const openEditDemand=async(d:Demand)=>{
     if(!isInternal&&!isClient)return;
-    setDemandError('');setEditingDemand(d);
+
+    setDemandError('');
+
+    const clientId=String((d as any).clientId||'');
+    const categoryId=String((d as any).categoryId||'');
+
+    let categories:any[]=[];
+
+    if(clientId){
+      categories=await loadClientCategories(clientId);
+      setDemandClientCategories(categories);
+    }else{
+      setDemandClientCategories([]);
+    }
+
+    setClientCategories(categories);
+
+    setEditingDemand(d);
+
     setDemandForm({
-      problema:d.problema,tratamento:d.tratamento,horasAnalise:d.horasAnalise,
-      horasNecessarias:d.horasNecessarias,prioridade:d.prioridade,status:d.status,
-      clientId:String((d as any).clientId||''),responsavel:d.responsavel,requesterUserId:String((d as any).requesterUserId||''),analysisMonth:String((d as any).analysisMonth||'').slice(0,10),requestDate:String((d as any).requestDate||'').slice(0,10),deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
+      problema:d.problema,
+      tratamento:d.tratamento,
+      horasAnalise:d.horasAnalise,
+      horasNecessarias:d.horasNecessarias,
+      prioridade:d.prioridade,
+      status:d.status,
+      clientId,
+      categoryId,
+      responsavel:d.responsavel,
+      requesterUserId:String((d as any).requesterUserId||''),
+      analysisMonth:String((d as any).analysisMonth||'').slice(0,10),
+      requestDate:String((d as any).requestDate||'').slice(0,10),
+      deliveryDate:String((d as any).deliveryDate||'').slice(0,10)
     });
+
     setDemandComments([]);
     setDemandCommentText('');
     setDemandModal(true);
     loadDemandComments(d.id);
   };
-
   const openLinkedDemandFromTicket=(ticket:any)=>{
     if(!ticket?.demandId)return;
 
@@ -1705,7 +1746,7 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
         analysisHours:Number(demandForm.horasAnalise)||0,requiredHours:Number(demandForm.horasNecessarias)||0,
         priority:demandForm.prioridade,status:demandForm.status,
         analysisMonth:demandForm.analysisMonth||null,requestDate:demandForm.requestDate||null,deliveryDate:demandForm.deliveryDate||((demandForm.status==='Concluída')?(()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')})():null),
-        clientId:Number(demandForm.clientId),responsible:demandForm.responsavel||'',requesterUserId:Number(demandForm.requesterUserId)||null,ticketId:demandForm.ticketId||null
+        clientId:Number(demandForm.clientId),categoryId:demandForm.categoryId ? Number(demandForm.categoryId) : null,responsible:demandForm.responsavel||'',requesterUserId:Number(demandForm.requesterUserId)||null,ticketId:demandForm.ticketId||null
       };
       const creatingDemand = !editingDemand;
 
@@ -1982,23 +2023,139 @@ const dashboardDemands=useMemo(()=>{
     finally{setUserSaving(false)}
   };
 
-  const openClientModal=(client?:Client)=>{
-    setClientError('');setEditingClient(client||null);
-    setClientForm({name:client?.name||'',email:client?.email||''});setClientModal(true);
-  };
+  const openClientModal=async(client?:Client)=>{
+    setClientError('');
+    setEditingClient(client||null);
 
+    let categories:string[]=[];
+
+    if(client?.id){
+      const data=await loadClientCategories(client.id);
+      categories=(data||[])
+        .filter((category:any)=>Boolean(category.active))
+        .map((category:any)=>String(category.name||'').trim())
+        .filter(Boolean);
+    }else{
+      setClientCategories([]);
+    }
+
+    setClientForm({
+      name:client?.name||'',
+      email:client?.email||'',
+      categories
+    });
+
+    setClientModal(true);
+  };
   const saveClient=async(e:React.FormEvent)=>{
-    e.preventDefault();setClientError('');
-    if(!clientForm.name.trim()){setClientError('Informe o nome da empresa/cliente.');return}
+    e.preventDefault();
+    setClientError('');
+
+    if(!clientForm.name.trim()){
+      setClientError('Informe o nome da empresa/cliente.');
+      return;
+    }
+
+    const categories=Array.from(
+      new Set(
+        clientForm.categories
+          .map(category=>category.trim())
+          .filter(Boolean)
+      )
+    );
+
     try{
       setClientSaving(true);
-      if(editingClient)await request(`/clients/${editingClient.id}`,{method:'PUT',body:JSON.stringify(clientForm)});
-      else await request('/clients',{method:'POST',body:JSON.stringify(clientForm)});
-      setClientModal(false);setEditingClient(null);setClientForm({name:'',email:''});await loadClients();
-    }catch(error:any){setClientError(error.message||'Não foi possível salvar o cliente.')}
-    finally{setClientSaving(false)}
-  };
 
+      let savedClientId:number;
+
+      if(editingClient){
+        await request(`/clients/${editingClient.id}`,{
+          method:'PUT',
+          body:JSON.stringify({
+            name:clientForm.name.trim(),
+            email:clientForm.email.trim()
+          })
+        });
+
+        savedClientId=Number(editingClient.id);
+      }else{
+        const response=await request('/clients',{
+          method:'POST',
+          body:JSON.stringify({
+            name:clientForm.name.trim(),
+            email:clientForm.email.trim()
+          })
+        });
+
+        savedClientId=Number(
+          response?.data?.id ||
+          response?.data?.clientId ||
+          response?.id
+        );
+      }
+
+      if(!savedClientId){
+        throw new Error('Não foi possível identificar o cliente salvo.');
+      }
+
+      const existingData=await loadClientCategories(savedClientId);
+      const existingCategories=existingData||[];
+
+      for(const category of existingCategories){
+        const stillExists=categories.some(
+          name=>name.toLowerCase()===String(category.name||'').trim().toLowerCase()
+        );
+
+        if(!stillExists && Boolean(category.active)){
+          await request(`/client-categories/${category.id}/status`,{
+            method:'PATCH',
+            body:JSON.stringify({active:false})
+          });
+        }
+      }
+
+      for(const name of categories){
+        const existing=existingCategories.find(
+          category=>String(category.name||'').trim().toLowerCase()===name.toLowerCase()
+        );
+
+        if(existing){
+          if(!Boolean(existing.active)){
+            await request(`/client-categories/${existing.id}/status`,{
+              method:'PATCH',
+              body:JSON.stringify({active:true})
+            });
+          }
+        }else{
+          await request('/client-categories',{
+            method:'POST',
+            body:JSON.stringify({
+              clientId:savedClientId,
+              name
+            })
+          });
+        }
+      }
+
+      setClientModal(false);
+      setEditingClient(null);
+      setClientForm({
+        name:'',
+        email:'',
+        categories:[]
+      });
+      setClientCategories([]);
+      await loadClients();
+
+    }catch(error:any){
+      setClientError(
+        error.message||'Não foi possível salvar o cliente.'
+      );
+    }finally{
+      setClientSaving(false);
+    }
+  };
   const copyTable=async()=>{
     const header=['Nº','Cliente','Problema','Tratamento','Análise','Horas necessárias','Prioridade','Status','Aprovação','Aprovado em','Data de entrega','Aprovado por','Responsável','Pago'];
     const rows=filtered.map(d=>[d.numero,(d as any).clientName||'',d.problema,d.tratamento,d.horasAnalise,d.horasNecessarias,d.prioridade,d.status,d.aprovacao,d.aprovadoEm?new Date(d.aprovadoEm).toLocaleString('pt-BR'):'',formatDate(d.deliveryDate || (d as any).delivery_date),d.aprovadoPor,d.responsavel,d.pago?'Sim':'Não']);
@@ -3399,7 +3556,7 @@ const proximas = minhasDemandas
       setFiles={setTicketCommentFiles}
     />}
 
-    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment} files={demandCommentFiles} setFiles={setDemandCommentFiles}/>}
+    {demandModal&&<DemandModal value={demandForm} setValue={setDemandForm} clients={clients} users={users} clientCategories={demandClientCategories} loadClientCategories={async(clientId)=>{const data=await loadClientCategories(clientId);setDemandClientCategories(data);return data}} editing={editingDemand} isClient={isClient} error={demandError} saving={demandSaving} success={demandSuccess} close={()=>setDemandModal(false)} save={saveDemand} approve={approve} comments={demandComments} commentsLoading={demandCommentsLoading} commentText={demandCommentText} setCommentText={setDemandCommentText} commentSaving={demandCommentSaving} sendComment={sendDemandComment} files={demandCommentFiles} setFiles={setDemandCommentFiles}/>}
   </div>;
 }
 
@@ -3720,15 +3877,191 @@ function ClientsPage({clients,demands,isAdmin,onNew,onEdit,onDemand}:{clients:Cl
   </section>
 }
 
-function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{name:string;email:string};setValue:(v:any)=>void;editing:Client|null;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void}){
-  return <div className="hf-modal-backdrop"><div className="hf-modal user-modal">
-    <div className="hf-modal-head"><div><span className="hf-eyebrow">Cadastro de empresa</span><h2>{editing?'Editar cliente':'Novo cliente'}</h2><p>Cadastre a empresa que poderá receber usuários e demandas.</p></div><button onClick={close}><X size={20}/></button></div>
-    <form onSubmit={save} className="hf-form"><label>Nome da empresa<input value={value.name} onChange={e=>setValue({...value,name:e.target.value})} placeholder="Ex.: ABHO" autoComplete="off"/></label><label>E-mail<input type="email" value={value.email} onChange={e=>setValue({...value,email:e.target.value})} placeholder="contato@empresa.com.br" autoComplete="off"/></label>
-    {error&&<div className="hf-login-error"><AlertCircle size={16}/>{error}</div>}<div className="hf-form-actions"><button type="button" className="hf-secondary" onClick={close}>Cancelar</button><button className="hf-primary" disabled={saving}>{saving?'Salvando...':editing?'Salvar alterações':'Cadastrar empresa'}</button></div></form>
-  </div></div>
+function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{name:string;email:string;categories:string[]};setValue:(v:any)=>void;editing:Client|null;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void}){
+  const [newCategory,setNewCategory]=useState('');
+
+  const addCategory=()=>{
+    const category=newCategory.trim();
+
+    if(!category)return;
+
+    const exists=value.categories.some(
+      item=>item.trim().toLowerCase()===category.toLowerCase()
+    );
+
+    if(exists){
+      setNewCategory('');
+      return;
+    }
+
+    setValue({
+      ...value,
+      categories:[...value.categories,category]
+    });
+
+    setNewCategory('');
+  };
+
+  const removeCategory=(categoryToRemove:string)=>{
+    setValue({
+      ...value,
+      categories:value.categories.filter(
+        category=>category!==categoryToRemove
+      )
+    });
+  };
+
+  return <div className="hf-modal-backdrop">
+    <div className="hf-modal user-modal">
+
+      <div className="hf-modal-head">
+        <div>
+          <span className="hf-eyebrow">Cadastro de empresa</span>
+          <h2>{editing?'Editar cliente':'Novo cliente'}</h2>
+          <p>Cadastre a empresa que poderá receber usuários e demandas.</p>
+        </div>
+
+        <button type="button" onClick={close}>
+          <X size={20}/>
+        </button>
+      </div>
+
+      <form onSubmit={save} className="hf-form">
+
+        <label>
+          Nome da empresa
+          <input
+            value={value.name}
+            onChange={e=>setValue({...value,name:e.target.value})}
+            placeholder="Ex.: ABHO"
+            autoComplete="off"
+          />
+        </label>
+
+        <label>
+          E-mail
+          <input
+            type="email"
+            value={value.email}
+            onChange={e=>setValue({...value,email:e.target.value})}
+            placeholder="contato@empresa.com.br"
+            autoComplete="off"
+          />
+        </label>
+
+        <div>
+          <label>
+            Categorias
+          </label>
+
+          <div style={{
+            display:'flex',
+            gap:8,
+            flexWrap:'wrap',
+            marginBottom:10
+          }}>
+            {value.categories.length>0 ? (
+              value.categories.map(category=>(
+                <span
+                  key={category}
+                  style={{
+                    display:'inline-flex',
+                    alignItems:'center',
+                    gap:6,
+                    padding:'6px 10px',
+                    borderRadius:999,
+                    background:'#f1f5f9',
+                    border:'1px solid #dbe3ec',
+                    fontSize:13
+                  }}
+                >
+                  {category}
+
+                  <button
+                    type="button"
+                    onClick={()=>removeCategory(category)}
+                    style={{
+                      border:'none',
+                      background:'transparent',
+                      cursor:'pointer',
+                      padding:0,
+                      display:'flex'
+                    }}
+                    title="Remover categoria"
+                  >
+                    <X size={14}/>
+                  </button>
+                </span>
+              ))
+            ) : (
+              <span style={{
+                fontSize:13,
+                color:'#64748b'
+              }}>
+                Nenhuma categoria cadastrada. Campo opcional.
+              </span>
+            )}
+          </div>
+
+          <div style={{
+            display:'flex',
+            gap:8
+          }}>
+            <input
+              value={newCategory}
+              onChange={e=>setNewCategory(e.target.value)}
+              onKeyDown={e=>{
+                if(e.key==='Enter'){
+                  e.preventDefault();
+                  addCategory();
+                }
+              }}
+              placeholder="Ex.: ERP, E-commerce, Site..."
+              autoComplete="off"
+            />
+
+            <button
+              type="button"
+              className="hf-secondary"
+              onClick={addCategory}
+              disabled={!newCategory.trim()}
+              style={{
+                whiteSpace:'nowrap'
+              }}
+            >
+              + Adicionar
+            </button>
+          </div>
+        </div>
+
+        {error&&(
+          <div className="hf-login-error">
+            <AlertCircle size={16}/>
+            {error}
+          </div>
+        )}
+
+        <div className="hf-form-actions">
+          <button
+            type="button"
+            className="hf-secondary"
+            onClick={close}
+          >
+            Cancelar
+          </button>
+
+          <button
+            className="hf-primary"
+            disabled={saving}
+          >
+            {saving?'Salvando...':editing?'Salvar alterações':'Cadastrar empresa'}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
 }
-
-
 function NotificationsModal({
   notifications,
   close,
@@ -4407,7 +4740,7 @@ function TicketDetailsModal({
     </div>
   </div>;
 }
-function DemandModal({value,setValue,clients,users,editing,isClient,error,saving,success,close,save,approve,comments,commentsLoading,commentText,setCommentText,commentSaving,sendComment,files,setFiles}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void;comments:any[];commentsLoading:boolean;commentText:string;setCommentText:(v:string)=>void;commentSaving:boolean;sendComment:()=>void;files:File[];setFiles:(v:File[])=>void}){
+function DemandModal({value,setValue,clients,users,clientCategories,loadClientCategories,editing,isClient,error,saving,success,close,save,approve,comments,commentsLoading,commentText,setCommentText,commentSaving,sendComment,files,setFiles}:{value:any;setValue:(v:any)=>void;clients:Client[];users:User[];clientCategories:any[];loadClientCategories:(clientId?:number|string)=>Promise<any[]>;editing:Demand|null;isClient:boolean;error:string;saving:boolean;success:string;close:()=>void;save:(e:React.FormEvent)=>void;approve:(d:Demand,approved?:boolean)=>void;comments:any[];commentsLoading:boolean;commentText:string;setCommentText:(v:string)=>void;commentSaving:boolean;sendComment:()=>void;files:File[];setFiles:(v:File[])=>void}){
   const readonly=isClient;
   const demandForApproval=editing;
 
@@ -4443,11 +4776,35 @@ function DemandModal({value,setValue,clients,users,editing,isClient,error,saving
         <div className="hf-form-section">
           <div className="hf-section-title"><span>01</span><div><strong>Identificação</strong><small>{readonly?'Informações da demanda':'Vincule a demanda e descreva o problema.'}</small></div></div>
           <label><span>Cliente</span>
-            <select value={value.clientId} onChange={e=>setValue({...value,clientId:e.target.value})} disabled={readonly||Boolean(editing)}>
+            <select value={value.clientId} onChange={async e=>{const clientId=e.target.value;setValue({...value,clientId,categoryId:""});if(clientId)await loadClientCategories(clientId)}} disabled={readonly||Boolean(editing)}>
               <option value="">Selecione o cliente</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </label>
-          <label><span>Problema</span>
+          
+
+          <label>
+            <span>Categoria <small>(opcional)</small></span>
+            <select
+              value={value.categoryId||''}
+              onChange={e=>setValue({...value,categoryId:e.target.value})}
+              disabled={readonly||!value.clientId}
+            >
+              <option value="">Sem categoria</option>
+              {(clientCategories||[])
+                .filter(category=>
+                  Boolean(category.active) &&
+                  String(category.clientId)===String(value.clientId)
+                )
+                .map(category=>(
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+
+<label><span>Problema</span>
             <textarea value={value.problema} onChange={e=>setValue({...value,problema:e.target.value})} placeholder="Descreva de forma clara o problema ou necessidade..." rows={3} readOnly={readonly}/>
           </label>
         </div>
@@ -5153,7 +5510,8 @@ Regras:
                 <span>O que você precisa resolver?</span>
               </div>
 
-              {demandSuggestion?.mode==='result' ? (<div className="hf-saphire-ia-demand-create"><div className="hf-saphire-ia-demand-title"><strong>✨ Sugestão da Saphire pronta</strong><span>Revise os dados antes de aprovar a demanda.</span></div><label><span>Título</span><input type="text" value={demandSuggestion.titulo||''} readOnly /></label><label><span>Problema</span><textarea value={demandSuggestion.problema||''} readOnly rows={4} /></label><div className="hf-saphire-ia-demand-summary"><div><span>Análise</span><strong>{demandSuggestion.horasAnalise||0}h</strong></div><div><span>Execução</span><strong>{demandSuggestion.horasNecessarias||0}h</strong></div><div><span>Total</span><strong>{(Number(demandSuggestion.horasAnalise)||0)+(Number(demandSuggestion.horasNecessarias)||0)}h</strong></div><div><span>Prioridade</span><strong>{demandSuggestion.prioridade||'Média'}</strong></div><div><span>Entrega</span><strong>{demandSuggestion.dataEntrega||'-'}</strong></div></div><div className="hf-saphire-ia-demand-actions"><button type="button" onClick={cancelDemandCreation}>Voltar</button><button type="button" onClick={()=>onApproveDemand(demandSuggestion)}>✓ Aprovar e abrir demanda</button></div></div>) : demandSuggestion?.mode==='create' ? (
+              {demandSuggestion?.mode==='result' ? (<div className="hf-saphire-ia-demand-create"><div className="hf-saphire-ia-demand-title"><strong>✨ Sugestão da Saphire pronta</strong><span>Revise os dados antes de aprovar a demanda.</span></div><label><span>Título</span><input type="text" value={demandSuggestion.titulo||''} readOnly /></label>
+<label><span>Problema</span><textarea value={demandSuggestion.problema||''} readOnly rows={4} /></label><div className="hf-saphire-ia-demand-summary"><div><span>Análise</span><strong>{demandSuggestion.horasAnalise||0}h</strong></div><div><span>Execução</span><strong>{demandSuggestion.horasNecessarias||0}h</strong></div><div><span>Total</span><strong>{(Number(demandSuggestion.horasAnalise)||0)+(Number(demandSuggestion.horasNecessarias)||0)}h</strong></div><div><span>Prioridade</span><strong>{demandSuggestion.prioridade||'Média'}</strong></div><div><span>Entrega</span><strong>{demandSuggestion.dataEntrega||'-'}</strong></div></div><div className="hf-saphire-ia-demand-actions"><button type="button" onClick={cancelDemandCreation}>Voltar</button><button type="button" onClick={()=>onApproveDemand(demandSuggestion)}>✓ Aprovar e abrir demanda</button></div></div>) : demandSuggestion?.mode==='create' ? (
                 <div className="hf-saphire-ia-demand-create">
                   <div className="hf-saphire-ia-demand-title">
                     <strong>✨ Criar demanda com a Saphire</strong>
@@ -10873,6 +11231,33 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
