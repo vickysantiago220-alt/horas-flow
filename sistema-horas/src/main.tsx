@@ -871,6 +871,18 @@ const markNotificationAsRead = async (id:string) => {
 
     const reportDemands = demands.filter(d => {
       if (!clientMatches(d)) return false;
+
+      const categoryId =
+        (d as any).categoryId ??
+        (d as any).category_id ??
+        '';
+
+      if (
+        dashboardCategoryFilter !== 'Todas' &&
+        String(categoryId) !== String(dashboardCategoryFilter)
+      ) {
+        return false;
+      }
       if (dashboardPeriod === 'Todos') return true;
       if (normalizeStatus(d.status) === 'Analisada') {
         return String(d.analysisMonth || '').slice(0, 7) === dashboardPeriod;
@@ -1221,23 +1233,58 @@ doc.setFont('helvetica', 'bold');
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(108, 122, 142);
-    doc.text(String(reportDemands.length) + ' demandas • ' + periodLabel + ' • ' + clientName, 14, 25);
+    const selectedReportCategory =
+      dashboardCategoryFilter === 'Todas'
+        ? 'Todas as categorias'
+        : (
+            clientCategories.find(
+              (category:any) =>
+                String(category.id) === String(dashboardCategoryFilter)
+            )?.name || 'Categoria selecionada'
+          );
 
-    const reportDemandTable = reportDemands.map(d => [
-      String(d.numero).padStart(3, '0'),
-      d.problema || '-',
-      normalizeStatus(d.status),
-      d.aprovadoPor || '-',
-      String(Number(d.horasAnalise || 0)) + 'h',
-      String(Number(d.horasNecessarias || 0)) + 'h',
-      formatPdfDate(d.requestDate || (d as any).request_date || d.criadoEm),
-      formatPdfDate(d.deliveryDate || (d as any).delivery_date)
-    ]);
+    doc.text(
+      String(reportDemands.length) +
+      ' demandas • ' +
+      periodLabel +
+      ' • ' +
+      clientName +
+      ' • ' +
+      selectedReportCategory,
+      14,
+      25
+    );
+
+    const reportDemandTable = reportDemands.map(d => {
+      const categoryId =
+        (d as any).categoryId ??
+        (d as any).category_id ??
+        '';
+
+      const categoryName =
+        clientCategories.find(
+          (category:any) =>
+            String(category.id) === String(categoryId)
+        )?.name || '-';
+
+      return [
+        String(d.numero).padStart(3, '0'),
+        categoryName,
+        d.problema || '-',
+        normalizeStatus(d.status),
+        d.aprovadoPor || '-',
+        String(Number(d.horasAnalise || 0)) + 'h',
+        String(Number(d.horasNecessarias || 0)) + 'h',
+        formatPdfDate(d.requestDate || (d as any).request_date || d.criadoEm),
+        formatPdfDate(d.deliveryDate || (d as any).delivery_date)
+      ];
+    });
 
     autoTable(doc, {
       startY: 31,
       head: [[
         'Nº',
+        'Categoria',
         'Demanda',
         'Status',
         'Aprovado por',
@@ -1269,17 +1316,18 @@ doc.setFont('helvetica', 'bold');
       },
       columnStyles: {
         0: { cellWidth: 12 },
-        1: { cellWidth: 73 },
-        2: { cellWidth: 28 },
-        3: { cellWidth: 30 },
-        4: { cellWidth: 25 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 95 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 30 },
         5: { cellWidth: 25 },
-        6: { cellWidth: 27 },
-        7: { cellWidth: 27 }
+        6: { cellWidth: 25 },
+        7: { cellWidth: 27 },
+        8: { cellWidth: 20 }
       },
       margin: { left: 14, right: 14 },
       didParseCell: (data: any) => {
-        if (data.section === 'body' && data.column.index === 2) {
+        if (data.section === 'body' && data.column.index === 3) {
           const status = String(data.cell.raw || '');
           const colors: Record<string, number[]> = {
             'Aguardando análise': [148, 163, 184],
@@ -11380,6 +11428,12 @@ const styles = `
   }
 }
 `
+
+
+
+
+
+
 
 
 
