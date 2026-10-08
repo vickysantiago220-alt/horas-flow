@@ -35,7 +35,7 @@ type HistoryItem = { id:string; date:string; user:string; field:string; oldValue
 type Demand = {
   id:string; numero:number; problema:string; tratamento:string; horasAnalise:number; horasNecessarias:number;
   prioridade:Priority; status:Status; aprovacao:'Pendente'|'Aprovada'|'Reprovada'; aprovadoPor:string;
-  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; requesterUserId?:number|string; criadoEm:string; history:HistoryItem[];
+  aprovadoEm:string; analysisMonth?:string; requestDate?:string; deliveryDate?:string; rejectionReason?:string; pago:boolean; responsavel:string; requesterUserId?:number|string; categoryId?:number|string|null; criadoEm:string; history:HistoryItem[];
 };
 
 const API = 'https://horas-flow.onrender.com/api';
@@ -94,6 +94,7 @@ function normalizeDemand(raw:any):Demand {
     aprovadoEm:raw.approvedAt ?? raw.approved_at ?? '', analysisMonth, requestDate, deliveryDate,
     rejectionReason:raw.rejectionReason ?? raw.rejection_reason ?? raw.rejection ?? '',
     pago:Boolean(raw.paid ?? raw.pago), responsavel:raw.responsible ?? raw.responsavel ?? '', requesterUserId:raw.requesterUserId ?? raw.requester_user_id ?? '',
+    categoryId:raw.categoryId ?? raw.category_id ?? null,
     criadoEm:String(created).slice(0,10), history:raw.history ?? []
   };
 }
@@ -11231,6 +11232,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
