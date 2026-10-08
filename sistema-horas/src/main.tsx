@@ -4855,6 +4855,25 @@ function DemandModal({value,setValue,clients,users,clientCategories,loadClientCa
   const readonly=isClient;
   const demandForApproval=editing;
 
+  const selectedClientId=String(value.clientId||'');
+
+  const demandRequesterUsers=users.filter((u:any)=>
+    Boolean(u.active) &&
+    selectedClientId &&
+    String(u.clientId??'')===selectedClientId
+  );
+
+  const demandResponsibleUsers=users.filter((u:any)=>
+    Boolean(u.active) &&
+    (
+      String(u.role||'').toUpperCase()==='ADMIN' ||
+      (
+        selectedClientId &&
+        String(u.clientId??'')===selectedClientId
+      )
+    )
+  );
+
   return <div className="hf-modal-backdrop">
     <div className="hf-modal hf-demand-modal">
 
@@ -4994,13 +5013,11 @@ function DemandModal({value,setValue,clients,users,clientCategories,loadClientCa
               disabled={readonly}
             >
               <option value="">Selecione o usuário solicitante</option>
-              {users
-                .filter((u:any)=>Boolean(u.active))
-                .map((u:any)=>(
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
+              {demandRequesterUsers.map((u:any)=>(
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
             </select>
           </label>
 
@@ -5012,13 +5029,11 @@ function DemandModal({value,setValue,clients,users,clientCategories,loadClientCa
               disabled={readonly}
             >
               <option value="">Selecione o responsável</option>
-              {users
-                .filter((u:any)=>Boolean(u.active))
-                .map((u:any)=>(
-                  <option key={u.id} value={u.name}>
-                    {u.name}
-                  </option>
-                ))}
+              {demandResponsibleUsers.map((u:any)=>(
+                <option key={u.id} value={u.name}>
+                  {u.name}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -11365,6 +11380,7 @@ const styles = `
   }
 }
 `
+
 
 
 
