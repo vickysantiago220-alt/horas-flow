@@ -142,7 +142,8 @@ const DEMAND_SELECT = `
     updated_at AS updatedAt,
     request_date AS requestDate,
     delivery_date AS deliveryDate,
-    requester_user_id AS requesterUserId
+    requester_user_id AS requesterUserId,
+    category_id AS categoryId
   FROM demands
 `;
 
@@ -698,6 +699,275 @@ app.patch(
 // =====================================================
 
 
+// =====================================================
+// CATEGORIAS / MÓDULOS DOS CLIENTES
+// =====================================================
+
+// LISTAR CATEGORIAS
+app.get(
+  '/api/client-categories',
+  authenticate,
+  authorize('ADMIN','INTERNO'),
+  async (req, res) => {
+    try {
+      const clientId = req.query.clientId
+        ? Number(req.query.clientId)
+        : null;
+
+      let query = `
+        SELECT
+          id,
+          client_id AS clientId,
+          name,
+          active,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM client_categories
+      `;
+
+      const params: any[] = [];
+
+      if (clientId) {
+        query += ` WHERE client_id = ? `;
+        params.push(clientId);
+      }
+
+      query += ` ORDER BY name ASC `;
+
+      const [rows] = await pool.query(query, params);
+
+      return res.json({
+        success: true,
+        data: rows
+      });
+    } catch (error: any) {
+      console.error('ERRO AO LISTAR CATEGORIAS:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao listar categorias.',
+        error: error?.message
+      });
+    }
+  }
+);
+
+// CADASTRAR CATEGORIA
+app.post(
+  '/api/client-categories',
+  authenticate,
+  authorize('ADMIN'),
+  async (req, res) => {
+    try {
+      const {
+        clientId,
+        name
+      } = req.body;
+
+      const parsedClientId = Number(clientId);
+
+      if (!parsedClientId || !name?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cliente e nome da categoria são obrigatórios.'
+        });
+      }
+
+      const [clientRows] = await pool.query(
+        `
+        SELECT id
+        FROM clients
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [parsedClientId]
+      );
+
+      if (!(clientRows as any[]).length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Cliente não encontrado.'
+        });
+      }
+
+      const [result] = await pool.execute(
+        `
+        INSERT INTO client_categories (
+          client_id,
+          name,
+          active
+        )
+        VALUES (?, ?, 1)
+        `,
+        [
+          parsedClientId,
+          name.trim()
+        ]
+      );
+
+      const insertResult = result as any;
+
+      const [rows] = await pool.query(
+        `
+        SELECT
+          id,
+          client_id AS clientId,
+          name,
+          active,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM client_categories
+        WHERE id = ?
+        `,
+        [insertResult.insertId]
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Categoria criada com sucesso.',
+        data: (rows as any[])[0]
+      });
+    } catch (error: any) {
+      console.error('ERRO AO CRIAR CATEGORIA:', error);
+
+      if (error?.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({
+          success: false,
+          message: 'Essa categoria já existe para este cliente.'
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao criar categoria.',
+        error: error?.message
+      });
+    }
+  }
+);
+
+// EDITAR CATEGORIA
+app.put(
+  '/api/client-categories/:id',
+  authenticate,
+  authorize('ADMIN'),
+  async (req, res) => {
+    try {
+      const id = getId(req.params.id);
+      const { name, active } = req.body;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID da categoria inválido.'
+        });
+      }
+
+      if (!name?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nome da categoria é obrigatório.'
+        });
+      }
+
+      await pool.execute(
+        `
+        UPDATE client_categories
+        SET
+          name = ?,
+          active = ?
+        WHERE id = ?
+        `,
+        [
+          name.trim(),
+          active === undefined ? 1 : (active ? 1 : 0),
+          id
+        ]
+      );
+
+      const [rows] = await pool.query(
+        `
+        SELECT
+          id,
+          client_id AS clientId,
+          name,
+          active,
+          created_at AS createdAt,
+          updated_at AS updatedAt
+        FROM client_categories
+        WHERE id = ?
+        `,
+        [id]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Categoria atualizada com sucesso.',
+        data: (rows as any[])[0]
+      });
+    } catch (error: any) {
+      console.error('ERRO AO EDITAR CATEGORIA:', error);
+
+      if (error?.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({
+          success: false,
+          message: 'Essa categoria já existe para este cliente.'
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao editar categoria.',
+        error: error?.message
+      });
+    }
+  }
+);
+
+// INATIVAR / ATIVAR CATEGORIA
+app.patch(
+  '/api/client-categories/:id/status',
+  authenticate,
+  authorize('ADMIN'),
+  async (req, res) => {
+    try {
+      const id = getId(req.params.id);
+      const { active } = req.body;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID da categoria inválido.'
+        });
+      }
+
+      await pool.execute(
+        `
+        UPDATE client_categories
+        SET active = ?
+        WHERE id = ?
+        `,
+        [
+          active ? 1 : 0,
+          id
+        ]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Status da categoria atualizado com sucesso.'
+      });
+    } catch (error: any) {
+      console.error('ERRO AO ALTERAR STATUS DA CATEGORIA:', error);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao alterar status da categoria.',
+        error: error?.message
+      });
+    }
+  }
+);
 // LISTAR CLIENTES
 
 app.get(
@@ -1257,9 +1527,11 @@ app.post(
         priority = 'Média',
         status = 'Aguardando anÃ¡lise',
         clientId = null,
+        categoryId = null,
         responsible = null,
         requesterUserId = null,
         ticketId = null,
+        categoryId = null,
       } = req.body;
 
       if (
@@ -1317,6 +1589,46 @@ app.post(
           `
         );
 
+      if (categoryId !== null && categoryId !== undefined && categoryId !== '') {
+        const normalizedCategoryId = Number(categoryId);
+        const normalizedClientId = Number(clientId);
+
+        if (!Number.isInteger(normalizedCategoryId) || normalizedCategoryId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Categoria inválida.'
+          });
+        }
+
+        if (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cliente é obrigatório para selecionar uma categoria.'
+          });
+        }
+
+        const [categoryRows] = await pool.query(
+          `
+          SELECT id
+          FROM client_categories
+          WHERE id = ?
+            AND client_id = ?
+            AND active = 1
+          LIMIT 1
+          `,
+          [
+            normalizedCategoryId,
+            normalizedClientId
+          ]
+        );
+
+        if (!(categoryRows as any[]).length) {
+          return res.status(400).json({
+            success: false,
+            message: 'A categoria selecionada não pertence ao cliente informado.'
+          });
+        }
+      }
       const nextNumber = Number(
         (lastRows as any[])[0]
           .nextNumber
@@ -1344,6 +1656,7 @@ app.post(
             responsible,
             requester_user_id,
             client_id,
+            category_id,
             paid
           )
           VALUES (
@@ -1360,6 +1673,7 @@ app.post(
             NULL,
             NULL,
             NULL,
+            ?,
             ?,
             ?,
             ?,
@@ -1391,6 +1705,9 @@ app.post(
               : null,
             clientId
               ? Number(clientId)
+              : null,
+            categoryId
+              ? Number(categoryId)
               : null,
           ]
         );
@@ -1606,6 +1923,46 @@ app.post(
         FROM tickets
       `);
 
+      if (categoryId !== null && categoryId !== undefined && categoryId !== '') {
+        const normalizedCategoryId = Number(categoryId);
+        const normalizedClientId = Number(clientId);
+
+        if (!Number.isInteger(normalizedCategoryId) || normalizedCategoryId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Categoria inválida.'
+          });
+        }
+
+        if (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cliente é obrigatório para selecionar uma categoria.'
+          });
+        }
+
+        const [categoryRows] = await pool.query(
+          `
+          SELECT id
+          FROM client_categories
+          WHERE id = ?
+            AND client_id = ?
+            AND active = 1
+          LIMIT 1
+          `,
+          [
+            normalizedCategoryId,
+            normalizedClientId
+          ]
+        );
+
+        if (!(categoryRows as any[]).length) {
+          return res.status(400).json({
+            success: false,
+            message: 'A categoria selecionada não pertence ao cliente informado.'
+          });
+        }
+      }
       const nextNumber = Number(
         (lastRows as any[])[0]?.nextNumber || 1
       );
@@ -2076,6 +2433,7 @@ app.put(
         priority = 'Média',
         status = 'Aguardando anÃ¡lise',
         clientId = null,
+        categoryId = null,
         responsible = null,
       } = req.body;
 
@@ -2125,6 +2483,45 @@ app.put(
         });
       }
 
+      if (categoryId !== null && categoryId !== undefined && categoryId !== '') {
+        const normalizedCategoryId = Number(categoryId);
+        const normalizedClientId = Number(clientId);
+
+        if (!Number.isInteger(normalizedCategoryId) || normalizedCategoryId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Categoria inválida.'
+          });
+        }
+
+        if (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cliente é obrigatório para selecionar uma categoria.'
+          });
+        }
+
+        const [categoryRows] = await pool.query(
+          `
+          SELECT id
+          FROM client_categories
+          WHERE id = ?
+            AND client_id = ?
+          LIMIT 1
+          `,
+          [
+            normalizedCategoryId,
+            normalizedClientId
+          ]
+        );
+
+        if (!(categoryRows as any[]).length) {
+          return res.status(400).json({
+            success: false,
+            message: 'A categoria selecionada não pertence ao cliente informado.'
+          });
+        }
+      }
       await pool.execute(
         `
         UPDATE demands
@@ -2139,6 +2536,7 @@ app.put(
           request_date = ?,
           delivery_date = ?,
           client_id = ?,
+          category_id = ?,
           responsible = ?,
           updated_at = NOW()
         WHERE id = ?
@@ -2159,6 +2557,9 @@ app.put(
             : null,
           clientId
             ? Number(clientId)
+            : null,
+          categoryId
+            ? Number(categoryId)
             : null,
           responsible?.trim()
             ? responsible.trim()
@@ -3772,6 +4173,54 @@ app.use(
 
 async function startServer() {
   try {
+    // =====================================================
+    // CATEGORIAS / MÓDULOS DOS CLIENTES
+    // =====================================================
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS client_categories (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        client_id BIGINT NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_client_category_name (client_id, name),
+        KEY idx_client_categories_client (client_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log(
+      'Tabela client_categories criada/verificada com sucesso.'
+    );
+
+    const [categoryColumns] = await pool.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'demands'
+        AND COLUMN_NAME = 'category_id'
+    `);
+
+    const hasCategoryId =
+      (categoryColumns as any[]).length > 0;
+
+    if (!hasCategoryId) {
+      await pool.query(`
+        ALTER TABLE demands
+        ADD COLUMN category_id BIGINT NULL
+      `);
+
+      console.log(
+        'Coluna category_id criada com sucesso.'
+      );
+    } else {
+      console.log(
+        'Coluna category_id já existe.'
+      );
+    }
+
     const [columns] = await pool.query(
       `
       SELECT COUNT(*) AS total
@@ -3918,4 +4367,15 @@ async function startServer() {
 }
 
 startServer();
+
+
+
+
+
+
+
+
+
+
+
 
