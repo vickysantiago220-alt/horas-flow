@@ -2473,7 +2473,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
               <p>Os chamados abertos pelos clientes aparecerão aqui.</p>
             </div>
           ) : (
-            <div className="hf-table-wrap">
+            <div className="hf-table-wrap hf-ticket-table">
               <table>
                 <thead>
                   <tr>
@@ -6953,6 +6953,22 @@ const styles = `
   width:100%;
   min-width:0;
 }.hf-table-wrap th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8b96a8;text-align:left;padding:10px 8px;border-bottom:1px solid #e8ecf2;white-space:nowrap}.hf-table-wrap td{padding:8px;border-bottom:1px solid #eef1f5;font-size:12px}.hf-table-wrap input,.hf-table-wrap select{border:1px solid #e3e7ee;border-radius:7px;height:34px;padding:0 8px;min-width:130px;background:#fff}.hf-table-wrap input.hours{width:72px;min-width:72px}.hf-table-wrap .number{font-weight:800;color:#315efb}.hf-pill{padding:5px 8px;border-radius:20px;font-size:11px;font-weight:700}.hf-pill.approved{background:#eaf8f1;color:#21865a}.hf-approve{border:0;background:#eef3ff;color:#315efb;border-radius:7px;padding:7px 9px;font-size:11px;font-weight:700}.hf-toggle{border:1px solid #e0e5ed;background:#fff;border-radius:20px;padding:6px 10px;font-size:11px;color:#7d899b}.hf-toggle.on{background:#eaf8f1;border-color:#cceedd;color:#21865a}.hf-icon-btn{width:30px;height:30px;border:0;background:#f2f5f9;color:#657188;border-radius:8px;display:grid;place-items:center}.hf-icon-btn.danger:hover{background:#fff0f0;color:#d13d3d}.hf-empty{padding:40px;display:flex;flex-direction:column;align-items:center;gap:7px;color:#8994a5}.hf-totals{display:flex;gap:20px;justify-content:flex-end;padding-top:15px;color:#788497;font-size:12px}.hf-totals strong{color:#27344b}.hf-user-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.hf-user-card{border:1px solid #e4e9f0;border-radius:14px;padding:17px}.hf-user-card-top{display:flex;justify-content:space-between;align-items:center}.hf-user-card h3{margin:15px 0 4px;font-size:15px}.hf-user-card p{margin:0;color:#8490a2;font-size:12px}.hf-role{font-size:10px;font-weight:800;border-radius:20px;padding:5px 8px}.role-admin{background:#eeeaff;color:#6744cc}.role-interno{background:#eef3ff;color:#315efb}.role-cliente{background:#fff5df;color:#a56b00}.hf-client-tag{display:flex;gap:5px;align-items:center;color:#69758a;font-size:11px;background:#f6f8fb;padding:8px;border-radius:8px;margin-top:12px}.hf-user-status{display:flex;gap:7px;align-items:center;color:#7c8799;font-size:11px;margin-top:15px}.hf-user-status span{width:7px;height:7px;border-radius:50%;background:#d2d8e1}.hf-user-status span.active{background:#27a56c}.hf-loading{text-align:center;padding:45px;color:#8793a5}.hf-empty-page{text-align:center;padding:60px;color:#8490a2}.hf-empty-page h2,.hf-empty-page h3{color:#28364c;margin:12px 0 5px}.hf-empty-page p{margin:0 0 20px}.hf-modal-backdrop{position:fixed;inset:0;background:#07101d99;display:grid;place-items:center;padding:20px;z-index:100;backdrop-filter:blur(3px)}.hf-modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 25px 70px #07101d44}.hf-modal.user-modal{width:min(500px,100%)}.hf-modal-head{display:flex;justify-content:space-between;gap:15px;margin-bottom:22px}.hf-modal-head h2{margin:4px 0;font-size:21px}.hf-modal-head p{margin:0;color:#8793a5;font-size:12px}.hf-modal-head>button{border:0;background:#f2f5f8;width:34px;height:34px;border-radius:9px;color:#647188;display:grid;place-items:center}.hf-form{display:grid;gap:3px}.hf-form input,.hf-form select{height:44px;margin-top:7px;border:1px solid #dce2eb;border-radius:10px;padding:0 12px;outline:0;background:#fff}.hf-form input:focus,.hf-form select:focus{border-color:#315efb;box-shadow:0 0 0 4px #315efb12}.hf-password-field{position:relative;margin-top:7px}.hf-password-field input{width:100%;margin-top:0;padding-right:45px}.hf-password-toggle{position:absolute;right:5px;top:5px;width:34px;height:34px;border:0;background:transparent;color:#7d899b;border-radius:8px;display:grid;place-items:center}.hf-password-toggle:hover{background:#f2f5f9;color:#315efb}.hf-form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:10px}.hf-history{display:grid;gap:17px}.hf-history-row{display:flex;gap:12px;position:relative}.hf-history-line{width:8px;height:8px;border-radius:50%;background:#315efb;margin-top:5px;flex:none}.hf-history-row strong{font-size:12px}.hf-history-row p{font-size:12px;color:#677388;margin:5px 0}.hf-history-row span{font-size:10px;color:#9aa4b3}.hf-overlay{display:none}
+/* Ajuste exclusivo da coluna Problema dos Chamados */
+.hf-ticket-table table th:nth-child(3),
+.hf-ticket-table table td:nth-child(3){
+  width:420px !important;
+  min-width:420px !important;
+  max-width:420px !important;
+}
+
+.hf-ticket-table table td:nth-child(3) > div{
+  width:100% !important;
+  max-width:none !important;
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  word-break:break-word;
+}
 /* =====================================================
    COMMAND CENTER - BOTÃO DE BUSCA RÁPIDA
    ===================================================== */
@@ -11428,6 +11444,7 @@ const styles = `
   }
 }
 `
+
 
 
 
