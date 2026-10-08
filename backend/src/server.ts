@@ -2973,6 +2973,7 @@ app.get(
 
 app.get(
   '/api/notifications',
+  authenticate,
   authorize('ADMIN', 'INTERNO', 'CLIENTE'),
   async (req: AuthenticatedRequest, res) => {
     try {
@@ -4326,6 +4327,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
