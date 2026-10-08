@@ -3755,19 +3755,41 @@ const proximas = minhasDemandas
                 type="button"
                 className="hf-primary"
                 style={{marginTop:10}}
-                onClick={()=>{
-                  const ticket=tickets.find(
-                    t=>String(t.id)===String(commentPopup.ticketId)
-                  );
+                onClick={async()=>{
+                  try{
+                    const ticketId=String(commentPopup.ticketId);
 
-                  setCommentPopup(null);
+                    setCommentPopup(null);
 
-                  if(ticket){
-                    setSelectedTicket(ticket);
-                    setTicketComments([]);
-                    setTicketCommentText('');
-                    setTicketCommentFiles([]);
-                    loadTicketComments(ticket.id);
+                    const existingTicket=tickets.find(
+                      t=>String(t.id)===ticketId
+                    );
+
+                    if(existingTicket){
+                      setSelectedTicket(existingTicket);
+                      setTicketComments([]);
+                      setTicketCommentText('');
+                      setTicketCommentFiles([]);
+                      await loadTicketComments(existingTicket.id);
+                      return;
+                    }
+
+                    const response=await request('/tickets/' + ticketId);
+
+                    const ticket=response.data;
+
+                    if(ticket){
+                      setSelectedTicket(ticket);
+                      setTicketComments([]);
+                      setTicketCommentText('');
+                      setTicketCommentFiles([]);
+                      await loadTicketComments(ticket.id);
+                    }
+                  }catch(error:any){
+                    console.error(
+                      'Erro ao abrir chamado pela notificacao:',
+                      error
+                    );
                   }
                 }}
               >
@@ -3813,7 +3835,7 @@ const proximas = minhasDemandas
       </div>
     )}
     {notificationsOpen&&<NotificationsModal
-      notifications={notifications}
+      notifications={allNotifications}
       close={()=>setNotificationsOpen(false)}
       openDemand={openEditDemand}
       markAsRead={markNotificationAsRead}
