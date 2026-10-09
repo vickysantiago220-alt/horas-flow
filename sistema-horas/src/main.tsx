@@ -134,7 +134,7 @@ function App(){
   const [dashboardLoading,setDashboardLoading]=useState(false);
   const [dashboardClientFilter,setDashboardClientFilter]=useState('Todos');
   const [dashboardCategoryFilter,setDashboardCategoryFilter]=useState('Todas');
-  const [dashboardPeriod,setDashboardPeriod]=useState('Todos');
+  const [dashboardPeriod,setDashboardPeriod]=useState(() => { const now = new Date(); return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0')].join('-'); });
 
 const availablePeriods = useMemo(() => {
   const periods = new Set<string>();
@@ -157,6 +157,8 @@ const availablePeriods = useMemo(() => {
     }
   });
 
+  const now = new Date();
+  periods.add([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0')].join('-'));
   return Array.from(periods).sort().reverse();
 }, [demands]);
 const formatPeriod = (period:string) => {
@@ -1700,8 +1702,9 @@ doc.setFont('helvetica', 'bold');
       loadDashboard();
       loadTickets();
       if(isAdmin||isInternal){loadClients();loadClientCategories();}
+      else if(isClient && (user?.clientId)){loadClientCategories(user?.clientId);}
     }
-  },[token,isAdmin]);
+  },[token,isAdmin,isClient,user?.clientId]);
 
   useEffect(()=>{
     if(token&&tab==='dashboard')loadDashboard(dashboardClientFilter);
@@ -2029,7 +2032,16 @@ const saveDemandField=async(id:string,field:keyof Demand,value:unknown)=>{
 
   useEffect(()=>{if(demandPage>demandPageCount)setDemandPage(demandPageCount)},[demandPage,demandPageCount]);
 
-  const dashboardCategoryMatches=(d:Demand)=>{
+  const dashboardClientMatches=(d:Demand)=>{
+  const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
+  if(isClient){
+    const ownClientId=(user as any)?.clientId ?? (user as any)?.client_id ?? '';
+    return String(demandClientId)===String(ownClientId);
+  }
+  return dashboardClientFilter==='Todos' ||
+    String(demandClientId)===String(dashboardClientFilter);
+};
+const dashboardCategoryMatches=(d:Demand)=>{
   if(dashboardCategoryFilter==='Todas') return true;
 
   const categoryId=(d as any).categoryId ?? (d as any).category_id ?? '';
@@ -2047,8 +2059,7 @@ const demandCategoryMatches=(d:Demand)=>{
 const dashboardFilteredDemands=useMemo(()=>{
     return demands.filter(d=>{
       const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
-      const matchesClient=dashboardClientFilter==='Todos' ||
-        String(demandClientId)===String(dashboardClientFilter);
+      const matchesClient=dashboardClientMatches(d);
 
       const matchesPeriod=dashboardPeriod==='Todos' ||
         getDeliveryMonthKey(
@@ -2057,122 +2068,84 @@ const dashboardFilteredDemands=useMemo(()=>{
 
       return matchesClient && dashboardCategoryMatches(d) && matchesPeriod;
     });
-  },[demands,dashboardClientFilter,dashboardCategoryFilter,dashboardPeriod]);
+  },[demands,dashboardClientFilter,dashboardCategoryFilter,dashboardPeriod,isClient,user?.clientId]);
 
   const dashboardLocalStats=useMemo(()=>{
-    const list=dashboardFilteredDemands;
+    const list = dashboardFilteredDemands;
 
-    const byStatus:Record<string,number>={};
+    const byStatus: Record<string, number> = {};
 
-    const statusPeriodMatches=(d:Demand)=>{
-      if(dashboardPeriod==='Todos') return true;
-
-      const status=normalizeStatus(d.status);
-
-      if(status==='Analisada'){
-        return String(d.analysisMonth || '').slice(0,7)===dashboardPeriod;
-      }
-
-      if(status==='Concluída'){
-        return getDeliveryMonthKey(
-          d.deliveryDate || (d as any).delivery_date
-        )===dashboardPeriod;
-      }
-
-      return String(d.requestDate || '').slice(0,7)===dashboardPeriod;
-    };
-
-    statuses.forEach(status=>{
-      byStatus[status]=demands.filter(d=>{
-        const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
-
-        const matchesClient=dashboardClientFilter==='Todos' ||
-          String(demandClientId)===String(dashboardClientFilter);
-
-        return matchesClient &&
-          normalizeStatus(d.status)===status &&
-          statusPeriodMatches(d);
-      }).length;
+    statuses.forEach(status => {
+      byStatus[status] = list.filter(
+        d => normalizeStatus(d.status) === status
+      ).length;
     });
 
-    const approvedDemands=list.filter(
-      d=>normalizeApproval(d.aprovacao)==='Aprovada'
+    const approvedDemands = list.filter(
+      d => normalizeApproval(d.aprovacao) === 'Aprovada'
     ).length;
 
-    const rejectedDemands=list.filter(
-      d=>normalizeApproval(d.aprovacao)==='Reprovada'
+    const rejectedDemands = list.filter(
+      d => normalizeApproval(d.aprovacao) === 'Reprovada'
     ).length;
 
-    const pendingApprovalDemands=list.filter(
-      d=>normalizeApproval(d.aprovacao)==='Pendente'
+    const pendingApprovalDemands = list.filter(
+      d => normalizeApproval(d.aprovacao) === 'Pendente'
     ).length;
 
-    const analysisHours=demands
-      .filter(d=>{
-        const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
+    const analysisHours = list
+      .filter(d => normalizeStatus(d.status) === 'Analisada')
+      .reduce((sum, d) => sum + Number(d.horasAnalise || 0), 0);
 
-        const matchesClient=dashboardClientFilter==='Todos' ||
-          String(demandClientId)===String(dashboardClientFilter);
+    const requiredHours = list.reduce(
+      (sum, d) => sum + Number(d.horasNecessarias || 0),
+      0
+    );
 
-        const matchesAnalysisPeriod=dashboardPeriod==='Todos' ||
-          String(d.analysisMonth || '').slice(0,7)===dashboardPeriod;
+    const finishedDemands = list.filter(
+      d => normalizeStatus(d.status) === 'Concluída'
+    ).length;
 
-        return matchesClient &&
-          normalizeStatus(d.status)==='Analisada' &&
-          matchesAnalysisPeriod;
-      })
+    const finishedHours = list
+      .filter(d => normalizeStatus(d.status) === 'Concluída')
       .reduce(
-        (sum,d)=>sum+Number(d.horasAnalise||0),
+        (sum, d) =>
+          sum + Number(d.horasAnalise || 0) +
+          Number(d.horasNecessarias || 0),
         0
       );
 
-    const requiredHours=list.reduce(
-      (sum,d)=>sum+Number(d.horasNecessarias||0),0
-    );
-
-    const finishedDemands=list.filter(
-      d=>normalizeStatus(d.status)==='Concluída'
-    ).length;
-
-    const finishedHours=list
-      .filter(d=>normalizeStatus(d.status)==='Concluída')
+    const pendingApprovalHoursTotal = list
+      .filter(d => normalizeApproval(d.aprovacao) === 'Pendente')
       .reduce(
-        (sum,d)=>sum+
-          Number(d.horasAnalise||0)+
-          Number(d.horasNecessarias||0),
+        (sum, d) =>
+          sum + Number(d.horasAnalise || 0) +
+          Number(d.horasNecessarias || 0),
         0
       );
 
     return {
-      totalDemands:list.length,
-      totalHours:analysisHours+requiredHours,
+      totalDemands: list.length,
+      totalHours: analysisHours + requiredHours,
       analysisHours,
       requiredHours,
       approvedDemands,
       rejectedDemands,
       pendingApprovalDemands,
-      pendingApprovalHoursTotal:list
-        .filter(d=>normalizeApproval(d.aprovacao)==='Pendente')
-        .reduce(
-          (sum,d)=>sum+
-            Number(d.horasAnalise||0)+
-            Number(d.horasNecessarias||0),
-          0
-        ),
+      pendingApprovalHoursTotal,
       finishedDemands,
       finishedHours,
       byStatus
     };
-  },[dashboardFilteredDemands]);
-const dashboardDemands=useMemo(()=>{
+  }, [dashboardFilteredDemands]);
+  const dashboardDemands=useMemo(()=>{
     return demands.filter(d=>{
       const demandClientId=(d as any).clientId ?? (d as any).client_id ?? '';
-      const matchesClient=dashboardClientFilter==='Todos' ||
-        String(demandClientId)===String(dashboardClientFilter);
+      const matchesClient=dashboardClientMatches(d);
       const matchesPeriod=demandMatchesPeriod(d,dashboardPeriod);
-      return matchesClient && matchesPeriod;
+      return matchesClient && dashboardCategoryMatches(d) && matchesPeriod;
     }).slice(0,5);
-  },[demands,dashboardClientFilter,dashboardPeriod]);
+  },[demands,dashboardClientFilter,dashboardCategoryFilter,dashboardPeriod,isClient,user?.clientId]);
 
 
 
@@ -3249,6 +3222,14 @@ const proximas = minhasDemandas
     </select>
   )}
 </>}
+            {isClient && (
+              <select value={dashboardCategoryFilter} onChange={e=>setDashboardCategoryFilter(e.target.value)}>
+                <option value="Todas">Todas as categorias</option>
+                {(clientCategories||[])
+                  .filter((category:any)=>Boolean(category.active) && String(category.clientId ?? category.client_id)===String(user?.clientId ?? ''))
+                  .map((category:any)=><option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            )}
             <select
   value={dashboardPeriod}
   onChange={e=>setDashboardPeriod(e.target.value)}
@@ -11663,6 +11644,8 @@ const styles = `
   }
 }
 `
+
+
 
 
 
