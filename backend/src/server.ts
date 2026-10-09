@@ -543,12 +543,33 @@ app.post(
 app.get(
   '/api/client-categories',
   authenticate,
-  authorize('ADMIN','INTERNO'),
-  async (req, res) => {
+  authorize('ADMIN', 'INTERNO', 'CLIENTE'),
+  async (req: AuthenticatedRequest, res) => {
     try {
-      const clientId = req.query.clientId
+      let clientId: number | null = req.query.clientId
         ? Number(req.query.clientId)
         : null;
+
+      // Cliente só pode consultar as categorias da própria empresa.
+      if (req.user?.role === 'CLIENTE') {
+        const ownClientId = Number(req.user.clientId);
+
+        if (!Number.isInteger(ownClientId) || ownClientId <= 0) {
+          return res.status(403).json({
+            success: false,
+            message: 'Usuário não está vinculado a um cliente.',
+          });
+        }
+
+        if (clientId !== null && clientId !== ownClientId) {
+          return res.status(403).json({
+            success: false,
+            message: 'Você não possui acesso às categorias deste cliente.',
+          });
+        }
+
+        clientId = ownClientId;
+      }
 
       let query = `
         SELECT
@@ -563,7 +584,7 @@ app.get(
 
       const params: any[] = [];
 
-      if (clientId) {
+      if (clientId !== null) {
         query += ` WHERE client_id = ? `;
         params.push(clientId);
       }
@@ -4253,6 +4274,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
