@@ -2496,7 +2496,7 @@ onClick={()=>{setTab('chamados');setMobileMenu(false)}}/>
       {apiError&&<div className="hf-alert"><AlertCircle size={18}/><span>{apiError}</span><button onClick={()=>{setApiError('');loadDemands();loadClients()}}><RefreshCw size={16}/></button></div>}
 
       {tab==='usuarios'&&<UsersPage users={users} clients={clients} loading={loading} onNew={openUserModal} onRefresh={loadUsers} isAdmin={isAdmin}/>}
-      {tab==='clientes'&&<ClientsPage clients={clients} demands={demands} isAdmin={isAdmin} onNew={()=>openClientModal()} onEdit={openClientModal} onDemand={openEditDemand}/>}
+      {tab==='clientes'&&<ClientsPage clients={clients} demands={demands} isAdmin={isAdmin} onNew={()=>openClientModal()} onEdit={openClientModal} onDemand={openEditDemand} request={request}/>}
       {tab==='chamados'&&<>
         <section className="hf-panel">
           <div className="hf-panel-title">
@@ -3672,7 +3672,7 @@ const proximas = minhasDemandas
     {approvalDemand&&<ApprovalModal demand={approvalDemand} month={approvalMonth} setMonth={setApprovalMonth} reason={approvalReason} setReason={setApprovalReason} saving={approvalSaving} close={closeApproval} confirm={confirmApproval} type={approvalType}/>}
     {historyDemand&&<HistoryModal demand={historyDemand} loading={historyLoading} close={()=>setHistoryDemand(null)}/>}
     {userModal&&<UserModal value={newUser} setValue={setNewUser} clients={clients} error={userError} saving={userSaving} close={closeUserModal} save={saveUser}/>}
-    {clientModal&&<ClientModal value={clientForm} setValue={setClientForm} editing={editingClient} error={clientError} saving={clientSaving} close={()=>setClientModal(false)} save={saveClient}/>}
+    {clientModal&&<ClientModal value={clientForm} setValue={setClientForm} editing={editingClient} error={clientError} saving={clientSaving} close={()=>setClientModal(false)} save={saveClient} request={request}/>}
     {saphireIaOpen&&<SaphireIAModal
       user={user}
       close={()=>setSaphireIaOpen(false)}
@@ -4225,18 +4225,51 @@ function DemandCardsView({demands,clients,onOpen}:{demands:Demand[];clients:Clie
     })}
   </div>
 }
-function ClientsPage({clients,demands,isAdmin,onNew,onEdit,onDemand}:{clients:Client[];demands:Demand[];isAdmin:boolean;onNew:()=>void;onEdit:(c:Client)=>void;onDemand:(d:Demand)=>void}){
+function ClientsPage({clients,demands,isAdmin,onNew,onEdit,onDemand,request}:{clients:Client[];demands:Demand[];isAdmin:boolean;onNew:()=>void;onEdit:(c:Client)=>void;onDemand:(d:Demand)=>void;request:(path:string,options?:RequestInit)=>Promise<any>}){
+  const [schedules,setSchedules]=useState<Record<number,{weekday:number;sendTime:string;enabled:boolean}>>({});
+  const [saving,setSaving]=useState<number|null>(null);
+  const [messages,setMessages]=useState<Record<number,string>>({});
+  const [history,setHistory]=useState<Record<number,any[]>>({});
+  useEffect(()=>{
+    if(!isAdmin)return;
+    request('/status-report-schedules').then((result:any)=>{
+      const next:Record<number,{weekday:number;sendTime:string;enabled:boolean}>={};
+      for(const row of (Array.isArray(result.data)?result.data:[])) next[Number(row.clientId)]={weekday:Number(row.weekday),sendTime:String(row.sendTime||'09:00').slice(0,5),enabled:Boolean(Number(row.enabled))};
+      setSchedules(next);
+    }).catch((error:any)=>console.error('Erro ao carregar agendamentos de Status Report:',error));
+  },[isAdmin]);
+  const getSchedule=(clientId:number)=>schedules[clientId]||{weekday:1,sendTime:'09:00',enabled:false};
+  const updateSchedule=(clientId:number,patch:Partial<{weekday:number;sendTime:string;enabled:boolean}>)=>setSchedules(prev=>({ ...prev,[clientId]:{...getSchedule(clientId),...patch} }));
+  const saveSchedule=async(clientId:number)=>{
+    setSaving(clientId);setMessages(prev=>({...prev,[clientId]:''}));
+    try{await request(`/status-report-schedules/${clientId}`,{method:'PUT',body:JSON.stringify(getSchedule(clientId))});setMessages(prev=>({...prev,[clientId]:'Agendamento salvo.'}));}
+    catch(error:any){setMessages(prev=>({...prev,[clientId]:error?.message||'Não foi possível salvar.'}));}
+    finally{setSaving(null);}
+  };
+  const loadHistory=async(clientId:number)=>{
+    try{const result=await request(`/status-report-schedules/${clientId}/history`);setHistory(prev=>({...prev,[clientId]:Array.isArray(result.data)?result.data:[]}));}
+    catch(error:any){setMessages(prev=>({...prev,[clientId]:error?.message||'Erro ao consultar histórico.'}));}
+  };
+  const sendNow=async(clientId:number)=>{
+    if(!window.confirm('Enviar o Status Report agora para todos os usuários ativos deste cliente?'))return;
+    setSaving(clientId);setMessages(prev=>({...prev,[clientId]:''}));
+    try{const result=await request(`/status-report-schedules/${clientId}/send-now`,{method:'POST'});setMessages(prev=>({...prev,[clientId]:`Relatório enviado para ${result.data?.sent||0} usuário(s).`}));await loadHistory(clientId);}
+    catch(error:any){setMessages(prev=>({...prev,[clientId]:error?.message||'Falha no envio.'}));await loadHistory(clientId);}
+    finally{setSaving(null);}
+  };
+  const weekdays=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   return <section className="hf-panel"><div className="hf-panel-title"><div><h2>Clientes / Empresas</h2><p className="hf-muted">Empresas cadastradas no HoraFlow e suas demandas vinculadas.</p></div>{isAdmin&&<button className="hf-primary" onClick={onNew}><Plus size={17}/> Novo cliente</button>}</div>
     {!clients.length?<div className="hf-empty-page"><Building2 size={40}/><h3>Nenhuma empresa cadastrada</h3><p>Cadastre a primeira empresa para poder vincular usuários e demandas.</p>{isAdmin&&<button className="hf-primary" onClick={onNew}><Plus size={16}/> Cadastrar empresa</button>}</div>:
-    <div className="hf-client-grid">{clients.map(c=>{const cd=demands.filter(d=>String((d as any).clientId||'')===String(c.id));return <div className="hf-client-card" key={c.id}>
+    <div className="hf-client-grid">{clients.map(c=>{const cd=demands.filter(d=>String((d as any).clientId||'')===String(c.id));const schedule=getSchedule(c.id);return <div className="hf-client-card" key={c.id}>
       <div className="hf-client-card-head"><div className="hf-client-icon"><Building2 size={20}/></div><div><h3>{c.name}</h3><p>{c.email||'Sem e-mail cadastrado'}</p></div>{isAdmin&&<button className="hf-icon-btn" onClick={()=>onEdit(c)} title="Editar cliente"><Clipboard size={15}/></button>}</div>
       <div className="hf-client-metrics"><div><b>{cd.length}</b><span>Demandas</span></div><div><b>{cd.filter(d=>d.aprovacao==='Aprovada').length}</b><span>Aprovadas</span></div></div>
       <div className="hf-client-demand-list">{cd.slice(0,3).map(d=><button key={d.id} onClick={()=>onDemand(d)}><span>#{String(d.numero).padStart(3,'0')}</span><strong>{d.problema||'Sem descrição'}</strong><small>{d.prioridade}</small></button>)}{!cd.length&&<span className="hf-muted">Nenhuma demanda vinculada.</span>}</div>
+
     </div>})}</div>}
   </section>
 }
 
-function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{name:string;email:string;categories:string[]};setValue:(v:any)=>void;editing:Client|null;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void}){
+function ClientModal({value,setValue,editing,error,saving,close,save,request}:{value:{name:string;email:string;categories:string[]};setValue:(v:any)=>void;editing:Client|null;error:string;saving:boolean;close:()=>void;save:(e:React.FormEvent)=>void;request:(path:string,options?:RequestInit)=>Promise<any>}){
   const [newCategory,setNewCategory]=useState('');
 
   const addCategory=()=>{
@@ -4393,6 +4426,8 @@ function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{na
           </div>
         </div>
 
+        {editing?.id && <StatusReportSettings clientId={Number(editing.id)} request={request}/>}
+
         {error&&(
           <div className="hf-login-error">
             <AlertCircle size={16}/>
@@ -4420,6 +4455,90 @@ function ClientModal({value,setValue,editing,error,saving,close,save}:{value:{na
       </form>
     </div>
   </div>
+}
+function StatusReportSettings({clientId,request}:{clientId:number;request:(path:string,options?:RequestInit)=>Promise<any>}){
+  const [schedule,setSchedule]=useState({weekday:1,sendTime:'09:00',enabled:false});
+  const [saving,setSaving]=useState(false);
+  const [message,setMessage]=useState('');
+  const [history,setHistory]=useState<any[]|null>(null);
+
+  useEffect(()=>{
+    let active=true;
+    request('/status-report-schedules').then((result:any)=>{
+      if(!active)return;
+      const row=(Array.isArray(result.data)?result.data:[]).find((item:any)=>Number(item.clientId)===clientId);
+      if(row)setSchedule({weekday:Number(row.weekday),sendTime:String(row.sendTime||'09:00').slice(0,5),enabled:Boolean(Number(row.enabled))});
+    }).catch(()=>{if(active)setMessage('Não foi possível carregar o agendamento.');});
+    return ()=>{active=false;};
+  },[clientId]);
+
+  const save=async()=>{
+    setSaving(true);setMessage('');
+    try{
+      await request(`/status-report-schedules/${clientId}`,{method:'PUT',body:JSON.stringify(schedule)});
+      setMessage('Configuração salva com sucesso.');
+    }catch(error:any){setMessage(error?.message||'Não foi possível salvar.');}
+    finally{setSaving(false);}
+  };
+
+  const loadHistory=async()=>{
+    try{
+      const result=await request(`/status-report-schedules/${clientId}/history`);
+      setHistory(Array.isArray(result.data)?result.data:[]);
+    }catch(error:any){setMessage(error?.message||'Não foi possível carregar o histórico.');}
+  };
+
+  const sendTest=async()=>{
+    if(!window.confirm('Enviar um e-mail de teste agora?'))return;
+    setSaving(true);setMessage('');
+    try{
+      const result=await request(`/status-report-schedules/${clientId}/send-now`,{method:'POST'});
+      setMessage(`Solicitação concluída. E-mails enviados: ${result.data?.sent||0}.`);
+      await loadHistory();
+    }catch(error:any){
+      setMessage(error?.message||'Falha no envio do teste.');
+      await loadHistory();
+    }finally{setSaving(false);}
+  };
+
+  const weekdays=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+  return <section style={{marginTop:8,padding:18,border:'1px solid #dbe3ec',borderRadius:14,display:'grid',gap:14}}>
+    <div style={{display:'flex',alignItems:'center',gap:12}}>
+      <div style={{width:42,height:42,borderRadius:12,background:'#e8eeff',display:'grid',placeItems:'center',color:'#315efb',flexShrink:0}}><Clipboard size={21}/></div>
+      <div><h3 style={{margin:0,fontSize:16}}>Status Report automático</h3><p className="hf-muted" style={{margin:'4px 0 0',fontSize:12}}>Configure o envio do relatório PDF no horário de Brasília.</p></div>
+    </div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
+      <label>Dia da semana
+        <select value={schedule.weekday} onChange={e=>setSchedule(s=>({...s,weekday:Number(e.target.value)}))} style={{display:'block',width:'100%',marginTop:6}}>
+          {weekdays.map((day,index)=><option value={index} key={day}>{day}</option>)}
+        </select>
+      </label>
+      <label>Horário (Brasília)
+        <input type="time" value={schedule.sendTime} onChange={e=>setSchedule(s=>({...s,sendTime:e.target.value}))} style={{display:'block',width:'100%',marginTop:6}}/>
+      </label>
+    </div>
+    <label style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'flex-start',gap:12,padding:'14px 16px',borderRadius:10,background:'var(--hf-soft, #f8fafc)',cursor:'pointer',textAlign:'left',width:'100%',boxSizing:'border-box'}}>
+      <input type="checkbox" checked={schedule.enabled} onChange={e=>setSchedule(s=>({...s,enabled:e.target.checked}))} style={{display:'block',appearance:'auto',width:16,height:16,minWidth:16,margin:0,padding:0,flex:'0 0 16px',alignSelf:'center',accentColor:'#315efb'}}/>
+      <span style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:3,minWidth:0,flex:1}}>
+        <strong style={{fontSize:13,lineHeight:1.4}}>Ativar envio automático</strong>
+        <small style={{fontSize:12,fontWeight:400,lineHeight:1.4}}>Ative somente quando quiser habilitar o agendamento.</small>
+      </span>
+    </label>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+      <button type="button" className="hf-primary" disabled={saving} onClick={()=>void save()}>{saving?'Aguarde...':'Salvar configuração'}</button>
+      <button type="button" className="hf-secondary" disabled={saving} onClick={()=>void sendTest()}>Enviar teste</button>
+      <button type="button" className="hf-secondary" disabled={saving} onClick={()=>void loadHistory()}>Ver histórico</button>
+    </div>
+    {message&&<p role="status" style={{margin:0,fontSize:13}}>{message}</p>}
+    {history!==null&&<div style={{display:'grid',gap:8}}>
+      <strong>Histórico de envios</strong>
+      {!history.length?<p className="hf-muted">Nenhum envio registrado.</p>:history.slice(0,5).map((item:any)=><div key={item.id} style={{padding:'10px 0',borderBottom:'1px solid var(--hf-border, #e5e7eb)'}}>
+        <strong>{String(item.scheduledDate).slice(0,10)} · {item.status}</strong>
+        <div className="hf-muted" style={{fontSize:12,marginTop:3}}>{item.sentCount||0}/{item.recipientCount||0} destinatários{item.errorMessage?` · ${item.errorMessage}`:''}</div>
+      </div>)}
+    </div>}
+  </section>;
 }
 function NotificationsModal({
   notifications,
@@ -11644,280 +11763,3 @@ const styles = `
   }
 }
 `
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
