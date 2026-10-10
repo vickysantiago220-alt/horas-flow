@@ -4332,7 +4332,7 @@ app.post('/api/status-report-schedules/:clientId/send-now', authenticate, author
   if (!Number.isInteger(clientId) || clientId < 1) return res.status(400).json({ success: false, message: 'Cliente inválido.' });
   try {
     const today = reportDateParts().date;
-    const result = await sendClientStatusReport(clientId, today, 'TEST');
+    const result = await sendClientStatusReport(clientId, today, 'AUTO');
     if ((result as any).skipped) return res.status(409).json({ success: false, message: 'Já existe um envio registrado para este cliente nesta data.' });
     return res.json({ success: true, data: result });
   } catch (error: any) { return res.status(500).json({ success: false, message: 'Falha ao enviar o Status Report.', error: error?.message }); }
