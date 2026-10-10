@@ -3,6 +3,9 @@ import express, { Response } from 'express';
 import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
 import cors from 'cors';
+import nodemailer from 'nodemailer';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import { pool } from './db';
 import { askGemini } from './ai/gemini';
@@ -3998,6 +4001,344 @@ app.get(
 
 
 // =====================================================
+// STATUS REPORT AUTOMÁTICO POR CLIENTE (ADMIN)
+// =====================================================
+
+const REPORT_TZ = 'America/Sao_Paulo';
+let reportSchedulerBusy = false;
+
+function reportDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: REPORT_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const values: Record<string, string> = {};
+  for (const part of parts) values[part.type] = part.value;
+  const weekday = Number(new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TZ, weekday: 'short',
+  }).format(date) === 'Sun' ? 0 : new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TZ, weekday: 'short',
+  }).format(date) === 'Mon' ? 1 : new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TZ, weekday: 'short',
+  }).format(date) === 'Tue' ? 2 : new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TZ, weekday: 'short',
+  }).format(date) === 'Wed' ? 3 : new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TZ, weekday: 'short',
+  }).format(date) === 'Thu' ? 4 : new Intl.DateTimeFormat('en-US', {
+    timeZone: REPORT_TZ, weekday: 'short',
+  }).format(date) === 'Fri' ? 5 : 6);
+  return { date: `${values.year}-${values.month}-${values.day}`, year: values.year, month: values.month, day: values.day, weekday,
+    time: new Intl.DateTimeFormat('en-GB', { timeZone: REPORT_TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date) };
+}
+
+function createReportPdf(clientName: string, periodStart: string, periodEnd: string, demands: any[]) {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const norm = (v: any) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const analyzed = demands.filter(d => norm(d.status).toLowerCase() === 'analisada');
+  const completed = demands.filter(d => ['concluida', 'concluido'].includes(norm(d.status).toLowerCase()));
+  const analysisHours = analyzed.reduce((sum, d) => sum + Number(d.analysisHours || 0), 0);
+  const finishedHours = completed.reduce((sum, d) => sum + Number(d.analysisHours || 0) + Number(d.requiredHours || 0), 0);
+  doc.setFontSize(19); doc.text('Status Report Executivo', 14, 17);
+  doc.setFontSize(10); doc.text(`Cliente: ${clientName}`, 14, 25);
+  doc.text(`Período: ${periodStart} a ${periodEnd}`, 14, 31);
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR', { timeZone: REPORT_TZ })}`, 14, 37);
+  const metrics = [
+    ['HORAS ANALISADAS', `${analysisHours}h`],
+    ['HORAS CONCLUÍDAS', `${finishedHours}h`],
+    ['TOTAL DO PERÍODO', `${analysisHours + finishedHours}h`],
+    ['DEMANDAS', String(demands.length)],
+  ];
+  metrics.forEach((m, i) => { const x = 14 + i * 67; doc.setDrawColor(210); doc.roundedRect(x, 43, 61, 18, 2, 2); doc.setFontSize(8); doc.text(String(m[0] ?? ''), x + 4, 50); doc.setFontSize(13); doc.text(String(m[1] ?? ''), x + 4, 57); });
+  const rows = demands.map(d => [String(d.number ?? d.id), d.categoryName || '—', d.problem || '—', d.status || '—', d.approvedBy || '—', `${Number(d.analysisHours || 0)}h`, `${Number(d.requiredHours || 0)}h`, d.requestDate ? String(d.requestDate).slice(0,10) : '—', d.deliveryDate ? String(d.deliveryDate).slice(0,10) : '—']);
+  autoTable(doc, { startY: 68, head: [['Nº', 'Categoria', 'Demanda', 'Status', 'Aprovado por', 'Horas analisadas', 'Horas necessárias', 'Solicitação', 'Entrega']], body: rows.length ? rows : [['—','—','Nenhuma demanda no período','—','—','0h','0h','—','—']], styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' }, headStyles: { fillColor: [45, 55, 72] }, columnStyles: { 2: { cellWidth: 72 } } });
+  const pages = (doc as any).internal.getNumberOfPages();
+  for (let i=1;i<=pages;i++) { doc.setPage(i); doc.setFontSize(8); doc.text(`Status Report • HoraFlow  |  Página ${i}/${pages}`, 14, 202); }
+  return Buffer.from(doc.output('arraybuffer'));
+}
+
+async function sendClientStatusReport(clientId: number, scheduledDate: string, reportType: 'AUTO' | 'TEST' = 'AUTO') {
+  let historyId: number;
+
+  const [retry] = await pool.execute(
+    `UPDATE status_report_history
+     SET status = 'PROCESSING',
+         error_message = NULL,
+         started_at = NOW(),
+         finished_at = NULL
+     WHERE client_id = ? AND scheduled_date = ? AND report_type = ? AND status = 'FAILED'`,
+    [clientId, scheduledDate, reportType]
+  );
+
+  if ((retry as any).affectedRows > 0) {
+    const [rows] = await pool.execute(
+      'SELECT id FROM status_report_history WHERE client_id = ? AND scheduled_date = ? AND report_type = ? LIMIT 1',
+      [clientId, scheduledDate, reportType]
+    );
+    historyId = Number((rows as any[])[0]?.id);
+    if (!historyId) throw new Error('Não foi possível recuperar o histórico do Status Report.');
+  } else {
+    const [claim] = await pool.execute(
+      `INSERT IGNORE INTO status_report_history
+       (client_id, scheduled_date, report_type, status, recipient_count, sent_count, started_at)
+       VALUES (?, ?, ?, 'PROCESSING', 0, 0, NOW())`,
+      [clientId, scheduledDate, reportType]
+    );
+    if (!(claim as any).affectedRows) return { skipped: true };
+    historyId = Number((claim as any).insertId);
+  }
+
+  try {
+    const host = process.env.SMTP_HOST || 'smtp.hostinger.com';
+    const port = Number(process.env.SMTP_PORT || 465);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASSWORD;
+
+    if (!user || !pass) {
+      throw new Error('SMTP_USER e SMTP_PASSWORD precisam estar configurados no ambiente.');
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: String(process.env.SMTP_SECURE ?? 'true').toLowerCase() === 'true',
+      auth: { user, pass }
+    });
+
+    const [clientRows] = await pool.execute(
+      'SELECT id, name FROM clients WHERE id = ? LIMIT 1',
+      [clientId]
+    );
+    const client = (clientRows as any[])[0];
+    if (!client) throw new Error('Cliente não encontrado.');
+
+    const nowParts = reportDateParts();
+    const periodStart = `${nowParts.year}-${nowParts.month}-01`;
+    const periodEnd = nowParts.date;
+
+    const [demandRows] = await pool.execute(`
+      SELECT d.id, d.number, d.problem, d.status,
+        d.analysis_hours AS analysisHours,
+        d.required_hours AS requiredHours,
+        d.analysis_month AS analysisMonth,
+        d.approved_by AS approvedBy,
+        d.request_date AS requestDate,
+        d.delivery_date AS deliveryDate,
+        cc.name AS categoryName
+      FROM demands d
+      LEFT JOIN client_categories cc ON cc.id = d.category_id
+      WHERE d.client_id = ? AND (
+        (LOWER(d.status) = 'analisada'
+          AND DATE(COALESCE(d.analysis_month, d.request_date, d.created_at)) BETWEEN ? AND ?)
+        OR
+        (LOWER(REPLACE(d.status, 'í', 'i')) IN ('concluida','concluido')
+          AND DATE(COALESCE(d.delivery_date, d.request_date, d.created_at)) BETWEEN ? AND ?)
+        OR
+        (LOWER(d.status) NOT IN ('analisada','concluída','concluida','concluído','concluido')
+          AND DATE(COALESCE(d.request_date, d.created_at)) BETWEEN ? AND ?)
+      )
+      ORDER BY d.created_at DESC`,
+      [clientId, periodStart, periodEnd, periodStart, periodEnd, periodStart, periodEnd]
+    );
+
+    let recipients: any[];
+
+    if (reportType === 'TEST') {
+      const [testUsers] = await pool.execute(`
+        SELECT id, name, email
+        FROM users
+        WHERE email = ?
+          AND active = 1
+        LIMIT 1`,
+        ['vickysantiago220@gmail.com']
+      );
+
+      recipients = testUsers as any[];
+
+      if (recipients.length !== 1) {
+        throw new Error('Usuário de teste não encontrado ou inativo.');
+      }
+    } else {
+      const [usersRows] = await pool.execute(`
+        SELECT id, name, email
+        FROM users
+        WHERE client_id = ? AND active = 1
+          AND email IS NOT NULL AND TRIM(email) <> ''
+        ORDER BY id`,
+        [clientId]
+      );
+
+      recipients = usersRows as any[];
+    }
+    if (!recipients.length) {
+      throw new Error('Não há usuários ativos com e-mail vinculados a este cliente.');
+    }
+
+    const pdf = createReportPdf(client.name, periodStart, periodEnd, demandRows as any[]);
+
+    for (const recipient of recipients) {
+      await pool.execute(`
+        INSERT IGNORE INTO status_report_recipients
+          (history_id, user_id, email, status)
+        VALUES (?, ?, ?, 'PENDING')`,
+        [historyId, recipient.id, recipient.email]
+      );
+    }
+
+    const [recipientRows] = await pool.execute(`
+      SELECT id, user_id AS userId, email
+      FROM status_report_recipients
+      WHERE history_id = ?
+        AND status IN ('PENDING', 'FAILED')
+        AND attempts < 3
+        AND (last_attempt_at IS NULL OR last_attempt_at <= DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+      ORDER BY id`,
+      [historyId]
+    );
+
+    for (const recipient of recipientRows as any[]) {
+      const [claimResult] = await pool.execute(`
+        UPDATE status_report_recipients
+        SET status = 'PROCESSING',
+            attempts = attempts + 1,
+            last_attempt_at = NOW(),
+            error_message = NULL
+        WHERE id = ? AND status IN ('PENDING', 'FAILED')
+          AND attempts < 3
+          AND (last_attempt_at IS NULL OR last_attempt_at <= DATE_SUB(NOW(), INTERVAL 5 MINUTE))`,
+        [recipient.id]
+      );
+
+      if ((claimResult as any).affectedRows !== 1) continue;
+
+      if (
+        reportType === 'TEST' &&
+        String(recipient.email).trim().toLowerCase() !==
+          'vickysantiago220@gmail.com'
+      ) {
+        await pool.execute(`
+          UPDATE status_report_recipients
+          SET status = 'FAILED',
+              error_message = 'Destinatário bloqueado pela proteção do modo TEST.'
+          WHERE id = ?`,
+          [recipient.id]
+        );
+        continue;
+      }
+
+      try {
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || 'Status Report - EvolutionSoft <no-reply@evolutionsoft.com.br>',
+          to: recipient.email,
+          subject: `Status Report - ${client.name} - ${periodStart} a ${periodEnd}`,
+          text: `Olá!\n\nSegue em anexo o Status Report de ${client.name}, referente ao período de ${periodStart} a ${periodEnd}.\n\nAtenciosamente,\nEvolutionSoft`,
+          attachments: [{
+            filename: `status-report-${clientId}-${periodEnd}.pdf`,
+            content: pdf,
+            contentType: 'application/pdf'
+          }]
+        });
+
+        await pool.execute(`
+          UPDATE status_report_recipients
+          SET status = 'SENT', sent_at = NOW(), error_message = NULL
+          WHERE id = ?`,
+          [recipient.id]
+        );
+      } catch (error: any) {
+        await pool.execute(`
+          UPDATE status_report_recipients
+          SET status = 'FAILED', error_message = ?
+          WHERE id = ?`,
+          [String(error?.message || 'Falha no envio').slice(0, 4000), recipient.id]
+        );
+      }
+    }
+
+    const [countsRows] = await pool.execute(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(status = 'SENT') AS sent,
+        SUM(status = 'FAILED') AS failed,
+        SUM(status = 'PENDING') AS pending,
+        SUM(status = 'PROCESSING') AS processing
+      FROM status_report_recipients
+      WHERE history_id = ?`,
+      [historyId]
+    );
+
+    const counts = (countsRows as any[])[0];
+    const sent = Number(counts.sent || 0);
+    const failed = Number(counts.failed || 0);
+    const pending = Number(counts.pending || 0);
+    const processing = Number(counts.processing || 0);
+    const total = Number(counts.total || 0);
+    const hasFailures = failed > 0 || pending > 0 || processing > 0;
+
+    await pool.execute(`
+      UPDATE status_report_history
+      SET recipient_count = ?, sent_count = ?, status = ?,
+          finished_at = NOW(), error_message = ?
+      WHERE id = ?`,
+      [
+        total,
+        sent,
+        hasFailures ? 'FAILED' : 'SENT',
+        hasFailures ? `${failed} falha(s), ${pending} pendente(s), ${processing} em processamento.` : null,
+        historyId
+      ]
+    );
+
+    return { sent, recipients: total, failed, pending, processing };
+  } catch (error: any) {
+    await pool.execute(`
+      UPDATE status_report_history
+      SET status = 'FAILED', finished_at = NOW(), error_message = ?
+      WHERE id = ?`,
+      [String(error?.message || 'Falha no envio').slice(0, 4000), historyId]
+    );
+    throw error;
+  }
+}
+
+app.get('/api/status-report-schedules', authenticate, authorize('ADMIN'), async (_req, res) => {
+  try {
+    const [rows] = await pool.query(`SELECT s.client_id AS clientId, s.weekday, TIME_FORMAT(s.send_time, '%H:%i') AS sendTime, s.enabled, s.updated_at AS updatedAt FROM status_report_schedules s ORDER BY s.client_id`);
+    return res.json({ success: true, data: rows });
+  } catch (error: any) { return res.status(500).json({ success: false, message: 'Erro ao listar agendamentos.', error: error?.message }); }
+});
+
+app.put('/api/status-report-schedules/:clientId', authenticate, authorize('ADMIN'), async (req, res) => {
+  const clientId = Number(req.params.clientId);
+  const weekday = Number(req.body?.weekday);
+  const sendTime = String(req.body?.sendTime || '09:00');
+  const enabled = req.body?.enabled ? 1 : 0;
+  if (!Number.isInteger(clientId) || clientId < 1 || !Number.isInteger(weekday) || weekday < 0 || weekday > 6 || !/^([01]\d|2[0-3]):[0-5]\d$/.test(sendTime)) return res.status(400).json({ success: false, message: 'Cliente, dia da semana ou horário inválido.' });
+  try {
+    await pool.execute(`INSERT INTO status_report_schedules (client_id, weekday, send_time, enabled) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE weekday = VALUES(weekday), send_time = VALUES(send_time), enabled = VALUES(enabled), updated_at = NOW()`, [clientId, weekday, sendTime, enabled]);
+    return res.json({ success: true, message: 'Agendamento salvo.' });
+  } catch (error: any) { return res.status(500).json({ success: false, message: 'Erro ao salvar agendamento.', error: error?.message }); }
+});
+
+app.get('/api/status-report-schedules/:clientId/history', authenticate, authorize('ADMIN'), async (req, res) => {
+  const clientId = Number(req.params.clientId);
+  if (!Number.isInteger(clientId) || clientId < 1) return res.status(400).json({ success: false, message: 'Cliente inválido.' });
+  try {
+    const [rows] = await pool.execute(`SELECT id, scheduled_date AS scheduledDate, report_type AS reportType, status, recipient_count AS recipientCount, sent_count AS sentCount, error_message AS errorMessage, started_at AS startedAt, finished_at AS finishedAt FROM status_report_history WHERE client_id = ? ORDER BY id DESC LIMIT 10`, [clientId]);
+    return res.json({ success: true, data: rows });
+  } catch (error: any) { return res.status(500).json({ success: false, message: 'Erro ao consultar histórico.', error: error?.message }); }
+});
+
+app.post('/api/status-report-schedules/:clientId/send-now', authenticate, authorize('ADMIN'), async (req, res) => {
+  const clientId = Number(req.params.clientId);
+  if (!Number.isInteger(clientId) || clientId < 1) return res.status(400).json({ success: false, message: 'Cliente inválido.' });
+  try {
+    const today = reportDateParts().date;
+    const result = await sendClientStatusReport(clientId, today, 'TEST');
+    if ((result as any).skipped) return res.status(409).json({ success: false, message: 'Já existe um envio registrado para este cliente nesta data.' });
+    return res.json({ success: true, data: result });
+  } catch (error: any) { return res.status(500).json({ success: false, message: 'Falha ao enviar o Status Report.', error: error?.message }); }
+});
+
+// =====================================================
 // 404
 // =====================================================
 
@@ -4254,6 +4595,119 @@ async function startServer() {
 
     console.log('Coluna ticket_id verificada com sucesso.');
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS status_report_schedules (
+        client_id BIGINT NOT NULL,
+        weekday TINYINT NOT NULL DEFAULT 1,
+        send_time TIME NOT NULL DEFAULT '09:00:00',
+        enabled TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (client_id),
+        KEY idx_status_report_enabled (enabled, weekday, send_time)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS status_report_history (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        client_id BIGINT NOT NULL,
+        scheduled_date DATE NOT NULL,
+        report_type VARCHAR(10) NOT NULL DEFAULT 'AUTO',
+        status VARCHAR(20) NOT NULL,
+        recipient_count INT NOT NULL DEFAULT 0,
+        sent_count INT NOT NULL DEFAULT 0,
+        error_message TEXT NULL,
+        started_at DATETIME NULL,
+        finished_at DATETIME NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_status_report_client_date_type (client_id, scheduled_date, report_type),
+        KEY idx_status_report_history_client (client_id, id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS status_report_recipients (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        history_id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        attempts INT NOT NULL DEFAULT 0,
+        last_attempt_at DATETIME NULL,
+        sent_at DATETIME NULL,
+        error_message TEXT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_status_report_recipient (history_id, user_id),
+        KEY idx_status_report_recipient_status (history_id, status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    const [recipientColumnRows] = await pool.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'status_report_recipients'
+        AND COLUMN_NAME = 'last_attempt_at'
+    `);
+
+    if (!(recipientColumnRows as any[]).length) {
+      await pool.query(`
+        ALTER TABLE status_report_recipients
+        ADD COLUMN last_attempt_at DATETIME NULL AFTER attempts
+      `);
+      console.log('Coluna last_attempt_at adicionada aos destinatários.');
+    }
+    // Migração segura do histórico do Status Report.
+    // Preserva os registros existentes.
+    const [reportTypeColumnRows] = await pool.query(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'status_report_history'
+         AND COLUMN_NAME = 'report_type'`
+    );
+
+    if (!(reportTypeColumnRows as any[]).length) {
+      await pool.query(
+        "ALTER TABLE status_report_history ADD COLUMN report_type VARCHAR(10) NOT NULL DEFAULT 'AUTO' AFTER scheduled_date"
+      );
+      console.log('Coluna report_type adicionada ao histórico.');
+    }
+
+    const [oldUniqueRows] = await pool.query(
+      `SELECT INDEX_NAME
+       FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'status_report_history'
+         AND INDEX_NAME = 'uq_status_report_client_date'`
+    );
+
+    if ((oldUniqueRows as any[]).length) {
+      await pool.query(
+        'ALTER TABLE status_report_history DROP INDEX uq_status_report_client_date'
+      );
+      console.log('Índice antigo do histórico removido.');
+    }
+
+    const [newUniqueRows] = await pool.query(
+      `SELECT INDEX_NAME
+       FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'status_report_history'
+         AND INDEX_NAME = 'uq_status_report_client_date_type'`
+    );
+
+    if (!(newUniqueRows as any[]).length) {
+      await pool.query(
+        'ALTER TABLE status_report_history ADD UNIQUE KEY uq_status_report_client_date_type (client_id, scheduled_date, report_type)'
+      );
+      console.log('Novo índice do histórico criado.');
+    }
+
+    console.log('Migração do Status Report concluída.');
+
     console.log('Tabela notifications criada/verificada com sucesso.');
     app.listen(
       PORT,
@@ -4261,6 +4715,64 @@ async function startServer() {
         console.log(
           `Backend rodando em http://localhost:${PORT}`
         );
+        const runReportScheduler = async () => {
+          if (reportSchedulerBusy) return;
+          reportSchedulerBusy = true;
+          try {
+            const now = reportDateParts();
+            const [rows] = await pool.execute(`
+  SELECT s.client_id AS clientId
+  FROM status_report_schedules s
+  WHERE s.enabled = 1
+    AND s.weekday = ?
+    AND TIME_FORMAT(s.send_time, '%H:%i') <= ?
+    AND NOT EXISTS (
+      SELECT 1 FROM status_report_history h
+      WHERE h.client_id = s.client_id
+        AND h.scheduled_date = ?
+        AND h.report_type = 'AUTO'
+        AND (
+          h.status = 'SENT'
+          OR (h.status = 'PROCESSING'
+              AND h.started_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE))
+        )
+    )
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM status_report_history h
+        WHERE h.client_id = s.client_id
+          AND h.scheduled_date = ?
+          AND h.report_type = 'AUTO'
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM status_report_history h
+        JOIN status_report_recipients r ON r.history_id = h.id
+        WHERE h.client_id = s.client_id
+          AND h.scheduled_date = ?
+          AND h.report_type = 'AUTO'
+          AND r.status IN ('PENDING', 'FAILED')
+          AND r.attempts < 3
+          AND (
+            r.last_attempt_at IS NULL
+            OR r.last_attempt_at <= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+          )
+      )
+    )`,
+  [now.weekday, now.time, now.date, now.date, now.date]
+);for (const row of rows as any[]) {
+              try { await sendClientStatusReport(Number(row.clientId), now.date); }
+              catch (error: any) { console.error('Falha no Status Report automático do cliente', row.clientId, error?.message || error); }
+            }
+          } catch (error: any) { console.error('Erro no agendador de Status Report:', error?.message || error); }
+          finally { reportSchedulerBusy = false; }
+        };
+        if (process.env.ENABLE_STATUS_REPORT_SCHEDULER === 'true') {
+          void runReportScheduler();
+          setInterval(() => { void runReportScheduler(); }, 30_000);
+        } else {
+          console.log('Agendador de Status Report desativado por configuração.');
+        }
       }
     );
   } catch (error) {
@@ -4274,25 +4786,3 @@ async function startServer() {
 }
 
 startServer();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
