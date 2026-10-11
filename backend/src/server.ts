@@ -1,3 +1,5 @@
+import { setDefaultResultOrder } from 'node:dns';
+setDefaultResultOrder('ipv4first');
 import 'dotenv/config';
 import express, { Response } from 'express';
 import multer from 'multer';
