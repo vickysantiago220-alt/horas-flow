@@ -4100,7 +4100,10 @@ async function sendClientStatusReport(clientId: number, scheduledDate: string, r
       host,
       port,
       secure: String(process.env.SMTP_SECURE ?? 'true').toLowerCase() === 'true',
-      auth: { user, pass }
+      auth: { user, pass },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000
     });
 
     const [clientRows] = await pool.execute(
