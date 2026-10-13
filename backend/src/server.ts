@@ -4234,7 +4234,63 @@ async function sendClientStatusReport(clientId: number, scheduledDate: string, r
           from: process.env.SMTP_FROM || 'Status Report - EvolutionSoft <no-reply@evolutionsoft.com.br>',
           to: recipient.email,
           subject: `Status Report - ${client.name} - ${periodStart} a ${periodEnd}`,
-          text: `Olá!\n\nSegue em anexo o Status Report de ${client.name}, referente ao período de ${periodStart} a ${periodEnd}.\n\nAtenciosamente,\nEvolutionSoft`,
+          text: `Olá!
+
+Segue em anexo o Status Report de ${client.name}, referente ao período de ${periodStart} a ${periodEnd}.
+
+O relatório completo está anexado em PDF.
+
+Atenciosamente,
+Equipe EvolutionSoft`,
+          html: `
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Status Report - EvolutionSoft</title>
+            </head>
+            <body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:28px 12px;">
+                <tr><td align="center">
+                  <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#fff;border-radius:12px;overflow:hidden;">
+                    <tr><td style="background:#172554;padding:30px 32px;">
+                      <p style="margin:0 0 8px;color:#bfdbfe;font-size:12px;font-weight:bold;letter-spacing:2px;">EVOLUTIONSOFT</p>
+                      <h1 style="margin:0;color:#fff;font-size:26px;">Status Report</h1>
+                      <p style="margin:10px 0 0;color:#dbeafe;font-size:14px;">Relatório de acompanhamento</p>
+                    </td></tr>
+                    <tr><td style="padding:30px 32px;">
+                      <p style="font-size:16px;">Olá!</p>
+                      <p style="color:#475569;font-size:14px;line-height:1.7;">O relatório de acompanhamento do período está disponível no arquivo PDF anexado.</p>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <tr><td style="padding:20px;">
+                          <p style="margin:0 0 6px;color:#64748b;font-size:11px;font-weight:bold;letter-spacing:1px;">CLIENTE</p>
+                          <p style="margin:0 0 20px;color:#0f172a;font-size:18px;font-weight:bold;">${client.name}</p>
+                          <p style="margin:0 0 6px;color:#64748b;font-size:11px;font-weight:bold;letter-spacing:1px;">PERÍODO DO RELATÓRIO</p>
+                          <p style="margin:0;color:#334155;font-size:14px;">${periodStart} a ${periodEnd}</p>
+                        </td></tr>
+                      </table>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px;border:1px solid #dbeafe;border-radius:8px;">
+                        <tr>
+                          <td width="48" style="padding:18px;color:#dc2626;font-size:18px;font-weight:bold;">PDF</td>
+                          <td style="padding:18px 18px 18px 0;">
+                            <p style="margin:0 0 6px;color:#1e293b;font-size:14px;font-weight:bold;">Relatório completo em anexo</p>
+                            <p style="margin:0;color:#64748b;font-size:12px;line-height:1.6;">Abra o arquivo PDF anexado para consultar as demandas e as horas registradas.</p>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin:24px 0 0;color:#475569;font-size:14px;line-height:1.7;">Em caso de dúvidas, entre em contato com a equipe responsável.</p>
+                    </td></tr>
+                    <tr><td style="padding:22px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+                      <p style="margin:0 0 5px;color:#334155;font-size:13px;font-weight:bold;">Atenciosamente,</p>
+                      <p style="margin:0;color:#475569;font-size:13px;">Equipe EvolutionSoft</p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+          `,
           attachments: [{
             filename: `status-report-${clientId}-${periodEnd}.pdf`,
             content: pdf,
